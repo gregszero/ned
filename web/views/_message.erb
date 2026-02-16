@@ -1,13 +1,9 @@
-<div class="message message-<%= message.role %>" id="message-<%= message.id %>">
-  <div class="message-header">
-    <span class="message-role">
-      <%= message.role == 'user' ? '👤 You' : '🤖 AI' %>
-    </span>
-    <span class="message-time">
-      <%= message.created_at.strftime('%I:%M %p') %>
-    </span>
+<div class="chat <%= message.role == 'user' ? 'chat-end' : 'chat-start' %>" id="message-<%= message.id %>">
+  <div class="chat-header text-xs text-base-content/50 mb-1">
+    <%= message.role == 'user' ? 'You' : 'AI' %>
+    <time class="ml-1"><%= message.created_at.strftime('%I:%M %p') %></time>
   </div>
-  <div class="message-content">
+  <div class="chat-bubble <%= message.role == 'user' ? 'chat-bubble-primary' : 'chat-bubble-secondary' %>">
     <%= message.content.gsub("\n", "<br>") %>
   </div>
 </div>

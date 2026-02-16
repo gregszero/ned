@@ -1,33 +1,39 @@
-<div class="conversations-list">
-  <div class="header">
-    <h2>Conversations</h2>
-    <form action="/conversations" method="post" class="new-conversation-form">
-      <input type="text" name="title" placeholder="Conversation title (optional)">
-      <button type="submit">Start New Conversation</button>
+<div class="space-y-6">
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <h2 class="text-3xl font-bold">Conversations</h2>
+    <form action="/conversations" method="post" class="join">
+      <input type="text" name="title" placeholder="Conversation title (optional)" class="input input-bordered join-item w-64">
+      <button type="submit" class="btn btn-primary join-item">Start New</button>
     </form>
   </div>
 
   <% if @conversations.empty? %>
-    <div class="empty-state">
-      <p>No conversations yet. Start one above!</p>
+    <div class="hero bg-base-200 rounded-box py-16">
+      <div class="hero-content text-center">
+        <div>
+          <p class="text-lg text-base-content/60">No conversations yet. Start one above!</p>
+        </div>
+      </div>
     </div>
   <% else %>
-    <div class="conversation-cards">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <% @conversations.each do |conversation| %>
-        <a href="/conversations/<%= conversation.id %>" class="conversation-card">
-          <div class="conversation-header">
-            <h3><%= conversation.title || "Conversation ##{conversation.id}" %></h3>
-            <span class="source-badge"><%= conversation.source %></span>
-          </div>
-          <div class="conversation-meta">
-            <span><%= conversation.messages.count %> messages</span>
-            <span><%= conversation.last_message_at&.strftime('%b %d, %Y %I:%M %p') %></span>
-          </div>
-          <% if conversation.messages.any? %>
-            <div class="conversation-preview">
-              <%= conversation.messages.last.truncated_content(100) %>
+        <a href="/conversations/<%= conversation.id %>" class="card bg-base-100 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer">
+          <div class="card-body">
+            <div class="flex justify-between items-start">
+              <h3 class="card-title text-lg"><%= conversation.title || "Conversation ##{conversation.id}" %></h3>
+              <div class="badge badge-outline badge-sm"><%= conversation.source %></div>
             </div>
-          <% end %>
+            <div class="flex gap-3 text-sm text-base-content/50">
+              <span><%= conversation.messages.count %> messages</span>
+              <span><%= conversation.last_message_at&.strftime('%b %d, %Y %I:%M %p') %></span>
+            </div>
+            <% if conversation.messages.any? %>
+              <p class="text-sm text-base-content/60 mt-1">
+                <%= conversation.messages.last.truncated_content(100) %>
+              </p>
+            <% end %>
+          </div>
         </a>
       <% end %>
     </div>

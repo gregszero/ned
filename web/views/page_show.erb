@@ -1,15 +1,10 @@
-<div class="page-view">
-  <a href="/pages" class="back-link">← Back to pages</a>
+<div class="max-w-3xl mx-auto">
+  <a href="/pages" class="link link-primary text-sm">← Back to pages</a>
 
-  <article class="page-content">
+  <article class="prose prose-lg mt-4 max-w-none">
     <h1><%= @page.title %></h1>
-
-    <div class="page-meta">
-      <span>Published <%= @page.published_at&.strftime('%B %d, %Y') %></span>
-    </div>
-
-    <div class="page-body">
-      <%= @page.content %>
-    </div>
+    <p class="text-sm text-base-content/50">Published <%= @page.published_at&.strftime('%B %d, %Y') %></p>
+    <div class="divider"></div>
+    <div><%= @page.content %></div>
   </article>
 </div>

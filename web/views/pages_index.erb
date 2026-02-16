@@ -1,17 +1,19 @@
-<div class="pages-list">
-  <h2>AI-Generated Pages</h2>
+<div class="space-y-6">
+  <h2 class="text-3xl font-bold">AI-Generated Pages</h2>
 
   <% if @pages.empty? %>
-    <div class="empty-state">
-      <p>No published pages yet.</p>
+    <div class="hero bg-base-200 rounded-box py-16">
+      <div class="hero-content text-center">
+        <p class="text-lg text-base-content/60">No published pages yet.</p>
+      </div>
     </div>
   <% else %>
-    <div class="page-cards">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <% @pages.each do |page| %>
-        <a href="/pages/<%= page.slug %>" class="page-card">
-          <h3><%= page.title %></h3>
-          <div class="page-meta">
-            <span>Published <%= page.published_at&.strftime('%b %d, %Y') %></span>
+        <a href="/pages/<%= page.slug %>" class="card bg-base-100 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-200">
+          <div class="card-body">
+            <h3 class="card-title"><%= page.title %></h3>
+            <p class="text-sm text-base-content/50">Published <%= page.published_at&.strftime('%b %d, %Y') %></p>
           </div>
         </a>
       <% end %>

@@ -1,21 +1,19 @@
-<div class="conversation-view">
-  <div class="conversation-header">
-    <div>
-      <a href="/conversations" class="back-link">← Back to conversations</a>
-      <h2><%= @conversation.title || "Conversation ##{@conversation.id}" %></h2>
-      <div class="conversation-info">
-        <span class="source-badge"><%= @conversation.source %></span>
-        <span><%= @conversation.messages.count %> messages</span>
-        <span>Started <%= @conversation.created_at.strftime('%b %d, %Y') %></span>
-      </div>
+<div class="flex flex-col h-[calc(100vh-10rem)]">
+  <div class="mb-4">
+    <a href="/conversations" class="link link-primary text-sm">← Back to conversations</a>
+    <h2 class="text-2xl font-bold mt-1"><%= @conversation.title || "Conversation ##{@conversation.id}" %></h2>
+    <div class="flex gap-3 mt-1">
+      <div class="badge badge-outline"><%= @conversation.source %></div>
+      <span class="text-sm text-base-content/50"><%= @conversation.messages.count %> messages</span>
+      <span class="text-sm text-base-content/50">Started <%= @conversation.created_at.strftime('%b %d, %Y') %></span>
     </div>
   </div>
 
-  <div class="messages-container" data-controller="messages">
-    <div id="messages" class="messages">
+  <div class="flex-1 overflow-hidden bg-base-100 rounded-box border border-base-content/10">
+    <div id="messages" class="messages h-full overflow-y-auto p-4 flex flex-col gap-3">
       <% if @messages.empty? %>
-        <div class="empty-state">
-          <p>No messages yet. Start the conversation below!</p>
+        <div class="hero py-16">
+          <p class="text-base-content/50">No messages yet. Start the conversation below!</p>
         </div>
       <% else %>
         <% @messages.each do |message| %>
@@ -25,9 +23,9 @@
     </div>
   </div>
 
-  <div class="message-form-container">
+  <div class="mt-4">
     <turbo-frame id="message-form">
-      <form action="/conversations/<%= @conversation.id %>/messages" method="post" class="message-form" data-turbo="true">
+      <form action="/conversations/<%= @conversation.id %>/messages" method="post" class="flex gap-3" data-turbo="true">
         <input type="hidden" name="turbo" value="1">
         <textarea
           name="content"
@@ -35,15 +33,15 @@
           rows="3"
           required
           autofocus
+          class="textarea textarea-bordered flex-1 text-base"
         ></textarea>
-        <button type="submit">Send</button>
+        <button type="submit" class="btn btn-primary self-end">Send</button>
       </form>
     </turbo-frame>
   </div>
 </div>
 
 <script>
-  // Auto-scroll to bottom of messages
   document.addEventListener('turbo:load', () => {
     const messages = document.querySelector('.messages');
     if (messages) {
@@ -51,7 +49,6 @@
     }
   });
 
-  // Scroll on new message
   document.addEventListener('turbo:before-stream-render', () => {
     setTimeout(() => {
       const messages = document.querySelector('.messages');

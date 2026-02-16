@@ -1,34 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="night">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ai.rb - Ruby AI Framework</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/css/style.css">
   <script type="module">
     import "@hotwired/turbo";
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.0/dist/turbo.es2017-esm.js" type="module"></script>
 </head>
-<body>
-  <div class="container">
-    <header>
-      <h1>🤖 ai.rb</h1>
-      <nav>
-        <a href="/conversations">Conversations</a>
-        <a href="/pages">Pages</a>
-        <a href="/settings">Settings</a>
-        <a href="/conversations" data-turbo-method="post">+ New</a>
-      </nav>
-    </header>
-
-    <main>
-      <%= yield %>
-    </main>
-
-    <footer>
-      <p>ai.rb v0.1.0 - Ruby AI Framework</p>
-    </footer>
+<body class="min-h-screen bg-base-300">
+  <div class="navbar bg-base-100 shadow-lg border-b border-primary/30 px-6">
+    <div class="flex-1">
+      <a href="/conversations" class="text-xl font-bold text-primary">ai.rb</a>
+    </div>
+    <div class="flex-none">
+      <ul class="menu menu-horizontal gap-1">
+        <li><a href="/conversations" class="font-medium">Conversations</a></li>
+        <li><a href="/pages" class="font-medium">Pages</a></li>
+        <li><a href="/settings" class="font-medium">Settings</a></li>
+        <li><a href="/conversations" data-turbo-method="post" class="btn btn-primary btn-sm">+ New</a></li>
+      </ul>
+    </div>
   </div>
+
+  <main class="max-w-7xl mx-auto p-6">
+    <%= yield %>
+  </main>
+
+  <footer class="footer footer-center p-4 bg-base-100 text-base-content/60 border-t border-base-content/10">
+    <p class="text-sm">ai.rb v0.1.0 - Ruby AI Framework</p>
+  </footer>
 </body>
 </html>
