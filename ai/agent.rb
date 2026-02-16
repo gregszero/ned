@@ -70,7 +70,11 @@ module Ai
       end
 
       def build_env(conversation)
-        env = {}
+        # Start with current environment so claude can find PATH, HOME, etc.
+        env = ENV.to_h.dup
+
+        # Unset CLAUDECODE to avoid nested session detection
+        env.delete('CLAUDECODE')
 
         if ENV['CLAUDE_CODE_OAUTH_TOKEN']
           env['CLAUDE_CODE_OAUTH_TOKEN'] = ENV['CLAUDE_CODE_OAUTH_TOKEN']
