@@ -11,38 +11,25 @@ module Ai
       def execute(prompt:, session_id:, conversation: nil)
         uuid = to_uuid(session_id)
         session = find_or_create_session(conversation, uuid)
-        resuming = session.persisted? && session.stopped?
+        resumable = session.stopped?
 
         session.start!
 
-        cmd = [
-          'claude',
-          '-p', prompt,
-          '--output-format', 'json',
-          '--max-turns', '25'
-        ]
+        result = run_claude(prompt: prompt, uuid: uuid, resuming: resumable, env: build_env(conversation))
 
-        # Resume existing session or start new one
-        if resuming
-          cmd += ['--resume', uuid]
-        else
-          cmd += ['--session-id', uuid]
+        # If resume failed, retry as a new session
+        if result[:failed] && resumable
+          Ai.logger.warn "Resume failed, starting fresh session"
+          result = run_claude(prompt: prompt, uuid: uuid, resuming: false, env: build_env(conversation))
         end
 
-        env = build_env(conversation)
-
-        Ai.logger.info "#{resuming ? 'Resuming' : 'Starting'} claude subprocess (session: #{uuid})"
-
-        stdout, stderr, status = Open3.capture3(env, *cmd)
-
-        unless status.success?
+        if result[:failed]
           session.error!
-          Ai.logger.error "Claude exited with code #{status.exitstatus}: #{stderr}"
-          return { 'type' => 'error', 'message' => "Agent exited with code #{status.exitstatus}: #{stderr}" }
+          return { 'type' => 'error', 'message' => result[:error] }
         end
 
         session.stop!
-        parse_response(stdout)
+        parse_response(result[:stdout])
       rescue Errno::ENOENT
         session&.error!
         Ai.logger.error "claude command not found. Ensure Claude Code CLI is installed and in PATH."
@@ -54,6 +41,33 @@ module Ai
       end
 
       private
+
+      def run_claude(prompt:, uuid:, resuming:, env:)
+        cmd = [
+          'claude',
+          '-p', prompt,
+          '--output-format', 'json',
+          '--max-turns', '25',
+          '--permission-mode', 'bypassPermissions'
+        ]
+
+        if resuming
+          cmd += ['--resume', uuid]
+        else
+          cmd += ['--session-id', uuid]
+        end
+
+        Ai.logger.info "#{resuming ? 'Resuming' : 'Starting'} claude subprocess (session: #{uuid})"
+
+        stdout, stderr, status = Open3.capture3(env, *cmd)
+
+        if status.success?
+          { failed: false, stdout: stdout }
+        else
+          Ai.logger.error "Claude exited with code #{status.exitstatus}: #{stderr}"
+          { failed: true, error: "Agent exited with code #{status.exitstatus}: #{stderr}" }
+        end
+      end
 
       def find_or_create_session(conversation, uuid)
         return Session.create!(status: 'starting') unless conversation
@@ -92,10 +106,22 @@ module Ai
         return { 'type' => 'error', 'message' => 'Empty response from agent' } if output.strip.empty?
 
         data = JSON.parse(output)
-        content = data['result'] || data['content'] || output
-        { 'type' => 'content', 'content' => content.to_s, 'done' => true }
+
+        # result can be empty when claude spent all turns on tool use
+        content = data['result'].to_s.strip
+        content = data['content'].to_s.strip if content.empty?
+        content = summarize_tool_use(data) if content.empty?
+
+        { 'type' => 'content', 'content' => content, 'done' => true }
       rescue JSON::ParserError
         { 'type' => 'content', 'content' => output.strip, 'done' => true }
+      end
+
+      def summarize_tool_use(data)
+        parts = []
+        parts << "Completed in #{data['num_turns']} turn(s)." if data['num_turns']
+        parts << "Cost: $#{'%.4f' % data['total_cost_usd']}." if data['total_cost_usd']
+        parts.empty? ? "Task completed (no text response)." : parts.join(' ')
       end
     end
   end
