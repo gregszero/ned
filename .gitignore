@@ -1,0 +1,46 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Database
+storage/data.db
+storage/data.db-*
+*.sqlite3
+
+# Session data
+storage/sessions/*
+!storage/sessions/.keep
+
+# Logs
+*.log
+log/
+
+# Temporary files
+tmp/
+.tmp/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Ruby/Bundler
+.bundle/
+vendor/bundle/
+*.gem
+
+# Docker
+.dockerignore
+
+# Claude Code
+.claude/
+
+# Overcommit
+.overcommit.yml

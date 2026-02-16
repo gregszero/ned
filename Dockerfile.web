@@ -1,0 +1,29 @@
+# Production Dockerfile for web/mcp services
+FROM ruby:3.3-alpine
+
+# Install dependencies
+RUN apk add --no-cache \
+    build-base \
+    postgresql-dev \
+    sqlite-dev \
+    git \
+    tzdata \
+    docker-cli
+
+WORKDIR /app
+
+# Install gems
+COPY Gemfile Gemfile.lock ./
+RUN bundle config set --local deployment 'true' && \
+    bundle config set --local without 'development test' && \
+    bundle install --jobs 4
+
+# Copy application
+COPY . .
+
+# Create directories
+RUN mkdir -p storage/data storage/sessions workspace/migrations
+
+EXPOSE 3000
+
+CMD ["bundle", "exec", "puma", "config.ru", "-b", "tcp://0.0.0.0:3000"]

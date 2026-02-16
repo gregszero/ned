@@ -1,0 +1,63 @@
+<div class="conversation-view">
+  <div class="conversation-header">
+    <div>
+      <a href="/conversations" class="back-link">← Back to conversations</a>
+      <h2><%= @conversation.title || "Conversation ##{@conversation.id}" %></h2>
+      <div class="conversation-info">
+        <span class="source-badge"><%= @conversation.source %></span>
+        <span><%= @conversation.messages.count %> messages</span>
+        <span>Started <%= @conversation.created_at.strftime('%b %d, %Y') %></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="messages-container" data-controller="messages">
+    <div id="messages" class="messages">
+      <% if @messages.empty? %>
+        <div class="empty-state">
+          <p>No messages yet. Start the conversation below!</p>
+        </div>
+      <% else %>
+        <% @messages.each do |message| %>
+          <%= render '_message', locals: { message: message } %>
+        <% end %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="message-form-container">
+    <turbo-frame id="message-form">
+      <form action="/conversations/<%= @conversation.id %>/messages" method="post" class="message-form" data-turbo="true">
+        <input type="hidden" name="turbo" value="1">
+        <textarea
+          name="content"
+          placeholder="Type your message..."
+          rows="3"
+          required
+          autofocus
+        ></textarea>
+        <button type="submit">Send</button>
+      </form>
+    </turbo-frame>
+  </div>
+</div>
+
+<script>
+  // Auto-scroll to bottom of messages
+  document.addEventListener('turbo:load', () => {
+    const messages = document.querySelector('.messages');
+    if (messages) {
+      messages.scrollTop = messages.scrollHeight;
+    }
+  });
+
+  // Scroll on new message
+  document.addEventListener('turbo:before-stream-render', () => {
+    setTimeout(() => {
+      const messages = document.querySelector('.messages');
+      if (messages) {
+        messages.scrollTop = messages.scrollHeight;
+      }
+    }, 100);
+  });
+</script>

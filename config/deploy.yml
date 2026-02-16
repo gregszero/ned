@@ -1,0 +1,57 @@
+# Kamal deployment configuration
+service: ai-rb
+image: your-username/ai-rb
+
+servers:
+  web:
+    hosts:
+      - your-server.com
+    labels:
+      traefik.http.routers.ai-rb.rule: Host(`your-domain.com`)
+    options:
+      network: private
+
+registry:
+  server: ghcr.io
+  username: your-username
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+env:
+  clear:
+    DB_HOST: db
+    RAILS_ENV: production
+  secret:
+    - ANTHROPIC_API_KEY
+    - CLAUDE_CODE_OAUTH_TOKEN
+    - DATABASE_URL
+
+volumes:
+  - "ai-rb-storage:/app/storage"
+
+accessories:
+  db:
+    image: postgres:16-alpine
+    host: your-server.com
+    port: 5432
+    env:
+      clear:
+        POSTGRES_DB: ai_rb_production
+      secret:
+        - POSTGRES_PASSWORD
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+traefik:
+  options:
+    publish:
+      - "443:443"
+    volume:
+      - "/letsencrypt:/letsencrypt"
+  args:
+    entryPoints.web.address: ":80"
+    entryPoints.websecure.address: ":443"
+    certificatesResolvers.letsencrypt.acme.email: "your-email@example.com"
+    certificatesResolvers.letsencrypt.acme.storage: "/letsencrypt/acme.json"
+    certificatesResolvers.letsencrypt.acme.httpchallenge: true
+    certificatesResolvers.letsencrypt.acme.httpchallenge.entrypoint: web

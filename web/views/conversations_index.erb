@@ -1,0 +1,35 @@
+<div class="conversations-list">
+  <div class="header">
+    <h2>Conversations</h2>
+    <form action="/conversations" method="post" class="new-conversation-form">
+      <input type="text" name="title" placeholder="Conversation title (optional)">
+      <button type="submit">Start New Conversation</button>
+    </form>
+  </div>
+
+  <% if @conversations.empty? %>
+    <div class="empty-state">
+      <p>No conversations yet. Start one above!</p>
+    </div>
+  <% else %>
+    <div class="conversation-cards">
+      <% @conversations.each do |conversation| %>
+        <a href="/conversations/<%= conversation.id %>" class="conversation-card">
+          <div class="conversation-header">
+            <h3><%= conversation.title || "Conversation ##{conversation.id}" %></h3>
+            <span class="source-badge"><%= conversation.source %></span>
+          </div>
+          <div class="conversation-meta">
+            <span><%= conversation.messages.count %> messages</span>
+            <span><%= conversation.last_message_at&.strftime('%b %d, %Y %I:%M %p') %></span>
+          </div>
+          <% if conversation.messages.any? %>
+            <div class="conversation-preview">
+              <%= conversation.messages.last.truncated_content(100) %>
+            </div>
+          <% end %>
+        </a>
+      <% end %>
+    </div>
+  <% end %>
+</div>

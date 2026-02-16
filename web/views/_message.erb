@@ -1,0 +1,13 @@
+<div class="message message-<%= message.role %>" id="message-<%= message.id %>">
+  <div class="message-header">
+    <span class="message-role">
+      <%= message.role == 'user' ? '👤 You' : '🤖 AI' %>
+    </span>
+    <span class="message-time">
+      <%= message.created_at.strftime('%I:%M %p') %>
+    </span>
+  </div>
+  <div class="message-content">
+    <%= message.content.gsub("\n", "<br>") %>
+  </div>
+</div>

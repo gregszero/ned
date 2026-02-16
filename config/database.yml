@@ -1,0 +1,23 @@
+# Database configuration for ai.rb
+
+default: &default
+  pool: 5
+  timeout: 5000
+
+development:
+  <<: *default
+  adapter: sqlite3
+  database: storage/data.db
+
+test:
+  <<: *default
+  adapter: sqlite3
+  database: storage/test.db
+
+production:
+  <<: *default
+  adapter: postgresql
+  encoding: unicode
+  # Use DATABASE_URL environment variable in production
+  # Example: postgresql://user:password@localhost/ai_rb_production
+  url: <%= ENV['DATABASE_URL'] %>

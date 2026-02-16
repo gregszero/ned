@@ -1,0 +1,20 @@
+<div class="pages-list">
+  <h2>AI-Generated Pages</h2>
+
+  <% if @pages.empty? %>
+    <div class="empty-state">
+      <p>No published pages yet.</p>
+    </div>
+  <% else %>
+    <div class="page-cards">
+      <% @pages.each do |page| %>
+        <a href="/pages/<%= page.slug %>" class="page-card">
+          <h3><%= page.title %></h3>
+          <div class="page-meta">
+            <span>Published <%= page.published_at&.strftime('%b %d, %Y') %></span>
+          </div>
+        </a>
+      <% end %>
+    </div>
+  <% end %>
+</div>
