@@ -30,10 +30,24 @@ services:
       RAILS_ENV: development
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      WHATSAPP_ENABLED: ${WHATSAPP_ENABLED:-false}
+      WHATSAPP_WEBHOOK_SECRET: ${WHATSAPP_WEBHOOK_SECRET}
+      GOWA_URL: http://whatsapp:3000
     depends_on:
       db:
         condition: service_healthy
     command: bundle exec puma config.ru -b tcp://0.0.0.0:3000
+
+  whatsapp:
+    image: aldinokemal2104/go-whatsapp-web-multidevice
+    ports:
+      - "3001:3000"
+    environment:
+      WHATSAPP_WEBHOOK: http://web:3000/webhooks/whatsapp
+      WHATSAPP_WEBHOOK_SECRET: ${WHATSAPP_WEBHOOK_SECRET}
+    volumes:
+      - whatsapp_data:/app/storages
+    restart: unless-stopped
 
   mcp:
     build:
@@ -55,3 +69,4 @@ services:
 volumes:
   postgres_data:
   bundle_cache:
+  whatsapp_data:

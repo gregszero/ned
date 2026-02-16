@@ -9,7 +9,7 @@ module Ai
     has_many :sessions, dependent: :destroy
 
     # Validations
-    validates :source, presence: true, inclusion: { in: %w[web cli scheduled_task] }
+    validates :source, presence: true, inclusion: { in: %w[web cli scheduled_task whatsapp] }
 
     # Scopes
     scope :recent, -> { order(last_message_at: :desc) }

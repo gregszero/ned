@@ -35,6 +35,7 @@ module Ai
       require_relative 'scheduler'
       require_relative 'skill_loader'
       require_relative 'message_router'
+      require_relative 'whatsapp'
       require_relative 'mcp_server'
 
       # Load models

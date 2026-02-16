@@ -71,6 +71,25 @@
     </div>
   </div>
 
+  <!-- WhatsApp Integration -->
+  <div class="card bg-base-100 shadow-md">
+    <div class="card-body">
+      <h3 class="card-title">WhatsApp Integration</h3>
+      <div class="flex items-center gap-4">
+        <div class="badge <%= Ai::WhatsApp.enabled? ? 'badge-success' : 'badge-ghost' %> gap-1">
+          <%= Ai::WhatsApp.enabled? ? 'Enabled' : 'Disabled' %>
+        </div>
+        <% if Ai::WhatsApp.enabled? %>
+          <a href="http://localhost:3001" target="_blank" class="btn btn-sm btn-outline">
+            Open GOWA Dashboard
+          </a>
+        <% else %>
+          <p class="text-base-content/60 text-sm">Set <code class="bg-base-300 px-1 rounded">WHATSAPP_ENABLED=true</code> to activate.</p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
   <!-- Configuration Section -->
   <div class="card bg-base-100 shadow-md">
     <div class="card-body">

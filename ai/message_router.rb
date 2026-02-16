@@ -10,6 +10,8 @@ module Ai
           handle_web_message(message)
         when 'cli'
           handle_cli_message(message)
+        when 'whatsapp'
+          handle_whatsapp_message(message)
         else
           Ai.logger.warn "Unknown message source: #{source}"
         end
@@ -37,6 +39,11 @@ module Ai
 
       def handle_cli_message(message)
         Ai.logger.info "Processing CLI message: #{message.content[0..50]}..."
+        Jobs::AgentExecutorJob.perform_later(message.id)
+      end
+
+      def handle_whatsapp_message(message)
+        Ai.logger.info "Processing WhatsApp message: #{message.content[0..50]}..."
         Jobs::AgentExecutorJob.perform_later(message.id)
       end
 

@@ -159,6 +159,24 @@ module Ai
           end
         end
 
+        # Webhooks
+        r.on 'webhooks' do
+          r.on 'whatsapp' do
+            r.post do
+              raw_body = r.body.read
+
+              unless Ai::WhatsApp.verify_signature(raw_body, r.env['HTTP_X_WEBHOOK_SIGNATURE'])
+                r.halt 401, { error: 'Invalid signature' }
+              end
+
+              payload = JSON.parse(raw_body)
+              Ai::WhatsApp.handle_inbound(payload)
+
+              { status: 'ok' }
+            end
+          end
+        end
+
         # Health check
         r.on 'health' do
           { status: 'ok', timestamp: Time.now.iso8601 }

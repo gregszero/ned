@@ -34,6 +34,7 @@ module Ai
         end
 
         broadcast_response(conversation, response_message) if response_message
+        deliver_to_whatsapp(conversation, response_message) if response_message
 
       rescue ActiveRecord::RecordNotFound => e
         Ai.logger.error "Message not found: #{e.message}"
@@ -61,6 +62,17 @@ module Ai
         HTML
 
         Web::TurboBroadcast.broadcast("conversation:#{conversation.id}", html)
+      end
+
+      def deliver_to_whatsapp(conversation, message)
+        return unless conversation.source == 'whatsapp'
+
+        phone = conversation.context&.dig('whatsapp_phone')
+        return unless phone
+
+        Ai::WhatsApp.send_message(phone: phone, content: message.content)
+      rescue => e
+        Ai.logger.error "WhatsApp delivery failed: #{e.message}"
       end
 
       def broadcast_response(conversation, message)
