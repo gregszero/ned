@@ -1,0 +1,83 @@
+Implement the following plan:
+
+# Notification System
+
+## Context
+Add a simple, reusable notification system. `noticed` gem requires Rails, so we build our own — minimal model, a broadcast helper, a notifications page, and the ability to start a chat from any notification.
+
+## New Files
+
+### 1. Migration: `workspace/migrations/20260216000010_create_notifications.rb`
+```ruby
+create_table :notifications do |t|
+  t.string :title, null: false
+  t.text :body
+  t.string :kind        # info, success, warning, error
+  t.string :status, default: 'unread'  # unread, read, dismissed
+  t.string :action_url  # optional link
+  t.integer :conversation_id  # optional, links to source conversation
+  t.timestamps
+end
+```
+
+### 2. Model: `ai/models/notification.rb`
+- Scopes: `unread`, `recent`
+- Methods: `mark_read!`, `broadcast!` (sends Turbo Stream via TurboBroadcast to `notifications` channel)
+- `start_conversation!` — creates a new conversation with the notification body as first message, returns conversation
+
+### 3. View: `web/views/notifications.erb`
+- Lists notifications newest-first
+- Each notification card has: title, body, timestamp, kind badge
+- "Start Chat" button that POSTs to `/notifications/:id/chat`
+- "Mark Read" button
+- Unread count badge styling
+
+### 4. Stimulus controller: `web/public/js/controllers/notifications_controller.js`
+- Subscribes to SSE at `/notifications/stream`
+- Renders incoming Turbo Streams (new notifications + badge updates)
+
+## Modified Files
+
+### 5. `web/app.rb` — Add routes
+- `GET /notifications` — list page
+- `GET /notifications/stream` — SSE endpoint for `notifications` channel
+- `POST /notifications/:id/read` — mark read
+- `POST /notifications/:id/chat` — create conversation from notification, redirect to it
+
+### 6. `web/views/layout.erb` — Add nav link
+- Add "Notifications" link with unread count badge in navbar
+
+### 7. `ai/jobs/scheduled_task_runner_job.rb` — Create notifications
+- After `mark_completed!` → create success notification
+- After `mark_failed!` → create error notification
+- Call `notification.broadcast!` to push via SSE
+
+## How `broadcast!` works
+Reuses existing `TurboBroadcast.broadcast("notifications", turbo_stream_html)` pattern — same as conversations. The Turbo Stream appends the notification card to the list and updates the badge count.
+
+## Verification
+1. Run migration: `rake db:migrate`
+2. Open `/notifications` — should show empty state
+3. Create a scheduled task that completes → notification appears in real-time
+4. Click "Start Chat" → new conversation created with notification context
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+in two minutes remind me of turn off the fire
+AI 10:40 PM
+Agent error: Agent exited with code 1:
+
+---
+
+why the agent wasnt able to create?
+
+---
+
+add better error logging so I can see the actual stderr
+
+---
+
+commit this
