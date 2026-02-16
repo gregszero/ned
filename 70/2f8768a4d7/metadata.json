@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "702f8768a4d7",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "web/app.rb",
+    "web/views/jobs_and_skills.erb",
+    "web/views/layout.erb",
+    "workspace/CLAUDE.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/70/2f8768a4d7/0/metadata.json",
+      "transcript": "/70/2f8768a4d7/0/full.jsonl",
+      "context": "/70/2f8768a4d7/0/context.md",
+      "content_hash": "/70/2f8768a4d7/0/content_hash.txt",
+      "prompt": "/70/2f8768a4d7/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 25,
+    "cache_creation_tokens": 17710,
+    "cache_read_tokens": 504854,
+    "output_tokens": 2486,
+    "api_call_count": 17
+  }
+}

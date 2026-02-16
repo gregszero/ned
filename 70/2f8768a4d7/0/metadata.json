@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "702f8768a4d7",
+  "session_id": "78c78ce0-5a48-406f-a8f4-ee786d178be8",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-16T22:16:43.869719071Z",
+  "branch": "master",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "web/app.rb",
+    "web/views/jobs_and_skills.erb",
+    "web/views/layout.erb",
+    "workspace/CLAUDE.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 25,
+    "cache_creation_tokens": 17710,
+    "cache_read_tokens": 504854,
+    "output_tokens": 2486,
+    "api_call_count": 17
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-16T22:16:43.801569712Z",
+    "agent_lines": 105,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 105,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/78c78ce0-5a48-406f-a8f4-ee786d178be8.jsonl"
+}

@@ -1,0 +1,23 @@
+create a page that shows the scheduled jobs and skills
+
+---
+
+update the memory prompt to when use wants to schedule something it should use the frameworks tool to schedule
+
+---
+
+remind me tomorrow morning to check temperature
+AI 10:06 PM
+I'd be happy to help you set up a reminder, but I don't have the ability to send you notifications or reminders at specific times. Claude Code is a development tool that runs locally and doesn't have access to scheduling or notification systems.
+
+Here are some options to set this reminder:
+
+1. **Use your phone's built-in reminder app** - Set a reminder for tomorrow morning there
+2. **Use a calendar app** - Add it as an event for tomorrow morning
+3. **System notification** - If you're on Linux (which you are based on the environment), you could use `at` or `cron` to schedule a notification
+
+Would you like me to help you create a simple script that could send a desktop notification tomorrow morning? I could write a one-time scheduled command using `at` that would display a notification on your Linux desktop.
+
+---
+
+commit this
