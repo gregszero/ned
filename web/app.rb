@@ -3,6 +3,7 @@
 require 'roda'
 require 'tilt/erubi'
 require 'json'
+require_relative 'turbo_broadcast'
 
 module Ai
   module Web
@@ -13,6 +14,7 @@ module Ai
       plugin :halt
       plugin :all_verbs
       plugin :symbol_views
+      plugin :streaming
 
       # Make models available in views
       plugin :render_locals, locals: {
@@ -58,6 +60,24 @@ module Ai
               end
             end
 
+            # SSE stream for Turbo Stream updates
+            r.on 'stream' do
+              r.get do
+                channel = "conversation:#{@conversation.id}"
+                queue = Thread::Queue.new
+                subscriber = TurboBroadcast.subscribe(channel) { |html| queue.push(html) }
+
+                response['Content-Type'] = 'text/event-stream'
+                response['Cache-Control'] = 'no-cache'
+                response['X-Accel-Buffering'] = 'no'
+
+                stream(loop: true, callback: proc { TurboBroadcast.unsubscribe(channel, subscriber) }) do |out|
+                  html = queue.pop
+                  out << "data: #{html.gsub("\n", "\ndata: ")}\n\n"
+                end
+              end
+            end
+
             # Messages for this conversation
             r.on 'messages' do
               r.post do
@@ -77,7 +97,7 @@ module Ai
                 Ai::Jobs::AgentExecutorJob.perform_later(message.id)
 
                 if r.params['turbo']
-                  # Turbo Stream response
+                  # Turbo Stream response - append user message and reset form
                   response['Content-Type'] = 'text/vnd.turbo-stream.html'
                   render inline: <<~HTML
                     <turbo-stream action="append" target="messages">
@@ -85,8 +105,23 @@ module Ai
                         #{render('_message', locals: { message: message })}
                       </template>
                     </turbo-stream>
-                    <turbo-stream action="reset" target="message-form">
-                      <template></template>
+                    <turbo-stream action="replace" target="message-form">
+                      <template>
+                        <turbo-frame id="message-form">
+                          <form action="/conversations/#{@conversation.id}/messages" method="post" class="flex gap-3" data-turbo="true">
+                            <input type="hidden" name="turbo" value="1">
+                            <textarea
+                              name="content"
+                              placeholder="Type your message..."
+                              rows="3"
+                              required
+                              autofocus
+                              class="textarea textarea-bordered flex-1 text-base"
+                            ></textarea>
+                            <button type="submit" class="btn btn-primary self-end">Send</button>
+                          </form>
+                        </turbo-frame>
+                      </template>
                     </turbo-stream>
                   HTML
                 else
