@@ -7,4 +7,6 @@ const application = Application.start()
 
 // Import controllers
 import ConversationController from "/js/controllers/conversation_controller.js"
+import NotificationsController from "/js/controllers/notifications_controller.js"
 application.register("conversation", ConversationController)
+application.register("notifications", NotificationsController)

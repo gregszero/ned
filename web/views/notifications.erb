@@ -1,0 +1,48 @@
+<div class="max-w-5xl mx-auto space-y-6" data-controller="notifications">
+  <h2 class="text-3xl font-bold">Notifications</h2>
+
+  <div id="notifications-list" class="space-y-3">
+    <% if @notifications.any? %>
+      <% @notifications.each do |notification| %>
+        <% kind_badge = case notification.kind
+           when 'success' then 'badge-success'
+           when 'error'   then 'badge-error'
+           when 'warning' then 'badge-warning'
+           else 'badge-info'
+           end %>
+        <% unread_class = notification.status == 'unread' ? 'border-l-4 border-primary' : '' %>
+
+        <div id="notification-<%= notification.id %>" class="card bg-base-100 shadow-sm <%= unread_class %>">
+          <div class="card-body p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <h3 class="font-semibold"><%= notification.title %></h3>
+                <span class="badge <%= kind_badge %> badge-sm"><%= notification.kind || 'info' %></span>
+              </div>
+              <span class="text-xs text-base-content/50"><%= notification.created_at.strftime('%b %d, %H:%M') %></span>
+            </div>
+            <% if notification.body.present? %>
+              <p class="text-sm text-base-content/70 mt-1"><%= notification.body %></p>
+            <% end %>
+            <div class="card-actions justify-end mt-2">
+              <% if notification.status == 'unread' %>
+                <form action="/notifications/<%= notification.id %>/read" method="post" class="inline">
+                  <button type="submit" class="btn btn-ghost btn-xs">Mark Read</button>
+                </form>
+              <% end %>
+              <form action="/notifications/<%= notification.id %>/chat" method="post" class="inline">
+                <button type="submit" class="btn btn-primary btn-xs">Start Chat</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body p-6 text-center">
+          <p class="text-base-content/60">No notifications yet.</p>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

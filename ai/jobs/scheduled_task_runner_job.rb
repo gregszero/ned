@@ -24,6 +24,15 @@ module Ai
         # Feed result back to the originating conversation so the AI knows what happened
         feed_result_to_conversation(task, result)
 
+        # Create success notification
+        notification = Notification.create!(
+          title: "Task completed: #{task.title}",
+          body: "Scheduled task '#{task.title}' finished successfully.",
+          kind: 'success',
+          conversation_id: task.respond_to?(:conversation_id) ? task.conversation_id : nil
+        )
+        notification.broadcast!
+
         Ai.logger.info "Completed scheduled task #{task_id}"
 
       rescue ActiveRecord::RecordNotFound => e
@@ -32,6 +41,17 @@ module Ai
         Ai.logger.error "Scheduled task execution failed: #{e.message}"
         task&.mark_failed!(e.message)
         feed_error_to_conversation(task, e.message) if task
+
+        # Create error notification
+        if task
+          notification = Notification.create!(
+            title: "Task failed: #{task.title}",
+            body: e.message,
+            kind: 'error',
+            conversation_id: task.respond_to?(:conversation_id) ? task.conversation_id : nil
+          )
+          notification.broadcast!
+        end
       end
 
       private

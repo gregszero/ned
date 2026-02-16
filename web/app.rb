@@ -21,7 +21,8 @@ module Ai
         Conversation: Ai::Conversation,
         Message: Ai::Message,
         SkillRecord: Ai::SkillRecord,
-        Config: Ai::Config
+        Config: Ai::Config,
+        Notification: Ai::Notification
       }
 
       route do |r|
@@ -136,6 +137,52 @@ module Ai
         r.on 'pages', String do |slug|
           @page = AiPage.published.find_by!(slug: slug)
           view :page_show
+        end
+
+        # Notifications
+        r.on 'notifications' do
+          # SSE stream
+          r.on 'stream' do
+            r.get do
+              queue = Thread::Queue.new
+              subscriber = TurboBroadcast.subscribe('notifications') { |html| queue.push(html) }
+
+              response['Content-Type'] = 'text/event-stream'
+              response['Cache-Control'] = 'no-cache'
+              response['X-Accel-Buffering'] = 'no'
+
+              stream(loop: true, callback: proc { TurboBroadcast.unsubscribe('notifications', subscriber) }) do |out|
+                html = queue.pop
+                out << "data: #{html.gsub("\n", "\ndata: ")}\n\n"
+              end
+            end
+          end
+
+          # Mark read
+          r.on Integer, 'read' do |id|
+            r.post do
+              notification = Ai::Notification.find(id)
+              notification.mark_read!
+              r.redirect '/notifications'
+            end
+          end
+
+          # Start chat from notification
+          r.on Integer, 'chat' do |id|
+            r.post do
+              notification = Ai::Notification.find(id)
+              conversation = notification.start_conversation!
+              r.redirect "/conversations/#{conversation.id}"
+            end
+          end
+
+          # List
+          r.is do
+            r.get do
+              @notifications = Ai::Notification.recent.limit(50)
+              view :notifications
+            end
+          end
         end
 
         # Jobs & Skills

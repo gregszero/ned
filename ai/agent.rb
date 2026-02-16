@@ -64,8 +64,11 @@ module Ai
         if status.success?
           { failed: false, stdout: stdout }
         else
-          Ai.logger.error "Claude exited with code #{status.exitstatus}: #{stderr}"
-          { failed: true, error: "Agent exited with code #{status.exitstatus}: #{stderr}" }
+          detail = stderr.to_s.strip
+          detail = stdout.to_s.strip if detail.empty?
+          detail = "(no output)" if detail.empty?
+          Ai.logger.error "Claude exited with code #{status.exitstatus}:\nstderr: #{stderr}\nstdout: #{stdout}"
+          { failed: true, error: "Agent exited with code #{status.exitstatus}:\n#{detail}" }
         end
       end
 

@@ -20,6 +20,17 @@
         <% Ai::AiPage.published.recent.each do |page| %>
           <li><a href="/pages/<%= page.slug %>" class="font-medium"><%= page.title %></a></li>
         <% end %>
+        <li>
+          <a href="/notifications" class="font-medium">
+            Notifications
+            <% unread = Ai::Notification.unread.count %>
+            <% if unread > 0 %>
+              <span id="notifications-badge" class="badge badge-sm badge-primary"><%= unread %></span>
+            <% else %>
+              <span id="notifications-badge" class="badge badge-sm badge-primary hidden">0</span>
+            <% end %>
+          </a>
+        </li>
         <li><a href="/jobs" class="font-medium">Jobs & Skills</a></li>
         <li><a href="/settings" class="font-medium">Settings</a></li>
         <li><a href="/conversations" data-turbo-method="post" class="btn btn-primary btn-sm">+ New</a></li>
