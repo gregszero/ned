@@ -20,6 +20,7 @@
         <% Ai::AiPage.published.recent.each do |page| %>
           <li><a href="/pages/<%= page.slug %>" class="font-medium"><%= page.title %></a></li>
         <% end %>
+        <li><a href="/jobs" class="font-medium">Jobs & Skills</a></li>
         <li><a href="/settings" class="font-medium">Settings</a></li>
         <li><a href="/conversations" data-turbo-method="post" class="btn btn-primary btn-sm">+ New</a></li>
       </ul>

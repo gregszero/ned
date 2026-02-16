@@ -1,0 +1,86 @@
+<div class="max-w-5xl mx-auto space-y-6">
+  <h2 class="text-3xl font-bold">Jobs & Skills</h2>
+
+  <!-- Scheduled Jobs Section -->
+  <div class="card bg-base-100 shadow-md">
+    <div class="card-body">
+      <h3 class="card-title">Scheduled Jobs (<%= @tasks.count %>)</h3>
+      <% if @tasks.any? %>
+        <div class="overflow-x-auto">
+          <table class="table table-zebra">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Scheduled For</th>
+                <th>Skill</th>
+                <th>Status</th>
+                <th>Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @tasks.each do |task| %>
+                <tr>
+                  <td class="font-semibold"><%= task.title %></td>
+                  <td><%= task.scheduled_for&.strftime('%b %d, %Y %H:%M') %></td>
+                  <td>
+                    <% if task.skill_name.present? %>
+                      <code class="text-xs bg-base-300 px-2 py-1 rounded"><%= task.skill_name %></code>
+                    <% else %>
+                      <span class="text-base-content/40">-</span>
+                    <% end %>
+                  </td>
+                  <td>
+                    <% badge_class = case task.status
+                       when 'pending' then 'badge-warning'
+                       when 'running' then 'badge-info'
+                       when 'completed' then 'badge-success'
+                       when 'failed' then 'badge-error'
+                       else 'badge-ghost'
+                       end %>
+                    <div class="badge <%= badge_class %> gap-1"><%= task.status %></div>
+                  </td>
+                  <td class="max-w-xs truncate text-sm"><%= task.result %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="text-base-content/60">No scheduled jobs yet.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Skills Section -->
+  <div class="card bg-base-100 shadow-md">
+    <div class="card-body">
+      <h3 class="card-title">Skills (<%= @skills.count %>)</h3>
+      <% if @skills.any? %>
+        <div class="overflow-x-auto">
+          <table class="table table-zebra">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Description</th>
+                <th>Usage Count</th>
+                <th>File</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @skills.each do |skill| %>
+                <tr>
+                  <td class="font-semibold"><%= skill.name %></td>
+                  <td><%= skill.description %></td>
+                  <td><%= skill.usage_count %></td>
+                  <td><code class="text-xs bg-base-300 px-2 py-1 rounded"><%= skill.file_path %></code></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <p class="text-base-content/60">No skills registered yet.</p>
+      <% end %>
+    </div>
+  </div>
+</div>

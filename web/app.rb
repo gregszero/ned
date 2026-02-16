@@ -138,6 +138,17 @@ module Ai
           view :page_show
         end
 
+        # Jobs & Skills
+        r.on 'jobs' do
+          r.is do
+            r.get do
+              @tasks = Ai::ScheduledTask.order(scheduled_for: :desc)
+              @skills = SkillRecord.all.order(usage_count: :desc)
+              view :jobs_and_skills
+            end
+          end
+        end
+
         # Settings
         r.on 'settings' do
           r.is do
