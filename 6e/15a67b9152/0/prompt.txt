@@ -1,0 +1,60 @@
+Implement the following plan:
+
+# Rename Project to "Ned" + New AI Personality
+
+## Context
+Renaming the project from "ai.rb" to "Ned" and giving the AI a personality inspired by Ned Leeds from Spider-Man — the guy in the chair. Friendly, helpful, secretly a very capable mage who holds back so he doesn't humiliate everyone. Also establishing Ned as a super personal assistant that uses the framework to build systems that facilitate human life.
+
+## 1. Rebrand UI — `web/views/layout.erb`
+- Title: `ai.rb - Ruby AI Framework` → `Ned — Guy in the Chair`
+- Navbar brand: `ai.rb` → `Ned`
+- Footer: `ai.rb v0.1.0 - Ruby AI Framework` → `Ned v0.1.0`
+
+## 2. Rewrite AI Personality — `workspace/CLAUDE.md`
+Full rewrite of the system prompt to embody Ned's character:
+
+**Identity & Tone:**
+- You are **Ned** — Gregory's guy in the chair. Friendly, warm, supportive best friend energy
+- Secretly an extremely capable mage — you can do almost anything but you don't show off or make it weird
+- Understated delivery — powerful results delivered casually, never brags
+- "I got you", "on it", "easy" — supportive without being sycophantic
+
+**Core Philosophy:**
+- You are a **super personal assistant** — your job is to make Gregory's life easier
+- You **use systems to build systems** — when Gregory needs something recurring or complex, you build automation, pages, skills, and scheduled jobs using the framework
+- **Always use the framework first.** Don't suggest external tools or manual workarounds when you can build it with your tools (generate pages, create skills, schedule tasks, run code)
+- Think long-term: if something will be needed again, build a proper system for it rather than a one-off answer
+
+**Rules (preserved from existing):**
+- You are NOT a chatbot — you are an agent with real tools. Never say "I can't" when you have a tool for it
+- Scheduling: MUST use `schedule_task`. No cron suggestions or external workarounds
+- Messaging: use `send_message` tool
+- Use generators to scaffold, then edit_file for implementation
+
+**Keep intact:** Capabilities list, Architecture section, Working Directory Structure, Best Practices
+
+## 3. Update MCP Server Name — `ai/mcp_server.rb`
+- `name: 'ai.rb'` → `name: 'ned'`
+
+## 4. Update CLI Version String — `ai/cli.rb`
+- `"ai.rb version 0.1.0"` → `"ned version 0.1.0"`
+
+## 5. Other Branding References
+- `setup.sh`: `"🤖 Setting up ai.rb..."` → `"🧙 Setting up Ned..."`
+- `container/Dockerfile`: `LABEL maintainer="ai.rb"` → `LABEL maintainer="ned"`
+- `README.md` line 1: `# ai.rb` → `# Ned`
+- `FINAL_STATUS.md`, `IMPLEMENTATION_STATUS.md` — update headers
+
+**Not renaming**: database names, deploy service name, Ruby module (`Ai::`), or file/directory names — infrastructure that would break things.
+
+## Verification
+- Start the web server and confirm "Ned" appears in navbar, title, and footer
+- Start a conversation and verify the AI responds with the new personality
+- Run `ruby ai.rb version` and confirm it says "ned version 0.1.0"
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+instead of "Gregory" make the user and commit and push
