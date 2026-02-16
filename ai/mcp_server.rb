@@ -9,7 +9,7 @@ module Ai
 
       def configure!
         @server = FastMcp::Server.new(
-          name: 'ai.rb',
+          name: 'ned',
           version: '0.1.0'
         )
 

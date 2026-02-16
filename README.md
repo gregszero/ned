@@ -1,4 +1,4 @@
-# ai.rb
+# Ned
 
 A Ruby AI framework for building self-growing AI assistants with Rails-inspired conventions.
 

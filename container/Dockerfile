@@ -1,7 +1,7 @@
 # AI Agent Container - Claude Code SDK
 FROM ruby:3.3-alpine
 
-LABEL maintainer="ai.rb"
+LABEL maintainer="ned"
 LABEL description="Ruby AI agent container with Claude Code SDK"
 
 # Install system dependencies

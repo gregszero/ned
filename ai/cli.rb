@@ -68,7 +68,7 @@ module Ai
 
     desc "version", "Show version information"
     def version
-      puts "ai.rb version 0.1.0"
+      puts "ned version 0.1.0"
       puts "Ruby #{RUBY_VERSION}"
     end
   end

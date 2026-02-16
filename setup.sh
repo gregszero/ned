@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🤖 Setting up ai.rb..."
+echo "🧙 Setting up Ned..."
 echo ""
 
 # 1. Check dependencies
