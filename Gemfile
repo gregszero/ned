@@ -36,4 +36,5 @@ group :development do
   gem 'pry'                   # Better console
   gem 'rake'                  # Task runner
   gem 'overcommit'            # Git hooks (push to GitHub + entire.io)
+  gem 'rack-unreloader'       # Auto-reload code changes
 end
