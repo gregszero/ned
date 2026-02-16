@@ -24,12 +24,6 @@ module Ai
       exec "bundle exec puma config.ru -b tcp://#{options[:host]}:#{options[:port]}"
     end
 
-    desc "queue", "Start Solid Queue worker"
-    def queue
-      require 'solid_queue/cli'
-      SolidQueue::Cli.start(['start'])
-    end
-
     desc "mcp", "Start MCP server"
     option :port, type: :numeric, default: 9292, desc: "Port to run MCP server on"
     option :host, type: :string, default: '0.0.0.0', desc: "Host to bind to"

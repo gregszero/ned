@@ -32,6 +32,7 @@ module Ai
       # Core framework files (order matters)
       require_relative 'database'
       require_relative 'agent'
+      require_relative 'scheduler'
       require_relative 'skill_loader'
       require_relative 'message_router'
       require_relative 'mcp_server'
@@ -43,7 +44,7 @@ module Ai
       require_relative 'jobs/application_job'
       Dir[root.join('ai/jobs/**/*.rb')].sort.each { |f| require f unless f.include?('application_job') }
 
-      # Configure Solid Queue
+      # Configure ActiveJob queue adapter
       require_relative 'queue'
 
       # Connect to database if configured

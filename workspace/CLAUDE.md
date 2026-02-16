@@ -22,9 +22,9 @@ You have access to the following MCP tools:
 
 - Ruby 3.3+ with ActiveRecord
 - PostgreSQL/SQLite database
-- Solid Queue for background jobs
-- Docker containers for isolation
-- Claude Code SDK for agent execution
+- ActiveJob (async adapter) for background jobs
+- Rufus-scheduler for recurring tasks
+- Claude Code CLI subprocess for agent execution
 - MCP protocol for tool communication
 
 ## Working Directory Structure

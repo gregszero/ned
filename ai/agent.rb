@@ -10,6 +10,9 @@ module Ai
       # Execute a prompt via claude subprocess and return parsed response
       def execute(prompt:, session_id:, conversation: nil)
         uuid = to_uuid(session_id)
+        session = find_or_create_session(conversation, uuid)
+
+        session.start!
 
         cmd = [
           'claude',
@@ -21,25 +24,43 @@ module Ai
 
         env = build_env(conversation)
 
-        Ai.logger.info "Spawning claude subprocess (session: #{session_id})"
+        Ai.logger.info "Spawning claude subprocess (session: #{uuid})"
 
         stdout, stderr, status = Open3.capture3(env, *cmd)
 
         unless status.success?
+          session.error!
           Ai.logger.error "Claude exited with code #{status.exitstatus}: #{stderr}"
           return { 'type' => 'error', 'message' => "Agent exited with code #{status.exitstatus}: #{stderr}" }
         end
 
+        session.stop!
         parse_response(stdout)
       rescue Errno::ENOENT
+        session&.error!
         Ai.logger.error "claude command not found. Ensure Claude Code CLI is installed and in PATH."
         { 'type' => 'error', 'message' => 'claude command not found' }
       rescue => e
+        session&.error!
         Ai.logger.error "Agent execution failed: #{e.message}"
         { 'type' => 'error', 'message' => e.message }
       end
 
       private
+
+      def find_or_create_session(conversation, uuid)
+        return Session.create!(status: 'starting') unless conversation
+
+        # Reuse existing session for this conversation or create one
+        conversation.sessions.find_by(container_id: uuid) ||
+          conversation.sessions.create!(container_id: uuid, status: 'starting')
+      end
+
+      # Convert any value to a deterministic UUID v5 (SHA-1 based)
+      def to_uuid(value)
+        hash = Digest::SHA1.hexdigest("ai.rb:#{value}")
+        [hash[0..7], hash[8..11], "5#{hash[13..15]}", "#{(hash[16].to_i(16) & 0x3 | 0x8).to_s(16)}#{hash[17..19]}", hash[20..31]].join('-')
+      end
 
       def build_env(conversation)
         env = {}
@@ -54,13 +75,6 @@ module Ai
 
         env['CONVERSATION_ID'] = conversation.id.to_s if conversation
         env
-      end
-
-      # Convert any value to a deterministic UUID v5 (SHA-1 based)
-      def to_uuid(value)
-        hash = Digest::SHA1.hexdigest("ai.rb:#{value}")
-        # Format as UUID v5: xxxxxxxx-xxxx-5xxx-Nxxx-xxxxxxxxxxxx
-        [hash[0..7], hash[8..11], "5#{hash[13..15]}", "#{(hash[16].to_i(16) & 0x3 | 0x8).to_s(16)}#{hash[17..19]}", hash[20..31]].join('-')
       end
 
       def parse_response(output)

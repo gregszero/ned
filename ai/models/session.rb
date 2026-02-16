@@ -9,13 +9,11 @@ module Ai
 
     # Validations
     validates :status, presence: true, inclusion: { in: %w[starting running stopped error] }
-    validates :container_id, uniqueness: true, allow_nil: true
 
     # Scopes
     scope :active, -> { where(status: 'running') }
     scope :stopped, -> { where(status: 'stopped') }
     scope :with_errors, -> { where(status: 'error') }
-    scope :old, -> { where('stopped_at < ?', 30.minutes.ago) }
 
     # Methods
     def running?
@@ -42,10 +40,16 @@ module Ai
     end
 
     def error!(message = nil)
-      update!(
-        status: 'error',
-        stopped_at: Time.current
-      )
+      update!(status: 'error', stopped_at: Time.current)
+    end
+
+    # container_id column repurposed as session_uuid
+    def session_uuid
+      container_id
+    end
+
+    def session_uuid=(value)
+      self.container_id = value
     end
   end
 end

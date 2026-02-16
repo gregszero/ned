@@ -228,6 +228,8 @@ GEM
     rexml (3.4.4)
     roda (3.101.0)
       rack
+    rufus-scheduler (3.9.2)
+      fugit (~> 1.1, >= 1.11.1)
     securerandom (0.4.1)
     solid_cable (3.0.12)
       actioncable (>= 7.2)
@@ -238,13 +240,6 @@ GEM
       activejob (>= 7.2)
       activerecord (>= 7.2)
       railties (>= 7.2)
-    solid_queue (1.3.1)
-      activejob (>= 7.1)
-      activerecord (>= 7.1)
-      concurrent-ruby (>= 1.3.1)
-      fugit (~> 1.11)
-      railties (>= 7.1)
-      thor (>= 1.3.1)
     sqlite3 (2.9.0-aarch64-linux-gnu)
     sqlite3 (2.9.0-aarch64-linux-musl)
     sqlite3 (2.9.0-arm-linux-gnu)
@@ -298,9 +293,9 @@ DEPENDENCIES
   puma
   rake
   roda
+  rufus-scheduler
   solid_cable
   solid_cache
-  solid_queue
   sqlite3
   thor
   tilt

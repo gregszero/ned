@@ -33,7 +33,6 @@ module Ai
           content: content
         )
 
-        # TODO: Broadcast via Solid Cable when implemented
         Ai.logger.info "Message sent to conversation #{conversation.id}"
 
         {

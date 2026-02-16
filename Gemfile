@@ -8,7 +8,7 @@ ruby '~> 3.3'
 gem 'activerecord', '~> 8.0'
 gem 'pg'                      # Database (PostgreSQL)
 gem 'sqlite3'                 # SQLite option for development
-gem 'solid_queue'             # Background jobs
+gem 'rufus-scheduler'         # Cron-like recurring jobs
 gem 'solid_cable'             # WebSockets (for web UI)
 gem 'solid_cache'             # Caching
 

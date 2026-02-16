@@ -33,8 +33,10 @@ module Ai
           active_session: conversation.active_session&.then do |session|
             {
               id: session.id,
+              session_uuid: session.session_uuid,
               status: session.status,
-              started_at: session.started_at
+              started_at: session.started_at,
+              duration: session.duration
             }
           end,
           context: conversation.context
