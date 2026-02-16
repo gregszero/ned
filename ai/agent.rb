@@ -11,6 +11,7 @@ module Ai
       def execute(prompt:, session_id:, conversation: nil)
         uuid = to_uuid(session_id)
         session = find_or_create_session(conversation, uuid)
+        resuming = session.persisted? && session.stopped?
 
         session.start!
 
@@ -18,13 +19,19 @@ module Ai
           'claude',
           '-p', prompt,
           '--output-format', 'json',
-          '--session-id', uuid,
           '--max-turns', '25'
         ]
 
+        # Resume existing session or start new one
+        if resuming
+          cmd += ['--resume', uuid]
+        else
+          cmd += ['--session-id', uuid]
+        end
+
         env = build_env(conversation)
 
-        Ai.logger.info "Spawning claude subprocess (session: #{uuid})"
+        Ai.logger.info "#{resuming ? 'Resuming' : 'Starting'} claude subprocess (session: #{uuid})"
 
         stdout, stderr, status = Open3.capture3(env, *cmd)
 
