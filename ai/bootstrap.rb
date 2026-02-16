@@ -31,7 +31,7 @@ module Ai
     def load_core_components
       # Core framework files (order matters)
       require_relative 'database'
-      require_relative 'container'
+      require_relative 'agent'
       require_relative 'skill_loader'
       require_relative 'message_router'
       require_relative 'mcp_server'

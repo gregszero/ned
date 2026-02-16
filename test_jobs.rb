@@ -13,7 +13,7 @@ message = conversation.add_message(role: 'user', content: 'Test message for job'
 
 puts "  Created message #{message.id} in conversation #{conversation.id}"
 
-# Note: This will try to spawn a container, which will fail without API keys
+# Note: This will try to run claude subprocess, which will fail without API keys
 # but we can see that the job executes
 begin
   puts "  Enqueueing AgentExecutorJob..."
@@ -44,18 +44,8 @@ rescue => e
   puts "  ⚠️  Job failed: #{e.message}"
 end
 
-# Test 3: Container Cleanup Job
-puts "\n3. Testing ContainerCleanupJob..."
-begin
-  puts "  Enqueueing ContainerCleanupJob..."
-  Ai::Jobs::ContainerCleanupJob.perform_later
-  puts "  ✅ Job enqueued and executed (inline mode)"
-rescue => e
-  puts "  ⚠️  Job failed: #{e.message}"
-end
-
-# Test 4: Memory Sync Job
-puts "\n4. Testing MemorySyncJob..."
+# Test 3: Memory Sync Job
+puts "\n3. Testing MemorySyncJob..."
 session = Ai::Session.create!(
   conversation: conversation,
   status: 'stopped',
@@ -86,7 +76,6 @@ end
 # Check queue adapter
 puts "\n" + "="*50
 puts "Queue Adapter: #{ActiveJob::Base.queue_adapter.class.name}"
-puts "Mode: Inline (synchronous - jobs execute immediately)"
-puts "\n📝 Note: For production, switch to async adapter in ai/queue.rb"
+puts "Mode: Solid Queue (async background processing)"
 
 puts "\n✅ Job tests complete!"

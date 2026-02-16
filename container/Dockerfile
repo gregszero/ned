@@ -40,4 +40,4 @@ ENV LANG=C.UTF-8 \
     TERM=xterm-256color
 
 # Default command (will be overridden at runtime)
-CMD ["claude", "code", "--help"]
+CMD ["sleep", "infinity"]

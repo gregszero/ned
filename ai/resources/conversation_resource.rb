@@ -34,7 +34,6 @@ module Ai
             {
               id: session.id,
               status: session.status,
-              container_id: session.container_id,
               started_at: session.started_at
             }
           end,

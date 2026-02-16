@@ -63,9 +63,6 @@ GEM
     crass (1.0.6)
     csv (3.3.5)
     date (3.5.1)
-    docker-api (2.4.0)
-      excon (>= 0.64.0)
-      multi_json
     dotenv (3.2.0)
     drb (2.2.3)
     dry-configurable (1.3.0)
@@ -102,8 +99,6 @@ GEM
     erubi (1.13.1)
     et-orbi (1.4.0)
       tzinfo
-    excon (1.3.2)
-      logger
     fast-mcp (1.6.0)
       addressable (~> 2.8)
       base64
@@ -153,7 +148,6 @@ GEM
     mini_mime (1.1.5)
     minitest (6.0.1)
       prism (~> 1.5)
-    multi_json (1.19.1)
     multi_xml (0.8.1)
       bigdecimal (>= 3.1, < 5)
     net-scp (4.1.0)
@@ -291,7 +285,6 @@ PLATFORMS
 DEPENDENCIES
   activerecord (~> 8.0)
   anthropic
-  docker-api
   dotenv
   erubi
   fast-mcp

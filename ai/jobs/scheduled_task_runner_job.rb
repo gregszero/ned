@@ -5,26 +5,24 @@ module Ai
     class ScheduledTaskRunnerJob < ApplicationJob
       queue_as :scheduled_tasks
 
-      # Execute a scheduled task
+      # Execute a scheduled task and feed results back to the conversation
       def perform(task_id)
         task = ScheduledTask.find(task_id)
 
         Ai.logger.info "Running scheduled task: #{task.title}"
 
-        # Mark as running
         task.mark_running!
 
-        # Execute the task
         result = if task.skill_name.present?
-          # Execute via skill
           execute_skill(task)
         else
-          # Execute description as instruction
           execute_instruction(task)
         end
 
-        # Mark as completed
         task.mark_completed!(result.to_json)
+
+        # Feed result back to the originating conversation so the AI knows what happened
+        feed_result_to_conversation(task, result)
 
         Ai.logger.info "Completed scheduled task #{task_id}"
 
@@ -33,6 +31,7 @@ module Ai
       rescue => e
         Ai.logger.error "Scheduled task execution failed: #{e.message}"
         task&.mark_failed!(e.message)
+        feed_error_to_conversation(task, e.message) if task
       end
 
       private
@@ -54,22 +53,13 @@ module Ai
       end
 
       def execute_instruction(task)
-        # Create a new conversation for this task
-        conversation = Conversation.create!(
-          title: task.title,
-          source: 'scheduled_task',
-          context: {
-            scheduled_task_id: task.id
-          }
-        )
+        conversation = find_or_create_conversation(task)
 
-        # Add the task description as a message
         message = conversation.add_message(
           role: 'user',
           content: task.description || task.title
         )
 
-        # Enqueue agent execution
         AgentExecutorJob.perform_later(message.id)
 
         {
@@ -77,6 +67,37 @@ module Ai
           message_id: message.id,
           status: 'enqueued'
         }
+      end
+
+      def find_or_create_conversation(task)
+        if task.respond_to?(:conversation_id) && task.conversation_id
+          Conversation.find(task.conversation_id)
+        else
+          Conversation.create!(
+            title: task.title,
+            source: 'scheduled_task',
+            context: { scheduled_task_id: task.id }
+          )
+        end
+      end
+
+      def feed_result_to_conversation(task, result)
+        conversation = find_or_create_conversation(task)
+
+        conversation.add_message(
+          role: 'system',
+          content: "Scheduled task '#{task.title}' completed:\n```json\n#{result.to_json}\n```"
+        )
+      end
+
+      def feed_error_to_conversation(task, error_message)
+        conversation = find_or_create_conversation(task)
+        conversation.add_message(
+          role: 'system',
+          content: "Scheduled task '#{task.title}' failed: #{error_message}"
+        )
+      rescue => e
+        Ai.logger.error "Failed to feed error back to conversation: #{e.message}"
       end
     end
   end

@@ -6,7 +6,7 @@ module Ai
   class Database
     class << self
       def configured?
-        ENV['DATABASE_URL'] || File.exist?("#{Ai.root}/config/database.yml")
+        ENV['DATABASE_URL'] || File.exist?("#{Ai.root}/config/database.yml") || File.exist?("#{Ai.root}/storage/data.db")
       end
 
       def connect!

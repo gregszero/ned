@@ -15,7 +15,6 @@ gem 'solid_cache'             # Caching
 # AI & MCP
 gem 'fast-mcp'                # MCP server
 gem 'anthropic'               # Anthropic API client
-gem 'docker-api'              # Container management
 
 # CLI & Web
 gem 'thor'                    # CLI interface
