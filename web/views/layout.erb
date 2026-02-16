@@ -17,7 +17,9 @@
     <div class="flex-none">
       <ul class="menu menu-horizontal gap-1">
         <li><a href="/conversations" class="font-medium">Conversations</a></li>
-        <li><a href="/pages" class="font-medium">Pages</a></li>
+        <% Ai::AiPage.published.recent.each do |page| %>
+          <li><a href="/pages/<%= page.slug %>" class="font-medium"><%= page.title %></a></li>
+        <% end %>
         <li><a href="/settings" class="font-medium">Settings</a></li>
         <li><a href="/conversations" data-turbo-method="post" class="btn btn-primary btn-sm">+ New</a></li>
       </ul>

@@ -132,19 +132,10 @@ module Ai
           end
         end
 
-        # AI Pages
-        r.on 'pages' do
-          r.is do
-            r.get do
-              @pages = AiPage.published.recent
-              view :pages_index
-            end
-          end
-
-          r.on String do |slug|
-            @page = AiPage.published.find_by!(slug: slug)
-            view :page_show
-          end
+        # AI Pages (individual page by slug)
+        r.on 'pages', String do |slug|
+          @page = AiPage.published.find_by!(slug: slug)
+          view :page_show
         end
 
         # Settings
