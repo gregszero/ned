@@ -21,3 +21,61 @@
 .messages::-webkit-scrollbar-thumb:hover {
   background: oklch(var(--bc) / 0.3);
 }
+
+/* Markdown inside chat bubbles */
+.prose-bubble > *:first-child { margin-top: 0; }
+.prose-bubble > *:last-child { margin-bottom: 0; }
+
+.prose-bubble p { margin: 0.4em 0; }
+.prose-bubble h1, .prose-bubble h2, .prose-bubble h3,
+.prose-bubble h4, .prose-bubble h5, .prose-bubble h6 {
+  font-weight: 700;
+  margin: 0.6em 0 0.3em;
+}
+.prose-bubble h1 { font-size: 1.25em; }
+.prose-bubble h2 { font-size: 1.15em; }
+.prose-bubble h3 { font-size: 1.05em; }
+
+.prose-bubble ul, .prose-bubble ol { margin: 0.4em 0; padding-left: 1.4em; }
+.prose-bubble ul { list-style: disc; }
+.prose-bubble ol { list-style: decimal; }
+.prose-bubble li { margin: 0.15em 0; }
+
+.prose-bubble code {
+  background: oklch(var(--bc) / 0.12);
+  padding: 0.15em 0.35em;
+  border-radius: 0.25em;
+  font-size: 0.875em;
+}
+.prose-bubble pre {
+  background: oklch(var(--bc) / 0.12);
+  padding: 0.75em;
+  border-radius: 0.5em;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.prose-bubble pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+.prose-bubble blockquote {
+  border-left: 3px solid oklch(var(--bc) / 0.3);
+  padding-left: 0.75em;
+  margin: 0.4em 0;
+  opacity: 0.85;
+}
+
+.prose-bubble table { border-collapse: collapse; margin: 0.5em 0; width: 100%; }
+.prose-bubble th, .prose-bubble td {
+  border: 1px solid oklch(var(--bc) / 0.2);
+  padding: 0.3em 0.6em;
+  text-align: left;
+}
+.prose-bubble th { font-weight: 600; background: oklch(var(--bc) / 0.08); }
+
+.prose-bubble a { text-decoration: underline; opacity: 0.9; }
+.prose-bubble a:hover { opacity: 1; }
+
+.prose-bubble hr { border: none; border-top: 1px solid oklch(var(--bc) / 0.2); margin: 0.6em 0; }

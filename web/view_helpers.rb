@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'redcarpet'
+
 module Ai
   module Web
     module ViewHelpers
@@ -17,12 +19,27 @@ module Ai
         "<turbo-stream action=\"#{action}\" target=\"#{target}\"><template>#{content}</template></turbo-stream>"
       end
 
+      def markdown_renderer
+        @markdown_renderer ||= Redcarpet::Markdown.new(
+          Redcarpet::Render::HTML.new(hard_wrap: true, link_attributes: { target: '_blank', rel: 'noopener' }),
+          fenced_code_blocks: true,
+          tables: true,
+          autolink: true,
+          strikethrough: true,
+          no_intra_emphasis: true
+        )
+      end
+
+      def render_markdown(text)
+        markdown_renderer.render(text)
+      end
+
       def render_message_html(message)
         role_class = message.role == 'user' ? 'chat-end' : 'chat-start'
         bubble_class = message.role == 'user' ? 'chat-bubble-primary' : 'chat-bubble-secondary'
         label = message.role == 'user' ? 'You' : 'AI'
         time = message.created_at.strftime('%I:%M %p')
-        content = ERB::Util.html_escape(message.content).gsub("\n", '<br>')
+        content = render_markdown(message.content)
 
         <<~HTML
           <div class="chat #{role_class}" id="message-#{message.id}">
@@ -30,7 +47,7 @@ module Ai
               #{label}
               <time class="ml-1">#{time}</time>
             </div>
-            <div class="chat-bubble #{bubble_class}">
+            <div class="chat-bubble #{bubble_class} prose-bubble">
               #{content}
             </div>
           </div>

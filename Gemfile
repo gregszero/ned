@@ -22,6 +22,7 @@ gem 'puma'                    # Web server
 gem 'roda'                    # Lightweight web framework
 gem 'tilt'                    # Template rendering
 gem 'erubi'                   # ERB template engine
+gem 'redcarpet'               # Markdown rendering
 
 # Deployment
 gem 'kamal', require: false   # Deployment

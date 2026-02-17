@@ -224,6 +224,7 @@ GEM
       erb
       psych (>= 4.0.0)
       tsort
+    redcarpet (3.6.1)
     reline (0.6.3)
       io-console (~> 0.5)
     rexml (3.4.4)
@@ -294,6 +295,7 @@ DEPENDENCIES
   puma
   rack-unreloader
   rake
+  redcarpet
   roda
   rufus-scheduler
   solid_cable
