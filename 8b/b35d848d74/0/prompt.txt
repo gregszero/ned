@@ -1,0 +1,89 @@
+Implement the following plan:
+
+# PWA + Mobile-Ready Conversion for Ned
+
+## Context
+The app currently has no PWA support (no manifest, no service worker, no icons) and the navbar doesn't work well on mobile (horizontal-only, no responsive collapse). This plan adds PWA installability and a mobile-friendly responsive layout.
+
+## Files to Create
+
+### 1. `web/public/icon.svg`
+Simple SVG icon: dark rounded square (`#1d232a`) with "N" in primary blue (`#38bdf8`).
+
+### 2. `web/public/icon-192.png` + `web/public/icon-512.png`
+Generated from the SVG using `rsvg-convert`. Required for iOS apple-touch-icon and full PWA compatibility.
+
+### 3. `web/public/manifest.json`
+```json
+{
+  "name": "Ned — Guy in the Chair",
+  "short_name": "Ned",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#1d232a",
+  "background_color": "#1d232a",
+  "icons": [svg any + 192px png + 512px png]
+}
+```
+
+### 4. `web/public/sw.js`
+- Pre-caches local static assets (CSS, JS, icons)
+- **Cache-first** for local static files (`/css/`, `/js/`, `.svg`, `.png`)
+- **Network-first** for HTML (so Turbo always gets fresh content)
+- **Skips**: SSE `/stream` endpoints, non-GET requests, cross-origin CDN resources
+
+## Files to Modify
+
+### 5. `web/views/layout.erb`
+- Add `<head>` meta tags: `theme-color`, `description`, `apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style`
+- Add `viewport-fit=cover` to existing viewport meta
+- Add `<link rel="manifest">`, `<link rel="icon">`, `<link rel="apple-touch-icon">`
+- Change `min-h-screen` → `min-h-dvh` on body
+- **Responsive navbar**: Wrap page in DaisyUI `drawer` component
+  - `lg:` screens: horizontal menu in navbar (same as now)
+  - Small screens: hamburger button (left) + notification icon & "+" button (right)
+  - Drawer sidebar slides in with full nav menu
+- Add service worker registration script before `</body>`
+
+### 6. `web/views/conversation_show.erb`
+- Change `h-[calc(100vh-10rem)]` → `h-[calc(100dvh-10rem)]` (accounts for mobile browser chrome)
+
+### 7. `web/public/js/application.js`
+- Append Turbo listener to auto-close mobile drawer on navigation:
+  ```js
+  document.addEventListener('turbo:before-visit', () => {
+    const d = document.getElementById('nav-drawer');
+    if (d) d.checked = false;
+  });
+  ```
+
+## Verification
+1. Chrome DevTools → Application → Manifest: fields parse correctly
+2. Application → Service Workers: `sw.js` registers and activates
+3. Mobile emulation: hamburger appears, drawer works, notification badge visible
+4. SSE streams still work (send a message in conversation)
+5. Turbo navigation works normally (no stale cached HTML)
+6. Chrome "Install app" prompt appears in standalone mode
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+can you improve the way it looks in mobile?
+
+---
+
+the conversation title, make it fixed on bottom and when the user types instead of setting as conversation title, start a new conversation
+
+---
+
+now the app is not looking right in mobile because if navbar is showing the buttons and the horizontal size of the message field and button is too wide
+
+---
+
+lets remove the navbar buttons and use just the sidebar. keep in the navbar the Ned name and the notifications bell
+
+---
+
+commit and push
