@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "736fc85b8c55",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 7,
+  "files_touched": [
+    ".env",
+    "ai/agent.rb",
+    "web/app.rb",
+    "web/public/js/controllers/conversation_controller.js",
+    "web/public/sw.js",
+    "web/turbo_broadcast.rb",
+    "web/views/layout.erb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/73/6fc85b8c55/0/metadata.json",
+      "transcript": "/73/6fc85b8c55/0/full.jsonl",
+      "context": "/73/6fc85b8c55/0/context.md",
+      "content_hash": "/73/6fc85b8c55/0/content_hash.txt",
+      "prompt": "/73/6fc85b8c55/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 94,
+    "cache_creation_tokens": 79641,
+    "cache_read_tokens": 5094358,
+    "output_tokens": 14498,
+    "api_call_count": 74
+  }
+}
