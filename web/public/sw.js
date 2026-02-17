@@ -1,7 +1,6 @@
-const CACHE_NAME = 'ned-v1';
+const CACHE_NAME = 'ned-v2';
 const PRECACHE = [
   '/css/style.css',
-  '/js/application.js',
   '/icon.svg',
   '/icon-192.png',
   '/icon-512.png'
@@ -24,13 +23,15 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Skip non-GET, cross-origin, and SSE streams
+  // Skip non-GET and cross-origin
   if (e.request.method !== 'GET') return;
   if (url.origin !== location.origin) return;
-  if (url.pathname.includes('/stream')) return;
 
-  // Cache-first for local static assets
-  if (url.pathname.match(/^\/(css|js)\//) || url.pathname.match(/\.(svg|png)$/)) {
+  // SSE streams must bypass the service worker entirely
+  if (url.pathname.includes('/stream') || e.request.headers.get('Accept') === 'text/event-stream') return;
+
+  // Cache-first for static images only
+  if (url.pathname.match(/\.(svg|png|ico)$/)) {
     e.respondWith(
       caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
         const clone = res.clone();
@@ -41,8 +42,12 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Network-first for HTML
+  // Network-first for everything else (HTML, JS, CSS)
   e.respondWith(
-    fetch(e.request).catch(() => caches.match(e.request))
+    fetch(e.request).then(res => {
+      const clone = res.clone();
+      caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });

@@ -26,6 +26,8 @@ module Ai
       }
 
       route do |r|
+        r.public
+
         # Root - redirect to conversations
         r.root do
           r.redirect '/conversations'
@@ -75,13 +77,23 @@ module Ai
                 queue = Thread::Queue.new
                 subscriber = TurboBroadcast.subscribe(channel) { |html| queue.push(html) }
 
+                Ai.logger.info "[SSE] Connection opened for #{channel}"
+
                 response['Content-Type'] = 'text/event-stream'
                 response['Cache-Control'] = 'no-cache'
                 response['X-Accel-Buffering'] = 'no'
 
-                stream(loop: true, callback: proc { TurboBroadcast.unsubscribe(channel, subscriber) }) do |out|
-                  html = queue.pop
-                  out << "data: #{html.gsub("\n", "\ndata: ")}\n\n"
+                stream(loop: true, callback: proc {
+                  Ai.logger.info "[SSE] Connection closed for #{channel}"
+                  TurboBroadcast.unsubscribe(channel, subscriber)
+                }) do |out|
+                  html = queue.pop(timeout: 30)
+                  if html
+                    Ai.logger.info "[SSE] Sending event to #{channel} (#{html.length} bytes)"
+                    out << "data: #{html.gsub("\n", "\ndata: ")}\n\n"
+                  else
+                    out << ": heartbeat\n\n"
+                  end
                 end
               end
             end
@@ -106,11 +118,13 @@ module Ai
 
                 if r.params['turbo']
                   # Turbo Stream response - append user message and reset form
+                  message_html = render('_message', locals: { message: message })
+
                   response['Content-Type'] = 'text/vnd.turbo-stream.html'
-                  render inline: <<~HTML
+                  <<~HTML
                     <turbo-stream action="append" target="messages">
                       <template>
-                        #{render('_message', locals: { message: message })}
+                        #{message_html}
                       </template>
                     </turbo-stream>
                     <turbo-stream action="replace" target="message-form">
@@ -159,8 +173,12 @@ module Ai
               response['X-Accel-Buffering'] = 'no'
 
               stream(loop: true, callback: proc { TurboBroadcast.unsubscribe('notifications', subscriber) }) do |out|
-                html = queue.pop
-                out << "data: #{html.gsub("\n", "\ndata: ")}\n\n"
+                html = queue.pop(timeout: 30)
+                if html
+                  out << "data: #{html.gsub("\n", "\ndata: ")}\n\n"
+                else
+                  out << ": heartbeat\n\n"
+                end
               end
             end
           end

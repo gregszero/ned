@@ -12,6 +12,10 @@ export default class extends Controller {
       window.Turbo.renderStreamMessage(event.data)
       this.scrollToBottom()
     }
+    this.source.onerror = () => {
+      // EventSource auto-reconnects; log for debugging
+      console.warn("[SSE] Connection error, reconnecting...")
+    }
   }
 
   disconnect() {

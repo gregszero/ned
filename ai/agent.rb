@@ -23,6 +23,12 @@ module Ai
           result = run_claude(prompt: prompt, uuid: uuid, resuming: false, env: build_env(conversation))
         end
 
+        # If session ID is "already in use", retry with --resume
+        if result[:failed] && result[:error]&.include?('already in use')
+          Ai.logger.warn "Session in use, retrying with --resume"
+          result = run_claude(prompt: prompt, uuid: uuid, resuming: true, env: build_env(conversation))
+        end
+
         if result[:failed]
           session.error!
           return { 'type' => 'error', 'message' => result[:error] }
