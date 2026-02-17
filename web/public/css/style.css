@@ -1,28 +1,333 @@
-/* Mobile padding adjustments */
-@media (max-width: 639px) {
-  main.page-content { padding: 0.75rem; }
-  .navbar { padding-left: 0.5rem; padding-right: 0.5rem; }
+/* ============================================
+   NED — KINETIC TYPOGRAPHY DESIGN SYSTEM
+   Brutalist · Dark · Acid Yellow · Flat · Sharp
+   ============================================ */
+
+/* --- Design Tokens --- */
+:root {
+  --ned-bg: #09090B;
+  --ned-fg: #FAFAFA;
+  --ned-muted: #27272A;
+  --ned-muted-fg: #A1A1AA;
+  --ned-accent: #DFE104;
+  --ned-accent-fg: #09090B;
+  --ned-border: #3F3F46;
+  --ned-card: #18181B;
 }
 
-/* Custom scrollbar for messages */
-.messages::-webkit-scrollbar {
-  width: 6px;
+/* --- Element Base Styles --- */
+
+body {
+  background: var(--ned-bg);
+  color: var(--ned-fg);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
 }
 
-.messages::-webkit-scrollbar-track {
+h1, h2, h3, h4, h5, h6 {
+  text-transform: uppercase;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
+h2 { font-size: clamp(1.5rem, 4vw, 2.5rem); }
+h3 { font-size: clamp(1.25rem, 3vw, 1.75rem); }
+h4 { font-size: 1.25rem; }
+h5 { font-size: 1.1rem; }
+h6 { font-size: 1rem; }
+
+a {
+  color: var(--ned-accent);
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 3.5rem;
+  padding: 0 2rem;
+  background: var(--ned-accent);
+  color: var(--ned-accent-fg);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  transition: transform 0.1s;
+  white-space: nowrap;
+}
+button:hover {
+  transform: scale(1.05);
+}
+button:active {
+  transform: scale(0.95);
+}
+
+input, textarea {
   background: transparent;
+  color: var(--ned-fg);
+  font-family: inherit;
+  font-size: 1rem;
+  border: none;
+  border-bottom: 2px solid var(--ned-border);
+  border-radius: 0;
+  padding: 0.75rem 0;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, textarea:focus {
+  border-color: var(--ned-accent);
+}
+input::placeholder, textarea::placeholder {
+  color: var(--ned-muted-fg);
 }
 
-.messages::-webkit-scrollbar-thumb {
-  background: oklch(var(--bc) / 0.2);
-  border-radius: 3px;
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 2px solid var(--ned-border);
+}
+th {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  font-size: 0.75rem;
+  background: var(--ned-muted);
+  text-align: left;
+  padding: 0.75rem 1rem;
+}
+td {
+  border-bottom: 1px solid var(--ned-border);
+  padding: 0.75rem 1rem;
+}
+tr:nth-child(even) td {
+  background: var(--ned-muted);
 }
 
-.messages::-webkit-scrollbar-thumb:hover {
-  background: oklch(var(--bc) / 0.3);
+hr {
+  border: none;
+  border-top: 2px solid var(--ned-border);
+  margin: 1.5rem 0;
 }
 
-/* Markdown inside chat bubbles */
+code {
+  background: var(--ned-muted);
+  color: var(--ned-accent);
+  padding: 0.15em 0.4em;
+  font-size: 0.875em;
+}
+
+pre {
+  background: var(--ned-muted);
+  padding: 1rem;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+pre code {
+  background: none;
+  padding: 0;
+}
+
+/* --- Button Variants --- */
+
+button.ghost {
+  background: transparent;
+  color: var(--ned-fg);
+}
+button.ghost:hover {
+  color: var(--ned-accent);
+}
+
+button.outline {
+  background: transparent;
+  border: 2px solid var(--ned-border);
+  color: var(--ned-fg);
+}
+button.outline:hover {
+  background: var(--ned-fg);
+  color: var(--ned-bg);
+  border-color: var(--ned-fg);
+}
+
+button.sm {
+  height: 2.5rem;
+  padding: 0 1.25rem;
+  font-size: 0.75rem;
+}
+
+button.xs {
+  height: 2rem;
+  padding: 0 0.75rem;
+  font-size: 0.7rem;
+}
+
+button.icon {
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+}
+button.icon.sm {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+/* --- Badge --- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--ned-muted);
+  color: var(--ned-muted-fg);
+  border-radius: 0;
+}
+.badge.success { background: #166534; color: #4ade80; }
+.badge.error   { background: #7f1d1d; color: #f87171; }
+.badge.warning { background: #78350f; color: #fbbf24; }
+.badge.info    { background: #1e3a5f; color: #60a5fa; }
+
+/* --- Card --- */
+
+.card {
+  border: 2px solid var(--ned-border);
+  background: var(--ned-card);
+  padding: 1.5rem;
+  transition: border-color 0.15s;
+}
+.card:hover {
+  border-color: var(--ned-accent);
+}
+
+/* --- Chat Messages --- */
+
+.chat-msg {
+  padding: 1rem 1.25rem;
+  max-width: 85%;
+}
+.chat-msg.user {
+  margin-left: auto;
+  background: var(--ned-accent);
+  color: var(--ned-accent-fg);
+}
+.chat-msg.ai {
+  margin-right: auto;
+  background: var(--ned-card);
+  border: 2px solid var(--ned-border);
+  color: var(--ned-fg);
+}
+
+/* --- Marquee --- */
+
+.marquee {
+  overflow: hidden;
+  white-space: nowrap;
+  border-top: 2px solid var(--ned-border);
+  border-bottom: 2px solid var(--ned-border);
+  background: var(--ned-bg);
+}
+.marquee-inner {
+  display: inline-block;
+  animation: marquee 20s linear infinite;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ned-muted-fg);
+  font-size: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* --- Reveal Animation --- */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(1.5rem);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- Sidebar --- */
+
+#sidebar-toggle {
+  display: none;
+}
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 16rem;
+  height: 100dvh;
+  background: var(--ned-card);
+  border-right: 2px solid var(--ned-border);
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
+  z-index: 50;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+#sidebar-toggle:checked ~ .sidebar-container .sidebar {
+  transform: translateX(0);
+}
+
+.sidebar-container::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+#sidebar-toggle:checked ~ .sidebar-container::before {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar nav a {
+  display: block;
+  padding: 0.5rem 0;
+  color: var(--ned-muted-fg);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.sidebar nav a:hover {
+  color: var(--ned-accent);
+  text-decoration: none;
+}
+
+/* --- Prose Bubble (Markdown in Chat) --- */
+
 .prose-bubble > *:first-child { margin-top: 0; }
 .prose-bubble > *:last-child { margin-bottom: 0; }
 
@@ -31,6 +336,7 @@
 .prose-bubble h4, .prose-bubble h5, .prose-bubble h6 {
   font-weight: 700;
   margin: 0.6em 0 0.3em;
+  text-transform: none;
 }
 .prose-bubble h1 { font-size: 1.25em; }
 .prose-bubble h2 { font-size: 1.15em; }
@@ -42,15 +348,14 @@
 .prose-bubble li { margin: 0.15em 0; }
 
 .prose-bubble code {
-  background: oklch(var(--bc) / 0.12);
+  background: var(--ned-muted);
+  color: var(--ned-accent);
   padding: 0.15em 0.35em;
-  border-radius: 0.25em;
   font-size: 0.875em;
 }
 .prose-bubble pre {
-  background: oklch(var(--bc) / 0.12);
+  background: var(--ned-muted);
   padding: 0.75em;
-  border-radius: 0.5em;
   overflow-x: auto;
   margin: 0.5em 0;
 }
@@ -61,7 +366,7 @@
 }
 
 .prose-bubble blockquote {
-  border-left: 3px solid oklch(var(--bc) / 0.3);
+  border-left: 3px solid var(--ned-border);
   padding-left: 0.75em;
   margin: 0.4em 0;
   opacity: 0.85;
@@ -69,13 +374,44 @@
 
 .prose-bubble table { border-collapse: collapse; margin: 0.5em 0; width: 100%; }
 .prose-bubble th, .prose-bubble td {
-  border: 1px solid oklch(var(--bc) / 0.2);
+  border: 1px solid var(--ned-border);
   padding: 0.3em 0.6em;
   text-align: left;
 }
-.prose-bubble th { font-weight: 600; background: oklch(var(--bc) / 0.08); }
+.prose-bubble th { font-weight: 600; background: var(--ned-muted); }
 
-.prose-bubble a { text-decoration: underline; opacity: 0.9; }
-.prose-bubble a:hover { opacity: 1; }
+.prose-bubble a { color: var(--ned-accent); text-decoration: underline; }
+.prose-bubble a:hover { opacity: 0.8; }
 
-.prose-bubble hr { border: none; border-top: 1px solid oklch(var(--bc) / 0.2); margin: 0.6em 0; }
+.prose-bubble hr { border: none; border-top: 1px solid var(--ned-border); margin: 0.6em 0; }
+
+/* User chat bubble: invert prose colors */
+.chat-msg.user .prose-bubble a { color: var(--ned-accent-fg); }
+.chat-msg.user .prose-bubble code { background: rgba(0,0,0,0.15); color: var(--ned-accent-fg); }
+.chat-msg.user .prose-bubble pre { background: rgba(0,0,0,0.15); }
+.chat-msg.user .prose-bubble blockquote { border-left-color: var(--ned-accent-fg); }
+
+/* --- Custom Scrollbar --- */
+
+.messages::-webkit-scrollbar { width: 6px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb { background: var(--ned-border); }
+.messages::-webkit-scrollbar-thumb:hover { background: var(--ned-muted-fg); }
+
+/* --- Reduced Motion --- */
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-inner { animation: none; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  button { transition: none; }
+}
+
+/* --- Mobile --- */
+
+@media (max-width: 639px) {
+  main.page-content { padding: 0.75rem; }
+  .card { padding: 1rem; }
+  button { height: 3rem; padding: 0 1.25rem; }
+  button.icon { width: 2.75rem; height: 2.75rem; }
+  .chat-msg { max-width: 92%; }
+}

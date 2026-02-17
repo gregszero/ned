@@ -1,5 +1,5 @@
 <div class="max-w-5xl mx-auto space-y-6" data-controller="notifications">
-  <h2 class="text-3xl font-bold">Notifications</h2>
+  <h2 class="text-5xl md:text-7xl">Notifications</h2>
 
   <div id="notifications-list" class="space-y-3">
     <% if @notifications.any? %>
@@ -7,10 +7,8 @@
         <%= render_notification_card_html(notification) %>
       <% end %>
     <% else %>
-      <div class="card bg-base-100 shadow-sm">
-        <div class="card-body p-6 text-center">
-          <p class="text-base-content/60">No notifications yet.</p>
-        </div>
+      <div class="card text-center">
+        <p style="color:var(--ned-muted-fg);">No notifications yet.</p>
       </div>
     <% end %>
   </div>

@@ -1,10 +1,10 @@
 {
-  "name": "Ned — Guy in the Chair",
+  "name": "Ned — Bot in the Chair",
   "short_name": "Ned",
   "start_url": "/",
   "display": "standalone",
-  "theme_color": "#1d232a",
-  "background_color": "#1d232a",
+  "theme_color": "#09090B",
+  "background_color": "#09090B",
   "icons": [
     {
       "src": "/icon.svg",

@@ -8,11 +8,13 @@ const application = Application.start()
 // Import controllers
 import ConversationController from "/js/controllers/conversation_controller.js"
 import NotificationsController from "/js/controllers/notifications_controller.js"
+import ScrollAnimationController from "/js/controllers/scroll_animation_controller.js"
 application.register("conversation", ConversationController)
 application.register("notifications", NotificationsController)
+application.register("scroll-animation", ScrollAnimationController)
 
-// Close mobile drawer on Turbo navigation
+// Close sidebar on Turbo navigation
 document.addEventListener('turbo:before-visit', () => {
-  const d = document.getElementById('nav-drawer');
-  if (d) d.checked = false;
+  const toggle = document.getElementById('sidebar-toggle');
+  if (toggle) toggle.checked = false;
 })

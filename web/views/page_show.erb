@@ -1,10 +1,10 @@
 <div class="max-w-3xl mx-auto">
-  <a href="/conversations" class="link link-primary text-sm">← Back</a>
+  <a href="/conversations" class="text-sm">&larr; Back</a>
 
-  <article class="prose prose-lg mt-4 max-w-none">
+  <article class="mt-6">
     <h1><%= @page.title %></h1>
-    <p class="text-sm text-base-content/50">Published <%= @page.published_at&.strftime('%B %d, %Y') %></p>
-    <div class="divider"></div>
-    <div><%= @page.content %></div>
+    <p class="text-sm mt-2" style="color:var(--ned-muted-fg);">Published <%= @page.published_at&.strftime('%B %d, %Y') %></p>
+    <hr>
+    <div class="prose-bubble"><%= @page.content %></div>
   </article>
 </div>

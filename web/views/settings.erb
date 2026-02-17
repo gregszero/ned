@@ -1,131 +1,123 @@
 <div class="max-w-5xl mx-auto space-y-6">
-  <h2 class="text-3xl font-bold">Settings</h2>
+  <h2 class="text-5xl md:text-7xl">Settings</h2>
 
   <!-- Skills Section -->
-  <div class="card bg-base-100 shadow-md">
-    <div class="card-body">
-      <h3 class="card-title">Skills (<%= @skills.count %>)</h3>
-      <% if @skills.any? %>
-        <div class="overflow-x-auto">
-          <table class="table table-zebra">
-            <thead>
+  <div class="card">
+    <h3 style="font-size:1.25rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1rem;">Skills (<%= @skills.count %>)</h3>
+    <% if @skills.any? %>
+      <div class="overflow-x-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Usage Count</th>
+              <th>File</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @skills.each do |skill| %>
               <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th>Usage Count</th>
-                <th>File</th>
+                <td class="font-semibold"><%= skill.name %></td>
+                <td><%= skill.description %></td>
+                <td><%= skill.usage_count %></td>
+                <td><code><%= skill.file_path %></code></td>
               </tr>
-            </thead>
-            <tbody>
-              <% @skills.each do |skill| %>
-                <tr>
-                  <td class="font-semibold"><%= skill.name %></td>
-                  <td><%= skill.description %></td>
-                  <td><%= skill.usage_count %></td>
-                  <td><code class="text-xs bg-base-300 px-2 py-1 rounded"><%= skill.file_path %></code></td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      <% else %>
-        <p class="text-base-content/60">No skills registered yet.</p>
-      <% end %>
-    </div>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p style="color:var(--ned-muted-fg);">No skills registered yet.</p>
+    <% end %>
   </div>
 
   <!-- MCP Connections Section -->
-  <div class="card bg-base-100 shadow-md">
-    <div class="card-body">
-      <h3 class="card-title">MCP Connections (<%= @mcp_connections.count %>)</h3>
-      <% if @mcp_connections.any? %>
-        <div class="overflow-x-auto">
-          <table class="table table-zebra">
-            <thead>
+  <div class="card">
+    <h3 style="font-size:1.25rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1rem;">MCP Connections (<%= @mcp_connections.count %>)</h3>
+    <% if @mcp_connections.any? %>
+      <div class="overflow-x-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Connection</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @mcp_connections.each do |conn| %>
               <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Connection</th>
-                <th>Status</th>
+                <td class="font-semibold"><%= conn.name %></td>
+                <td><%= conn.transport_type %></td>
+                <td><code><%= conn.connection_string %></code></td>
+                <td>
+                  <span class="badge <%= conn.enabled? ? 'success' : 'error' %>">
+                    <%= conn.enabled? ? 'Enabled' : 'Disabled' %>
+                  </span>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              <% @mcp_connections.each do |conn| %>
-                <tr>
-                  <td class="font-semibold"><%= conn.name %></td>
-                  <td><%= conn.transport_type %></td>
-                  <td><code class="text-xs bg-base-300 px-2 py-1 rounded"><%= conn.connection_string %></code></td>
-                  <td>
-                    <div class="badge <%= conn.enabled? ? 'badge-success' : 'badge-error' %> gap-1">
-                      <%= conn.enabled? ? 'Enabled' : 'Disabled' %>
-                    </div>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      <% else %>
-        <p class="text-base-content/60">No MCP connections configured.</p>
-      <% end %>
-    </div>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p style="color:var(--ned-muted-fg);">No MCP connections configured.</p>
+    <% end %>
   </div>
 
   <!-- WhatsApp Integration -->
-  <div class="card bg-base-100 shadow-md">
-    <div class="card-body">
-      <h3 class="card-title">WhatsApp Integration</h3>
-      <div class="flex items-center gap-4">
-        <div class="badge <%= Ai::WhatsApp.enabled? ? 'badge-success' : 'badge-ghost' %> gap-1">
-          <%= Ai::WhatsApp.enabled? ? 'Enabled' : 'Disabled' %>
-        </div>
-        <% if Ai::WhatsApp.enabled? %>
-          <a href="http://localhost:3001" target="_blank" class="btn btn-sm btn-outline">
-            Open GOWA Dashboard
-          </a>
-        <% else %>
-          <p class="text-base-content/60 text-sm">Set <code class="bg-base-300 px-1 rounded">WHATSAPP_ENABLED=true</code> to activate.</p>
-        <% end %>
-      </div>
+  <div class="card">
+    <h3 style="font-size:1.25rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1rem;">WhatsApp Integration</h3>
+    <div class="flex items-center gap-4">
+      <span class="badge <%= Ai::WhatsApp.enabled? ? 'success' : '' %>">
+        <%= Ai::WhatsApp.enabled? ? 'Enabled' : 'Disabled' %>
+      </span>
+      <% if Ai::WhatsApp.enabled? %>
+        <a href="http://localhost:3001" target="_blank">
+          <button class="outline sm" type="button">Open GOWA Dashboard</button>
+        </a>
+      <% else %>
+        <p style="color:var(--ned-muted-fg);font-size:0.875rem;">Set <code>WHATSAPP_ENABLED=true</code> to activate.</p>
+      <% end %>
     </div>
   </div>
 
   <!-- Configuration Section -->
-  <div class="card bg-base-100 shadow-md">
-    <div class="card-body">
-      <h3 class="card-title">Configuration</h3>
-      <div class="overflow-x-auto">
-        <table class="table table-zebra">
-          <thead>
-            <tr>
-              <th>Key</th>
-              <th>Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Framework Version</td>
-              <td><%= @config['framework_version'] || '0.1.0' %></td>
-            </tr>
-            <tr>
-              <td>Ruby Version</td>
-              <td><%= @config['ruby_version'] || RUBY_VERSION %></td>
-            </tr>
-            <tr>
-              <td>Environment</td>
-              <td><%= @config['environment'] || Ai.env %></td>
-            </tr>
-            <tr>
-              <td>Database</td>
-              <td><%= ActiveRecord::Base.connection.adapter_name %></td>
-            </tr>
-            <tr>
-              <td>Queue Adapter</td>
-              <td><%= ActiveJob::Base.queue_adapter.class.name %></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+  <div class="card">
+    <h3 style="font-size:1.25rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:1rem;">Configuration</h3>
+    <div class="overflow-x-auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Framework Version</td>
+            <td><%= @config['framework_version'] || '0.1.0' %></td>
+          </tr>
+          <tr>
+            <td>Ruby Version</td>
+            <td><%= @config['ruby_version'] || RUBY_VERSION %></td>
+          </tr>
+          <tr>
+            <td>Environment</td>
+            <td><%= @config['environment'] || Ai.env %></td>
+          </tr>
+          <tr>
+            <td>Database</td>
+            <td><%= ActiveRecord::Base.connection.adapter_name %></td>
+          </tr>
+          <tr>
+            <td>Queue Adapter</td>
+            <td><%= ActiveJob::Base.queue_adapter.class.name %></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>

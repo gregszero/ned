@@ -1,91 +1,126 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="night">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#1d232a">
-  <meta name="description" content="Ned — Guy in the Chair">
+  <meta name="theme-color" content="#09090B">
+  <meta name="description" content="Ned — Bot in the Chair">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Ned — Guy in the Chair</title>
+  <title>Ned — Bot in the Chair</title>
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icon-192.png">
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'ned-bg': '#09090B',
+            'ned-fg': '#FAFAFA',
+            'ned-muted': '#27272A',
+            'ned-muted-fg': '#A1A1AA',
+            'ned-accent': '#DFE104',
+            'ned-accent-fg': '#09090B',
+            'ned-border': '#3F3F46',
+            'ned-card': '#18181B',
+          },
+          fontFamily: {
+            sans: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+          },
+          borderRadius: {
+            DEFAULT: '0px',
+          },
+        },
+      },
+    }
+  </script>
   <link rel="stylesheet" href="/css/style.css">
   <script type="module" src="/js/application.js"></script>
 </head>
-<body class="min-h-dvh bg-base-300">
-  <div class="drawer" id="nav-drawer-wrapper">
-    <input id="nav-drawer" type="checkbox" class="drawer-toggle" />
+<body class="min-h-dvh">
+  <input type="checkbox" id="sidebar-toggle">
 
-    <div class="drawer-content flex flex-col">
-      <!-- Navbar -->
-      <div class="navbar bg-base-100 shadow-lg border-b border-primary/30">
-        <div class="flex-none">
-          <label for="nav-drawer" class="btn btn-square btn-ghost">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </label>
-        </div>
-        <div class="flex-1">
-          <a href="/conversations" class="text-xl font-bold text-primary">Ned</a>
-        </div>
-        <div class="flex-none">
-          <% unread = Ai::Notification.unread.count %>
-          <a href="/notifications" class="btn btn-ghost btn-sm btn-square relative">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            <% if unread > 0 %>
-              <span id="notifications-badge" class="badge badge-xs badge-primary absolute -top-1 -right-1"><%= unread %></span>
-            <% else %>
-              <span id="notifications-badge" class="badge badge-xs badge-primary absolute -top-1 -right-1 hidden">0</span>
-            <% end %>
-          </a>
-        </div>
-      </div>
-
-      <!-- Page content -->
-      <main class="page-content max-w-7xl mx-auto p-6 w-full">
-        <%= yield %>
-      </main>
-
-      <footer class="footer footer-center p-4 bg-base-100 text-base-content/60 border-t border-base-content/10">
-        <p class="text-sm">Ned v0.1.0</p>
-      </footer>
-    </div>
-
-    <!-- Drawer sidebar -->
-    <div class="drawer-side z-40">
-      <label for="nav-drawer" class="drawer-overlay"></label>
-      <ul class="menu bg-base-200 min-h-full w-64 p-4 gap-1">
-        <li class="menu-title text-primary text-lg font-bold mb-2">Ned</li>
-        <li><a href="/conversations" class="font-medium">Conversations</a></li>
+  <!-- Sidebar -->
+  <div class="sidebar-container">
+    <label for="sidebar-toggle"></label>
+    <aside class="sidebar">
+      <div class="text-ned-accent font-bold text-xl uppercase tracking-wider mb-6">Ned</div>
+      <nav class="flex flex-col gap-1">
+        <a href="/conversations">Conversations</a>
         <% Ai::AiPage.published.recent.each do |page| %>
-          <li><a href="/pages/<%= page.slug %>" class="font-medium"><%= page.title %></a></li>
+          <a href="/pages/<%= page.slug %>"><%= page.title %></a>
         <% end %>
-        <li>
-          <a href="/notifications" class="font-medium">
-            Notifications
-            <% if unread.to_i > 0 %>
-              <span class="badge badge-sm badge-primary"><%= unread %></span>
-            <% end %>
-          </a>
-        </li>
-        <li><a href="/jobs" class="font-medium">Jobs & Skills</a></li>
-        <li><a href="/settings" class="font-medium">Settings</a></li>
-        <li class="mt-2"><a href="/conversations" class="btn btn-primary btn-sm">+ New Conversation</a></li>
-      </ul>
+        <a href="/notifications">
+          Notifications
+          <% if (unread = Ai::Notification.unread.count) > 0 %>
+            <span class="badge ml-1"><%= unread %></span>
+          <% end %>
+        </a>
+        <a href="/jobs">Jobs & Skills</a>
+        <a href="/settings">Settings</a>
+      </nav>
+      <div class="mt-6">
+        <a href="/conversations" class="block">
+          <button class="sm w-full">+ New Chat</button>
+        </a>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Navbar -->
+  <header class="flex items-center justify-between px-4 h-14 border-b-2 border-ned-border">
+    <label for="sidebar-toggle" class="icon ghost" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:3rem;height:3rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </label>
+    <a href="/conversations" class="text-ned-accent font-bold text-xl uppercase tracking-wider" style="text-decoration:none;">NED</a>
+    <a href="/notifications" style="text-decoration:none;">
+      <button class="icon ghost relative" type="button" onclick="window.location='/notifications'; return false;">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        <% if (unread ||= Ai::Notification.unread.count) > 0 %>
+          <span id="notifications-badge" class="badge absolute -top-1 -right-1" style="background:var(--ned-accent);color:var(--ned-accent-fg);font-size:0.6rem;padding:0.1rem 0.3rem;"><%= unread %></span>
+        <% else %>
+          <span id="notifications-badge" class="badge absolute -top-1 -right-1 hidden" style="background:var(--ned-accent);color:var(--ned-accent-fg);font-size:0.6rem;padding:0.1rem 0.3rem;">0</span>
+        <% end %>
+      </button>
+    </a>
+  </header>
+
+  <!-- Marquee -->
+  <div class="marquee">
+    <div class="marquee-inner">
+      NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp;
     </div>
   </div>
+
+  <!-- Page content -->
+  <main class="page-content max-w-7xl mx-auto p-6 w-full">
+    <%= yield %>
+  </main>
+
+  <footer class="border-t-2 border-ned-border px-6 py-4">
+    <p class="text-xs text-ned-muted-fg">Ned v0.1.0</p>
+  </footer>
 
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
     }
+    // Close sidebar when clicking overlay
+    document.addEventListener('click', function(e) {
+      var toggle = document.getElementById('sidebar-toggle');
+      if (toggle && toggle.checked && e.target.matches('.sidebar-container > label')) {
+        toggle.checked = false;
+      }
+    });
   </script>
 </body>
 </html>

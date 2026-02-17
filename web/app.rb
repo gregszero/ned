@@ -136,9 +136,9 @@ module Ai
                             rows="3"
                             required
                             autofocus
-                            class="textarea textarea-bordered flex-1 text-base"
+                            class="flex-1"
                           ></textarea>
-                          <button type="submit" class="btn btn-primary self-end">Send</button>
+                          <button type="submit" class="self-end">Send</button>
                         </form>
                       </turbo-frame>
                     HTML
