@@ -3,19 +3,19 @@
      data-conversation-id-value="<%= @conversation.id %>">
   <div class="mb-4">
     <a href="/conversations" class="text-sm">&larr; Back to conversations</a>
-    <h2 class="text-3xl md:text-5xl mt-1"><%= @conversation.title || "Conversation ##{@conversation.id}" %></h2>
+    <h2 class="text-2xl font-semibold tracking-tight mt-1"><%= @conversation.title || "Conversation ##{@conversation.id}" %></h2>
     <div class="flex gap-3 mt-2">
       <span class="badge"><%= @conversation.source %></span>
-      <span class="text-xs" style="color:var(--ned-muted-fg);"><%= @conversation.messages.count %> messages</span>
-      <span class="text-xs" style="color:var(--ned-muted-fg);">Started <%= @conversation.created_at.strftime('%b %d, %Y') %></span>
+      <span class="text-xs text-ned-muted-fg"><%= @conversation.messages.count %> messages</span>
+      <span class="text-xs text-ned-muted-fg">Started <%= @conversation.created_at.strftime('%b %d, %Y') %></span>
     </div>
   </div>
 
-  <div class="flex-1 overflow-hidden border-2 border-ned-border" style="background:var(--ned-card);">
+  <div class="flex-1 overflow-hidden border border-ned-border rounded-lg bg-ned-card">
     <div id="messages" data-conversation-target="messages" class="messages h-full overflow-y-auto p-4 flex flex-col gap-3">
       <% if @messages.empty? %>
         <div class="py-16 text-center">
-          <p style="color:var(--ned-muted-fg);">No messages yet. Start the conversation below!</p>
+          <p class="text-ned-muted-fg">No messages yet. Start the conversation below!</p>
         </div>
       <% else %>
         <% @messages.each do |message| %>

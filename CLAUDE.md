@@ -100,28 +100,41 @@ end
 
 ## Design System
 
-Brutalist dark theme — "Kinetic Typography". Sharp edges (border-radius: 0), acid yellow accent, Space Grotesk font.
+Clean, minimal shadcn/ui-inspired design with violet accent. Supports light/dark mode via `prefers-color-scheme`. Inter font, rounded corners, subtle shadows.
 
 ### CSS Tokens (defined in `web/public/css/style.css`)
-| Token | Value | Usage |
-|---|---|---|
-| `--ned-bg` | `#09090B` | Page background |
-| `--ned-fg` | `#FAFAFA` | Primary text |
-| `--ned-muted` | `#27272A` | Muted backgrounds |
-| `--ned-muted-fg` | `#A1A1AA` | Muted text |
-| `--ned-accent` | `#DFE104` | Accent (acid yellow) |
-| `--ned-accent-fg` | `#09090B` | Text on accent |
-| `--ned-border` | `#3F3F46` | Borders |
-| `--ned-card` | `#18181B` | Card backgrounds |
+
+Light and dark mode tokens are defined as CSS custom properties. The `--ned-*` aliases remain for backward compatibility with Tailwind classes.
+
+| Token | Light | Dark | Usage |
+|---|---|---|---|
+| `--background` | `#ffffff` | `#09090b` | Page background |
+| `--foreground` | `#0f172a` | `#fafafa` | Primary text |
+| `--card` | `#ffffff` | `#18181b` | Card backgrounds |
+| `--muted` | `#f1f5f9` | `#27272a` | Muted backgrounds |
+| `--muted-foreground` | `#64748b` | `#a1a1aa` | Muted text |
+| `--primary` | `#7c3aed` | `#8b5cf6` | Accent (violet) |
+| `--primary-foreground` | `#ffffff` | `#ffffff` | Text on accent |
+| `--border` | `#e2e8f0` | `#27272a` | Borders |
+| `--ring` | `#7c3aed` | `#8b5cf6` | Focus rings |
 
 ### Components
-- **`.card`** — bordered card, hover accent border
+- **`.card`** — rounded card with subtle border and shadow
 - **`.badge`** — pill label (variants: `.success`, `.error`, `.warning`, `.info`)
-- **`button`** — yellow bg. Variants: `.ghost`, `.outline`, `.sm`, `.xs`, `.icon`
-- **`.chat-msg.user`** / **`.chat-msg.ai`** — chat bubbles
+- **`button`** — violet bg, rounded. Variants: `.ghost`, `.outline`, `.sm`, `.xs`, `.icon`
+- **`.chat-msg.user`** / **`.chat-msg.ai`** — rounded chat bubbles
 - **`.prose-bubble`** — markdown content inside chat bubbles
+- **`.section-heading`** — card section titles
+- **`.msg-meta`** — chat message metadata (small, uppercase, muted)
+- **`.notification-unread`** — unread notification left border accent
+- **`.nav-trigger`** — hamburger menu button
+- **`.notification-badge`** — small pill badge for notification counts
 
-Tailwind CSS is loaded via CDN with custom colors: `ned-bg`, `ned-fg`, `ned-muted`, `ned-muted-fg`, `ned-accent`, `ned-accent-fg`, `ned-border`, `ned-card`.
+### Rules
+- **No inline styles** — all styling via Tailwind utilities or CSS classes
+- **No `text-transform: uppercase`** on headings — use `font-semibold tracking-tight`
+
+Tailwind CSS is loaded via CDN with custom colors: `ned-bg`, `ned-fg`, `ned-muted`, `ned-muted-fg`, `ned-accent`, `ned-accent-fg`, `ned-border`, `ned-card`, `ned-primary`, `ned-ring`.
 
 ## Key Files
 

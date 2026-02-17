@@ -1,25 +1,25 @@
 <div class="flex flex-col h-[calc(100dvh-10rem)]">
   <div class="flex-1 overflow-y-auto space-y-6 pb-4">
-    <h2 class="text-5xl md:text-7xl">Conversations</h2>
+    <h2 class="text-2xl font-semibold tracking-tight">Conversations</h2>
 
     <% if @conversations.empty? %>
-      <div class="border-2 border-ned-border p-12 text-center">
+      <div class="border border-ned-border rounded-lg p-12 text-center">
         <p class="text-ned-muted-fg text-lg">No conversations yet. Type a message below to start one!</p>
       </div>
     <% else %>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <% @conversations.each do |conversation| %>
-          <a href="/conversations/<%= conversation.id %>" class="card block" style="text-decoration:none;color:inherit;">
+          <a href="/conversations/<%= conversation.id %>" class="card block no-underline hover:no-underline text-ned-fg hover:border-ned-primary">
             <div class="flex justify-between items-start mb-2">
-              <h3 style="font-size:1.1rem;font-weight:700;text-transform:none;"><%= conversation.title || "Conversation ##{conversation.id}" %></h3>
+              <h3 class="text-base font-semibold"><%= conversation.title || "Conversation ##{conversation.id}" %></h3>
               <span class="badge"><%= conversation.source %></span>
             </div>
-            <div class="flex gap-3 text-xs" style="color:var(--ned-muted-fg);">
+            <div class="flex gap-3 text-xs text-ned-muted-fg">
               <span><%= conversation.messages.count %> messages</span>
               <span><%= conversation.last_message_at&.strftime('%b %d, %Y %I:%M %p') %></span>
             </div>
             <% if conversation.messages.any? %>
-              <p class="text-sm mt-2" style="color:var(--ned-muted-fg);">
+              <p class="text-sm mt-2 text-ned-muted-fg">
                 <%= conversation.messages.last.truncated_content(100) %>
               </p>
             <% end %>

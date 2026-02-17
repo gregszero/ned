@@ -43,7 +43,7 @@ module Ai
 
         <<~HTML
           <div class="#{msg_class}" id="message-#{message.id}">
-            <div class="flex items-center gap-2 mb-1" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;opacity:0.6;">
+            <div class="msg-meta flex items-center gap-2 mb-1">
               <span>#{label}</span>
               <time>#{time}</time>
             </div>
@@ -56,21 +56,21 @@ module Ai
 
       def render_notification_card_html(notification)
         kind = badge_class(notification.kind)
-        unread_border = notification.status == 'unread' ? 'border-left:4px solid var(--ned-accent);' : ''
+        unread_class = notification.status == 'unread' ? ' notification-unread' : ''
 
         <<~HTML
-          <div id="notification-#{notification.id}" class="card" style="#{unread_border}">
+          <div id="notification-#{notification.id}" class="card#{unread_class}">
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-2">
-                <h3 style="font-weight:600;font-size:1rem;text-transform:none;">#{ERB::Util.html_escape(notification.title)}</h3>
+                <h3 class="text-base font-semibold">#{ERB::Util.html_escape(notification.title)}</h3>
                 <span class="badge #{kind}">#{notification.kind || 'info'}</span>
               </div>
-              <span style="font-size:0.75rem;color:var(--ned-muted-fg);">#{notification.created_at&.strftime('%b %d, %H:%M')}</span>
+              <span class="text-xs text-ned-muted-fg">#{notification.created_at&.strftime('%b %d, %H:%M')}</span>
             </div>
-            #{"<p style=\"font-size:0.875rem;color:var(--ned-muted-fg);margin-top:0.25rem;\">#{ERB::Util.html_escape(notification.body)}</p>" if notification.body.present?}
+            #{"<p class=\"text-sm text-ned-muted-fg mt-1\">#{ERB::Util.html_escape(notification.body)}</p>" if notification.body.present?}
             <div class="flex justify-end gap-2 mt-3">
-              #{"<form action=\"/notifications/#{notification.id}/read\" method=\"post\" style=\"display:inline;\"><button type=\"submit\" class=\"ghost xs\">Mark Read</button></form>" if notification.status == 'unread'}
-              <form action="/notifications/#{notification.id}/chat" method="post" style="display:inline;">
+              #{"<form action=\"/notifications/#{notification.id}/read\" method=\"post\" class=\"inline\"><button type=\"submit\" class=\"ghost xs\">Mark Read</button></form>" if notification.status == 'unread'}
+              <form action="/notifications/#{notification.id}/chat" method="post" class="inline">
                 <button type="submit" class="xs">Start Chat</button>
               </form>
             </div>

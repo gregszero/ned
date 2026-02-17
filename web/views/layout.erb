@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#09090B">
+  <meta name="theme-color" content="#7c3aed" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
   <meta name="description" content="Ned — Bot in the Chair">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -13,27 +14,29 @@
   <link rel="apple-touch-icon" href="/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            'ned-bg': '#09090B',
-            'ned-fg': '#FAFAFA',
-            'ned-muted': '#27272A',
-            'ned-muted-fg': '#A1A1AA',
-            'ned-accent': '#DFE104',
-            'ned-accent-fg': '#09090B',
-            'ned-border': '#3F3F46',
-            'ned-card': '#18181B',
+            'ned-bg': 'var(--background)',
+            'ned-fg': 'var(--foreground)',
+            'ned-muted': 'var(--muted)',
+            'ned-muted-fg': 'var(--muted-foreground)',
+            'ned-accent': 'var(--primary)',
+            'ned-accent-fg': 'var(--primary-foreground)',
+            'ned-border': 'var(--border)',
+            'ned-card': 'var(--card)',
+            'ned-primary': 'var(--primary)',
+            'ned-ring': 'var(--ring)',
           },
           fontFamily: {
-            sans: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+            sans: ['"Inter"', 'system-ui', 'sans-serif'],
           },
           borderRadius: {
-            DEFAULT: '0px',
+            DEFAULT: '0.375rem',
           },
         },
       },
@@ -49,16 +52,16 @@
   <div class="sidebar-container">
     <label for="sidebar-toggle"></label>
     <aside class="sidebar">
-      <div class="text-ned-accent font-bold text-xl uppercase tracking-wider mb-6">Ned</div>
-      <nav class="flex flex-col gap-1">
+      <div class="text-ned-primary font-semibold text-lg tracking-tight mb-6">Ned</div>
+      <nav class="flex flex-col gap-0.5">
         <a href="/conversations">Conversations</a>
         <% Ai::AiPage.published.recent.each do |page| %>
           <a href="/pages/<%= page.slug %>"><%= page.title %></a>
         <% end %>
-        <a href="/notifications">
+        <a href="/notifications" class="flex items-center justify-between">
           Notifications
           <% if (unread = Ai::Notification.unread.count) > 0 %>
-            <span class="badge ml-1"><%= unread %></span>
+            <span class="badge"><%= unread %></span>
           <% end %>
         </a>
         <a href="/jobs">Jobs & Skills</a>
@@ -73,40 +76,33 @@
   </div>
 
   <!-- Navbar -->
-  <header class="flex items-center justify-between px-4 h-14 border-b-2 border-ned-border">
-    <label for="sidebar-toggle" class="icon ghost" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:3rem;height:3rem;">
+  <header class="flex items-center justify-between px-4 h-14 border-b border-ned-border">
+    <label for="sidebar-toggle" class="nav-trigger">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     </label>
-    <a href="/conversations" class="text-ned-accent font-bold text-xl uppercase tracking-wider" style="text-decoration:none;">NED</a>
-    <a href="/notifications" style="text-decoration:none;">
+    <a href="/conversations" class="text-ned-primary font-semibold text-lg tracking-tight no-underline hover:no-underline">Ned</a>
+    <a href="/notifications" class="no-underline hover:no-underline">
       <button class="icon ghost relative" type="button" onclick="window.location='/notifications'; return false;">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
         <% if (unread ||= Ai::Notification.unread.count) > 0 %>
-          <span id="notifications-badge" class="badge absolute -top-1 -right-1" style="background:var(--ned-accent);color:var(--ned-accent-fg);font-size:0.6rem;padding:0.1rem 0.3rem;"><%= unread %></span>
+          <span id="notifications-badge" class="notification-badge absolute -top-1 -right-1"><%= unread %></span>
         <% else %>
-          <span id="notifications-badge" class="badge absolute -top-1 -right-1 hidden" style="background:var(--ned-accent);color:var(--ned-accent-fg);font-size:0.6rem;padding:0.1rem 0.3rem;">0</span>
+          <span id="notifications-badge" class="notification-badge absolute -top-1 -right-1 hidden">0</span>
         <% end %>
       </button>
     </a>
   </header>
-
-  <!-- Marquee -->
-  <div class="marquee">
-    <div class="marquee-inner">
-      NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp; NED — BOT IN THE CHAIR &nbsp;&nbsp;&nbsp;
-    </div>
-  </div>
 
   <!-- Page content -->
   <main class="page-content max-w-7xl mx-auto p-6 w-full">
     <%= yield %>
   </main>
 
-  <footer class="border-t-2 border-ned-border px-6 py-4">
+  <footer class="border-t border-ned-border px-6 py-4">
     <p class="text-xs text-ned-muted-fg">Ned v0.1.0</p>
   </footer>
 
