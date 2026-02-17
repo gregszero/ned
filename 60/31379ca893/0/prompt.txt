@@ -1,0 +1,13 @@
+hi ned, what can you do in this framework?
+
+---
+
+what tools you think are useful for you?
+
+---
+
+Web fetch / HTTP requests — So I can pull external data (APIs, RSS feeds, weather, news) from within MCP tools, not just from the outer Claude Code layer. as skill or tool?
+
+---
+
+lets create a web_fetch tool just in case we need to create a skill that fetches data so we use that tool exclusively, makes sense?
