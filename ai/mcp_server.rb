@@ -13,10 +13,7 @@ module Ai
           version: '0.1.0'
         )
 
-        # Register tools
         register_tools
-
-        # Register resources
         register_resources
 
         Ai.logger.info "MCP Server configured with #{@server.tools.count} tools and #{@server.resources.count} resources"
@@ -26,31 +23,40 @@ module Ai
         configure! unless @server
 
         Ai.logger.info "Starting MCP server on #{host}:#{port}"
-
-        # Start server (FastMCP will handle the web server)
         @server.run!(host: host, port: port)
       end
 
       private
 
       def register_tools
-        # Load all tool files
-        tool_files = Dir["#{Ai.root}/ai/tools/**/*.rb"].sort
-        tool_files.each do |file|
-          require file
-        end
+        Dir["#{Ai.root}/ai/tools/**/*.rb"].sort.each { |f| require f }
 
-        # Tools will auto-register themselves via FastMCP
+        tool_classes.each { |tool| @server.register_tool(tool) }
       end
 
       def register_resources
-        # Load all resource files
-        resource_files = Dir["#{Ai.root}/ai/resources/**/*.rb"].sort
-        resource_files.each do |file|
-          require file
-        end
+        Dir["#{Ai.root}/ai/resources/**/*.rb"].sort.each { |f| require f }
 
-        # Resources will auto-register themselves via FastMCP
+        resource_classes.each { |resource| @server.register_resource(resource) }
+      end
+
+      def tool_classes
+        [
+          Ai::Tools::ScheduleTaskTool,
+          Ai::Tools::SendMessageTool,
+          Ai::Tools::RunSkillTool,
+          Ai::Tools::RunCodeTool
+        ]
+      end
+
+      def resource_classes
+        [
+          Ai::Resources::ConversationResource,
+          Ai::Resources::DatabaseSchemaResource,
+          Ai::Resources::AvailableGemsResource,
+          Ai::Resources::ConfigResource,
+          Ai::Resources::SkillsResource
+        ]
       end
     end
   end

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ned": {
+      "type": "sse",
+      "url": "http://localhost:3000/mcp/sse"
+    }
+  }
+}

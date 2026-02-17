@@ -2,14 +2,12 @@
 
 module Ai
   module Resources
-    class ConfigResource
-      include FastMcp::Resource
-
-      resource_uri 'config://user'
+    class ConfigResource < FastMcp::Resource
+      uri 'config://user'
       resource_name 'User Configuration'
       description 'User settings and configuration values'
 
-      def read
+      def content
         config_data = Config.all_config
 
         # Add useful framework info

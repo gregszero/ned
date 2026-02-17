@@ -2,20 +2,18 @@
 
 module Ai
   module Tools
-    class ScheduleTaskTool
-      include FastMcp::Tool
-
+    class ScheduleTaskTool < FastMcp::Tool
       tool_name 'schedule_task'
       description 'Schedule a task to run at a specific time in the future'
 
-      parameter :title, type: 'string', description: 'Task title', required: true
-      parameter :description, type: 'string', description: 'Detailed task description', required: false
-      parameter :scheduled_for, type: 'string', description: 'ISO8601 timestamp or relative time (e.g., "2 hours", "tomorrow")', required: true
-      parameter :skill_name, type: 'string', description: 'Name of skill to execute', required: false
-      parameter :parameters, type: 'object', description: 'Parameters to pass to the skill', required: false
+      arguments do
+        required(:title).filled(:string).description('Task title')
+        required(:scheduled_for).filled(:string).description('ISO8601 timestamp or relative time (e.g., "2 minutes", "1 hour", "tomorrow")')
+        optional(:description).filled(:string).description('Detailed task description')
+        optional(:skill_name).filled(:string).description('Name of skill to execute')
+      end
 
-      def call(title:, scheduled_for:, description: nil, skill_name: nil, parameters: {})
-        # Parse scheduled_for time
+      def call(title:, scheduled_for:, description: nil, skill_name: nil)
         scheduled_time = parse_time(scheduled_for)
 
         unless scheduled_time
@@ -25,13 +23,11 @@ module Ai
           }
         end
 
-        # Create scheduled task
         task = ScheduledTask.create!(
           title: title,
           description: description,
           scheduled_for: scheduled_time,
-          skill_name: skill_name,
-          parameters: parameters || {}
+          skill_name: skill_name
         )
 
         Ai.logger.info "Scheduled task ##{task.id}: #{title} for #{scheduled_time}"
@@ -40,15 +36,11 @@ module Ai
           success: true,
           task_id: task.id,
           title: task.title,
-          scheduled_for: task.scheduled_for.iso8601,
-          skill_name: skill_name
+          scheduled_for: task.scheduled_for.iso8601
         }
       rescue => e
         Ai.logger.error "Failed to schedule task: #{e.message}"
-        {
-          success: false,
-          error: e.message
-        }
+        { success: false, error: e.message }
       end
 
       private
@@ -61,8 +53,9 @@ module Ai
           # Continue to relative time parsing
         end
 
-        # Parse relative times
         case time_string.downcase
+        when /^(\d+)\s*(second|seconds|sec|secs)$/
+          $1.to_i.seconds.from_now
         when /^(\d+)\s*(minute|minutes|min|mins)$/
           $1.to_i.minutes.from_now
         when /^(\d+)\s*(hour|hours|hr|hrs)$/
@@ -75,8 +68,6 @@ module Ai
           1.day.from_now
         when 'next week'
           1.week.from_now
-        else
-          nil
         end
       end
     end

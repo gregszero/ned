@@ -2,17 +2,15 @@
 
 module Ai
   module Tools
-    class RunSkillTool
-      include FastMcp::Tool
-
+    class RunSkillTool < FastMcp::Tool
       tool_name 'run_skill'
       description 'Execute a Ruby skill by name'
 
-      parameter :skill_name, type: 'string', description: 'Name of the skill to run', required: true
-      parameter :parameters, type: 'object', description: 'Parameters to pass to the skill', required: false
+      arguments do
+        required(:skill_name).filled(:string).description('Name of the skill to run')
+      end
 
-      def call(skill_name:, parameters: {})
-        # Find skill in database
+      def call(skill_name:)
         skill_record = SkillRecord.find_by(name: skill_name)
 
         unless skill_record
@@ -23,11 +21,9 @@ module Ai
           }
         end
 
-        # Execute skill
         Ai.logger.info "Executing skill: #{skill_name}"
-        result = skill_record.load_and_execute(**(parameters || {}))
+        result = skill_record.load_and_execute
 
-        # Increment usage count
         skill_record.increment_usage!
 
         {
@@ -38,11 +34,7 @@ module Ai
         }
       rescue => e
         Ai.logger.error "Failed to execute skill #{skill_name}: #{e.message}"
-        {
-          success: false,
-          error: e.message,
-          backtrace: e.backtrace.first(5)
-        }
+        { success: false, error: e.message }
       end
     end
   end

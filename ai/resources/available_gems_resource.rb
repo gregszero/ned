@@ -2,14 +2,12 @@
 
 module Ai
   module Resources
-    class AvailableGemsResource
-      include FastMcp::Resource
-
-      resource_uri 'gems://available'
+    class AvailableGemsResource < FastMcp::Resource
+      uri 'gems://available'
       resource_name 'Available Gems'
       description 'Currently installed Ruby gems and their versions'
 
-      def read
+      def content
         # Get list of gems from Bundler
         specs = Bundler.load.specs.map do |spec|
           {

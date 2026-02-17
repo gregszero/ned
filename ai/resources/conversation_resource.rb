@@ -2,14 +2,12 @@
 
 module Ai
   module Resources
-    class ConversationResource
-      include FastMcp::Resource
-
-      resource_uri 'conversation://current'
+    class ConversationResource < FastMcp::Resource
+      uri 'conversation://current'
       resource_name 'Current Conversation'
       description 'Context and history of the current conversation'
 
-      def read
+      def content
         # Get the most recent conversation (or from context if available)
         conversation = Conversation.order(last_message_at: :desc).first
 

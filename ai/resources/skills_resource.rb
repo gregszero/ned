@@ -2,14 +2,12 @@
 
 module Ai
   module Resources
-    class SkillsResource
-      include FastMcp::Resource
-
-      resource_uri 'skills://available'
+    class SkillsResource < FastMcp::Resource
+      uri 'skills://available'
       resource_name 'Available Skills'
       description 'List of all available Ruby skills and their metadata'
 
-      def read
+      def content
         skills = SkillRecord.all.order(usage_count: :desc).map do |skill|
           {
             id: skill.id,

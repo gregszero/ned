@@ -2,14 +2,12 @@
 
 module Ai
   module Resources
-    class DatabaseSchemaResource
-      include FastMcp::Resource
-
-      resource_uri 'database://schema'
+    class DatabaseSchemaResource < FastMcp::Resource
+      uri 'database://schema'
       resource_name 'Database Schema'
       description 'Current database tables, columns, and relationships'
 
-      def read
+      def content
         connection = ActiveRecord::Base.connection
 
         tables_data = connection.tables.reject do |table|

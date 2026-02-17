@@ -49,12 +49,15 @@ module Ai
       private
 
       def run_claude(prompt:, uuid:, resuming:, env:)
+        mcp_config = File.join(Ai.root, 'workspace', '.mcp.json')
+
         cmd = [
           'claude',
           '-p', prompt,
           '--output-format', 'json',
           '--max-turns', '25',
-          '--permission-mode', 'bypassPermissions'
+          '--permission-mode', 'bypassPermissions',
+          '--mcp-config', mcp_config
         ]
 
         if resuming
