@@ -1,0 +1,38 @@
+# Session Context
+
+## User Prompts
+
+### Prompt 1
+
+when i ask ned to schedule or do smth to me, it should use the tools it has instead of offering me to set things myself. look at this: 
+hi ned
+AI 12:45 PM
+Hi Gregory! How's it going? What can I help you with today?
+You 12:48 PM
+remind me in 2 minutes to join the meeting
+AI 12:48 PM
+I don't have the ability to set timers or send reminders — I only exist within this conversation and can't trigger notifications after a delay.
+
+You could set a quick timer on your phone or run this in your terminal...
+
+### Prompt 2
+
+now ned said that i would be notified but it didnt created the scheduled job: http://0.0.0.0:3000/jobs
+
+### Prompt 3
+
+[2026-02-17T10:01:39.191306 #2264913]  INFO -- : Queue adapter: ActiveJob::QueueAdapters::AsyncAdapter
+I, [2026-02-17T10:01:39.216810 #2264913]  INFO -- : Connected to database: 
+I, [2026-02-17T10:01:39.217605 #2264913]  INFO -- : Scheduler started (polling every 60s)
+! Unable to load application: TypeError: wrong argument type Class (expected Module)
+bundler: failed to load command: puma (/home/greg/.local/share/mise/installs/ruby/3.4.7/bin/puma)
+/home/greg/Developer/ai.rb/ai/tools/run_code_too...
+
+### Prompt 4
+
+DEPRECATION WARNING: ActiveSupport::Concurrency::LoadInterlockAwareMonitor is deprecated and will be removed in Rails 9.0. Use Monitor directly instead, as the loading interlock is no longer used. (called from block (3 levels) in <top (required)> at config.ru:20)
+
+### Prompt 5
+
+worked. commit pls
+

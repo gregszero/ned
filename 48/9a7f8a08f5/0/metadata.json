@@ -1,0 +1,38 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "489a7f8a08f5",
+  "session_id": "a02244c6-dd90-42cb-88d1-1d530b8e3f66",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-17T13:06:35.310262258Z",
+  "branch": "master",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "ai/agent.rb",
+    "ai/mcp_server.rb",
+    "ai/tools/run_code_tool.rb",
+    "ai/tools/run_skill_tool.rb",
+    "ai/tools/schedule_task_tool.rb",
+    "ai/tools/send_message_tool.rb",
+    "config.ru",
+    "workspace/.mcp.json",
+    "workspace/CLAUDE.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 69,
+    "cache_creation_tokens": 56320,
+    "cache_read_tokens": 2704075,
+    "output_tokens": 7805,
+    "api_call_count": 57
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-17T13:06:35.113777485Z",
+    "agent_lines": 95,
+    "human_added": 15,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 110,
+    "agent_percentage": 86.36363636363636
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/a02244c6-dd90-42cb-88d1-1d530b8e3f66.jsonl"
+}
