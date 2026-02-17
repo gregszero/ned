@@ -1,0 +1,5 @@
+in chat conversations, handle and always use markdown
+
+---
+
+commit

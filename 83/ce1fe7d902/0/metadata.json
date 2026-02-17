@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "83ce1fe7d902",
+  "session_id": "edbf346f-8068-4288-8b7a-39e2ab0e89e8",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-17T14:40:05.64865509Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "Gemfile",
+    "web/public/css/style.css",
+    "web/view_helpers.rb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 15,
+    "cache_creation_tokens": 13911,
+    "cache_read_tokens": 290948,
+    "output_tokens": 2626,
+    "api_call_count": 11
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-17T14:40:05.601265913Z",
+    "agent_lines": 78,
+    "human_added": 2,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 80,
+    "agent_percentage": 97.5
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/edbf346f-8068-4288-8b7a-39e2ab0e89e8.jsonl"
+}

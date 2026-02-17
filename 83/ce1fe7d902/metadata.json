@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "83ce1fe7d902",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "Gemfile",
+    "web/public/css/style.css",
+    "web/view_helpers.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/83/ce1fe7d902/0/metadata.json",
+      "transcript": "/83/ce1fe7d902/0/full.jsonl",
+      "context": "/83/ce1fe7d902/0/context.md",
+      "content_hash": "/83/ce1fe7d902/0/content_hash.txt",
+      "prompt": "/83/ce1fe7d902/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 15,
+    "cache_creation_tokens": 13911,
+    "cache_read_tokens": 290948,
+    "output_tokens": 2626,
+    "api_call_count": 11
+  }
+}
