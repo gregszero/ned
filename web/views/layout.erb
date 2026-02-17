@@ -2,20 +2,67 @@
 <html lang="en" data-theme="night">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1d232a">
+  <meta name="description" content="Ned — Guy in the Chair">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Ned — Guy in the Chair</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="/css/style.css">
   <script type="module" src="/js/application.js"></script>
 </head>
-<body class="min-h-screen bg-base-300">
-  <div class="navbar bg-base-100 shadow-lg border-b border-primary/30 px-6">
-    <div class="flex-1">
-      <a href="/conversations" class="text-xl font-bold text-primary">Ned</a>
+<body class="min-h-dvh bg-base-300">
+  <div class="drawer" id="nav-drawer-wrapper">
+    <input id="nav-drawer" type="checkbox" class="drawer-toggle" />
+
+    <div class="drawer-content flex flex-col">
+      <!-- Navbar -->
+      <div class="navbar bg-base-100 shadow-lg border-b border-primary/30">
+        <div class="flex-none">
+          <label for="nav-drawer" class="btn btn-square btn-ghost">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </label>
+        </div>
+        <div class="flex-1">
+          <a href="/conversations" class="text-xl font-bold text-primary">Ned</a>
+        </div>
+        <div class="flex-none">
+          <% unread = Ai::Notification.unread.count %>
+          <a href="/notifications" class="btn btn-ghost btn-sm btn-square relative">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <% if unread > 0 %>
+              <span id="notifications-badge" class="badge badge-xs badge-primary absolute -top-1 -right-1"><%= unread %></span>
+            <% else %>
+              <span id="notifications-badge" class="badge badge-xs badge-primary absolute -top-1 -right-1 hidden">0</span>
+            <% end %>
+          </a>
+        </div>
+      </div>
+
+      <!-- Page content -->
+      <main class="page-content max-w-7xl mx-auto p-6 w-full">
+        <%= yield %>
+      </main>
+
+      <footer class="footer footer-center p-4 bg-base-100 text-base-content/60 border-t border-base-content/10">
+        <p class="text-sm">Ned v0.1.0</p>
+      </footer>
     </div>
-    <div class="flex-none">
-      <ul class="menu menu-horizontal gap-1">
+
+    <!-- Drawer sidebar -->
+    <div class="drawer-side z-40">
+      <label for="nav-drawer" class="drawer-overlay"></label>
+      <ul class="menu bg-base-200 min-h-full w-64 p-4 gap-1">
+        <li class="menu-title text-primary text-lg font-bold mb-2">Ned</li>
         <li><a href="/conversations" class="font-medium">Conversations</a></li>
         <% Ai::AiPage.published.recent.each do |page| %>
           <li><a href="/pages/<%= page.slug %>" class="font-medium"><%= page.title %></a></li>
@@ -23,27 +70,22 @@
         <li>
           <a href="/notifications" class="font-medium">
             Notifications
-            <% unread = Ai::Notification.unread.count %>
-            <% if unread > 0 %>
-              <span id="notifications-badge" class="badge badge-sm badge-primary"><%= unread %></span>
-            <% else %>
-              <span id="notifications-badge" class="badge badge-sm badge-primary hidden">0</span>
+            <% if unread.to_i > 0 %>
+              <span class="badge badge-sm badge-primary"><%= unread %></span>
             <% end %>
           </a>
         </li>
         <li><a href="/jobs" class="font-medium">Jobs & Skills</a></li>
         <li><a href="/settings" class="font-medium">Settings</a></li>
-        <li><a href="/conversations" data-turbo-method="post" class="btn btn-primary btn-sm">+ New</a></li>
+        <li class="mt-2"><a href="/conversations" class="btn btn-primary btn-sm">+ New Conversation</a></li>
       </ul>
     </div>
   </div>
 
-  <main class="max-w-7xl mx-auto p-6">
-    <%= yield %>
-  </main>
-
-  <footer class="footer footer-center p-4 bg-base-100 text-base-content/60 border-t border-base-content/10">
-    <p class="text-sm">Ned v0.1.0</p>
-  </footer>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  </script>
 </body>
 </html>

@@ -10,3 +10,9 @@ import ConversationController from "/js/controllers/conversation_controller.js"
 import NotificationsController from "/js/controllers/notifications_controller.js"
 application.register("conversation", ConversationController)
 application.register("notifications", NotificationsController)
+
+// Close mobile drawer on Turbo navigation
+document.addEventListener('turbo:before-visit', () => {
+  const d = document.getElementById('nav-drawer');
+  if (d) d.checked = false;
+})

@@ -1,3 +1,9 @@
+/* Mobile padding adjustments */
+@media (max-width: 639px) {
+  main.page-content { padding: 0.75rem; }
+  .navbar { padding-left: 0.5rem; padding-right: 0.5rem; }
+}
+
 /* Custom scrollbar for messages */
 .messages::-webkit-scrollbar {
   width: 6px;

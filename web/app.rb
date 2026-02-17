@@ -42,10 +42,17 @@ module Ai
 
             # Create new conversation
             r.post do
+              content = r.params['content']&.strip
               conversation = Conversation.create!(
-                title: r.params['title'] || 'New Conversation',
+                title: 'New Conversation',
                 source: 'web'
               )
+
+              if content && !content.empty?
+                message = conversation.add_message(role: 'user', content: content)
+                Ai::Jobs::AgentExecutorJob.perform_later(message.id)
+              end
+
               r.redirect "/conversations/#{conversation.id}"
             end
           end
