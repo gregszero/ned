@@ -4,6 +4,7 @@ require 'roda'
 require 'tilt/erubi'
 require 'json'
 require_relative 'turbo_broadcast'
+require_relative 'view_helpers'
 
 module Ai
   module Web
@@ -16,7 +17,7 @@ module Ai
       plugin :symbol_views
       plugin :streaming
 
-      # Make models available in views
+      # Make models and helpers available in views
       plugin :render_locals, locals: {
         Conversation: Ai::Conversation,
         Message: Ai::Message,
@@ -24,6 +25,32 @@ module Ai
         Config: Ai::Config,
         Notification: Ai::Notification
       }
+
+      include ViewHelpers
+
+      def sse_stream(channel)
+        queue = Thread::Queue.new
+        subscriber = TurboBroadcast.subscribe(channel) { |html| queue.push(html) }
+
+        Ai.logger.info "[SSE] Connection opened for #{channel}"
+
+        response['Content-Type'] = 'text/event-stream'
+        response['Cache-Control'] = 'no-cache'
+        response['X-Accel-Buffering'] = 'no'
+
+        stream(loop: true, callback: proc {
+          Ai.logger.info "[SSE] Connection closed for #{channel}"
+          TurboBroadcast.unsubscribe(channel, subscriber)
+        }) do |out|
+          html = queue.pop(timeout: 30)
+          if html
+            Ai.logger.info "[SSE] Sending event to #{channel} (#{html.length} bytes)"
+            out << "data: #{html.gsub("\n", "\ndata: ")}\n\n"
+          else
+            out << ": heartbeat\n\n"
+          end
+        end
+      end
 
       route do |r|
         r.public
@@ -73,28 +100,7 @@ module Ai
             # SSE stream for Turbo Stream updates
             r.on 'stream' do
               r.get do
-                channel = "conversation:#{@conversation.id}"
-                queue = Thread::Queue.new
-                subscriber = TurboBroadcast.subscribe(channel) { |html| queue.push(html) }
-
-                Ai.logger.info "[SSE] Connection opened for #{channel}"
-
-                response['Content-Type'] = 'text/event-stream'
-                response['Cache-Control'] = 'no-cache'
-                response['X-Accel-Buffering'] = 'no'
-
-                stream(loop: true, callback: proc {
-                  Ai.logger.info "[SSE] Connection closed for #{channel}"
-                  TurboBroadcast.unsubscribe(channel, subscriber)
-                }) do |out|
-                  html = queue.pop(timeout: 30)
-                  if html
-                    Ai.logger.info "[SSE] Sending event to #{channel} (#{html.length} bytes)"
-                    out << "data: #{html.gsub("\n", "\ndata: ")}\n\n"
-                  else
-                    out << ": heartbeat\n\n"
-                  end
-                end
+                sse_stream("conversation:#{@conversation.id}")
               end
             end
 
@@ -107,45 +113,36 @@ module Ai
                   r.halt 400, { error: 'Message content required' }
                 end
 
-                # Create user message
                 message = @conversation.add_message(
                   role: 'user',
                   content: content
                 )
 
-                # Enqueue job to process with AI
                 Ai::Jobs::AgentExecutorJob.perform_later(message.id)
 
                 if r.params['turbo']
-                  # Turbo Stream response - append user message and reset form
-                  message_html = render('_message', locals: { message: message })
+                  message_html = render_message_html(message)
 
                   response['Content-Type'] = 'text/vnd.turbo-stream.html'
-                  <<~HTML
-                    <turbo-stream action="append" target="messages">
-                      <template>
-                        #{message_html}
-                      </template>
-                    </turbo-stream>
-                    <turbo-stream action="replace" target="message-form">
-                      <template>
-                        <turbo-frame id="message-form">
-                          <form action="/conversations/#{@conversation.id}/messages" method="post" class="flex gap-3" data-turbo="true">
-                            <input type="hidden" name="turbo" value="1">
-                            <textarea
-                              name="content"
-                              placeholder="Type your message..."
-                              rows="3"
-                              required
-                              autofocus
-                              class="textarea textarea-bordered flex-1 text-base"
-                            ></textarea>
-                            <button type="submit" class="btn btn-primary self-end">Send</button>
-                          </form>
-                        </turbo-frame>
-                      </template>
-                    </turbo-stream>
-                  HTML
+                  turbo_stream('append', 'messages') { message_html } +
+                  turbo_stream('replace', 'message-form') do
+                    <<~HTML
+                      <turbo-frame id="message-form">
+                        <form action="/conversations/#{@conversation.id}/messages" method="post" class="flex gap-3" data-turbo="true">
+                          <input type="hidden" name="turbo" value="1">
+                          <textarea
+                            name="content"
+                            placeholder="Type your message..."
+                            rows="3"
+                            required
+                            autofocus
+                            class="textarea textarea-bordered flex-1 text-base"
+                          ></textarea>
+                          <button type="submit" class="btn btn-primary self-end">Send</button>
+                        </form>
+                      </turbo-frame>
+                    HTML
+                  end
                 else
                   r.redirect "/conversations/#{@conversation.id}"
                 end
@@ -165,21 +162,7 @@ module Ai
           # SSE stream
           r.on 'stream' do
             r.get do
-              queue = Thread::Queue.new
-              subscriber = TurboBroadcast.subscribe('notifications') { |html| queue.push(html) }
-
-              response['Content-Type'] = 'text/event-stream'
-              response['Cache-Control'] = 'no-cache'
-              response['X-Accel-Buffering'] = 'no'
-
-              stream(loop: true, callback: proc { TurboBroadcast.unsubscribe('notifications', subscriber) }) do |out|
-                html = queue.pop(timeout: 30)
-                if html
-                  out << "data: #{html.gsub("\n", "\ndata: ")}\n\n"
-                else
-                  out << ": heartbeat\n\n"
-                end
-              end
+              sse_stream('notifications')
             end
           end
 

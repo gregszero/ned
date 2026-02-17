@@ -4,26 +4,20 @@ module Ai
   class Session < ActiveRecord::Base
     self.table_name = 'sessions'
 
+    include HasStatus
+
     # Associations
     belongs_to :conversation
 
     # Validations
     validates :status, presence: true, inclusion: { in: %w[starting running stopped error] }
 
-    # Scopes
+    # Statuses
+    statuses :starting, :running, :stopped, :error
     scope :active, -> { where(status: 'running') }
-    scope :stopped, -> { where(status: 'stopped') }
     scope :with_errors, -> { where(status: 'error') }
 
     # Methods
-    def running?
-      status == 'running'
-    end
-
-    def stopped?
-      status == 'stopped'
-    end
-
     def duration
       return nil unless started_at
 

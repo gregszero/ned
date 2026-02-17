@@ -13,8 +13,12 @@ module Ai
           version: '0.1.0'
         )
 
-        register_tools
-        register_resources
+        # Auto-discover and register tools/resources
+        Dir["#{Ai.root}/ai/tools/**/*.rb"].sort.each { |f| require f }
+        Dir["#{Ai.root}/ai/resources/**/*.rb"].sort.each { |f| require f }
+
+        ObjectSpace.each_object(Class).select { |c| c < FastMcp::Tool }.each { |t| @server.register_tool(t) }
+        ObjectSpace.each_object(Class).select { |c| c < FastMcp::Resource }.each { |r| @server.register_resource(r) }
 
         Ai.logger.info "MCP Server configured with #{@server.tools.count} tools and #{@server.resources.count} resources"
       end
@@ -24,39 +28,6 @@ module Ai
 
         Ai.logger.info "Starting MCP server on #{host}:#{port}"
         @server.run!(host: host, port: port)
-      end
-
-      private
-
-      def register_tools
-        Dir["#{Ai.root}/ai/tools/**/*.rb"].sort.each { |f| require f }
-
-        tool_classes.each { |tool| @server.register_tool(tool) }
-      end
-
-      def register_resources
-        Dir["#{Ai.root}/ai/resources/**/*.rb"].sort.each { |f| require f }
-
-        resource_classes.each { |resource| @server.register_resource(resource) }
-      end
-
-      def tool_classes
-        [
-          Ai::Tools::ScheduleTaskTool,
-          Ai::Tools::SendMessageTool,
-          Ai::Tools::RunSkillTool,
-          Ai::Tools::RunCodeTool
-        ]
-      end
-
-      def resource_classes
-        [
-          Ai::Resources::ConversationResource,
-          Ai::Resources::DatabaseSchemaResource,
-          Ai::Resources::AvailableGemsResource,
-          Ai::Resources::ConfigResource,
-          Ai::Resources::SkillsResource
-        ]
       end
     end
   end

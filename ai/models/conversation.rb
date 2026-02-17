@@ -4,6 +4,8 @@ module Ai
   class Conversation < ActiveRecord::Base
     self.table_name = 'conversations'
 
+    include HasJsonDefaults
+
     # Associations
     has_many :messages, dependent: :destroy
     has_many :sessions, dependent: :destroy
@@ -15,8 +17,11 @@ module Ai
     scope :recent, -> { order(last_message_at: :desc) }
     scope :by_source, ->(source) { where(source: source) }
 
+    # Defaults
+    json_defaults context: {}
+
     # Callbacks
-    before_create :set_defaults
+    after_initialize :set_last_message_at, if: :new_record?
 
     # Methods
     def add_message(role:, content:, metadata: {})
@@ -39,8 +44,7 @@ module Ai
 
     private
 
-    def set_defaults
-      self.context ||= {}
+    def set_last_message_at
       self.last_message_at ||= Time.current
     end
   end

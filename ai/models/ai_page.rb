@@ -4,25 +4,22 @@ module Ai
   class AiPage < ActiveRecord::Base
     self.table_name = 'ai_pages'
 
+    include HasStatus
+
     # Validations
     validates :title, presence: true
     validates :slug, presence: true, uniqueness: true
     validates :content, presence: true
     validates :status, presence: true, inclusion: { in: %w[draft published archived] }
 
-    # Scopes
-    scope :published, -> { where(status: 'published') }
-    scope :draft, -> { where(status: 'draft') }
+    # Statuses
+    statuses :draft, :published, :archived
     scope :recent, -> { order(created_at: :desc) }
 
     # Callbacks
     before_validation :generate_slug, if: -> { slug.blank? }
 
     # Methods
-    def published?
-      status == 'published'
-    end
-
     def publish!
       update!(status: 'published', published_at: Time.current)
     end
@@ -39,7 +36,6 @@ module Ai
       base_slug = title.parameterize
       self.slug = base_slug
 
-      # Handle duplicates
       counter = 1
       while AiPage.exists?(slug: slug)
         self.slug = "#{base_slug}-#{counter}"

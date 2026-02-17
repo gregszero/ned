@@ -1,20 +1,21 @@
 # frozen_string_literal: true
 
 require_relative '../../web/turbo_broadcast'
+require_relative '../../web/view_helpers'
 
 module Ai
   module Jobs
     class AgentExecutorJob < ApplicationJob
+      include Web::ViewHelpers
+
       queue_as :agent_execution
 
-      # Execute a prompt via claude subprocess and save the response
       def perform(message_id)
         message = Message.find(message_id)
         conversation = message.conversation
 
         Ai.logger.info "Processing message #{message_id} for conversation #{conversation.id}"
 
-        # Show thinking indicator via Turbo Stream
         broadcast_thinking(conversation)
 
         result = Agent.execute(
@@ -48,18 +49,16 @@ module Ai
       private
 
       def broadcast_thinking(conversation)
-        html = <<~HTML
-          <turbo-stream action="append" target="messages">
-            <template>
-              <div class="chat chat-start" id="thinking-indicator">
-                <div class="chat-header text-xs text-base-content/50 mb-1">AI</div>
-                <div class="chat-bubble chat-bubble-secondary">
-                  <span class="loading loading-dots loading-sm"></span>
-                </div>
+        html = turbo_stream('append', 'messages') do
+          <<~HTML
+            <div class="chat chat-start" id="thinking-indicator">
+              <div class="chat-header text-xs text-base-content/50 mb-1">AI</div>
+              <div class="chat-bubble chat-bubble-secondary">
+                <span class="loading loading-dots loading-sm"></span>
               </div>
-            </template>
-          </turbo-stream>
-        HTML
+            </div>
+          HTML
+        end
 
         Web::TurboBroadcast.broadcast("conversation:#{conversation.id}", html)
       end
@@ -76,30 +75,8 @@ module Ai
       end
 
       def broadcast_response(conversation, message)
-        role_class = message.role == 'user' ? 'chat-end' : 'chat-start'
-        bubble_class = message.role == 'user' ? 'chat-bubble-primary' : 'chat-bubble-secondary'
-        label = message.role == 'user' ? 'You' : 'AI'
-        time = message.created_at.strftime('%I:%M %p')
-        content = message.content.gsub("\n", '<br>').gsub('"', '&quot;')
-
-        html = <<~HTML
-          <turbo-stream action="remove" target="thinking-indicator">
-            <template></template>
-          </turbo-stream>
-          <turbo-stream action="append" target="messages">
-            <template>
-              <div class="chat #{role_class}" id="message-#{message.id}">
-                <div class="chat-header text-xs text-base-content/50 mb-1">
-                  #{label}
-                  <time class="ml-1">#{time}</time>
-                </div>
-                <div class="chat-bubble #{bubble_class}">
-                  #{content}
-                </div>
-              </div>
-            </template>
-          </turbo-stream>
-        HTML
+        html = turbo_stream('remove', 'thinking-indicator') {} +
+               turbo_stream('append', 'messages') { render_message_html(message) }
 
         Web::TurboBroadcast.broadcast("conversation:#{conversation.id}", html)
       end

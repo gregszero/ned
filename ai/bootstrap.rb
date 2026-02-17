@@ -38,7 +38,8 @@ module Ai
       require_relative 'whatsapp'
       require_relative 'mcp_server'
 
-      # Load models
+      # Load concerns and models
+      Dir[root.join('ai/concerns/**/*.rb')].sort.each { |f| require f }
       Dir[root.join('ai/models/**/*.rb')].sort.each { |f| require f }
 
       # Load jobs

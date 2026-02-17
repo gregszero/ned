@@ -32,19 +32,11 @@ module Ai
       private
 
       def create_safe_context
-        binding_context = Object.new
-
-        binding_context.instance_eval do
-          def Conversation; Ai::Conversation; end
-          def Message; Ai::Message; end
-          def Session; Ai::Session; end
-          def ScheduledTask; Ai::ScheduledTask; end
-          def SkillRecord; Ai::SkillRecord; end
-          def McpConnection; Ai::McpConnection; end
-          def Config; Ai::Config; end
-        end
-
-        binding_context.instance_eval { binding }
+        ctx = Object.new
+        Ai.constants.map { |c| Ai.const_get(c) }
+          .select { |c| c.is_a?(Class) && c < ActiveRecord::Base }
+          .each { |model| ctx.define_singleton_method(model.name.demodulize.to_sym) { model } }
+        ctx.instance_eval { binding }
       end
     end
   end

@@ -4,6 +4,8 @@ module Ai
   class Message < ActiveRecord::Base
     self.table_name = 'messages'
 
+    include HasJsonDefaults
+
     # Associations
     belongs_to :conversation
 
@@ -18,9 +20,8 @@ module Ai
     scope :system_messages, -> { where(role: 'system') }
     scope :chronological, -> { order(created_at: :asc) }
 
-    # Callbacks
-    before_create :set_defaults
-    after_create :update_conversation_timestamp
+    # Defaults
+    json_defaults metadata: {}
 
     # Methods
     def user?
@@ -37,16 +38,6 @@ module Ai
 
     def truncated_content(length = 100)
       content.length > length ? "#{content[0...length]}..." : content
-    end
-
-    private
-
-    def set_defaults
-      self.metadata ||= {}
-    end
-
-    def update_conversation_timestamp
-      conversation.touch(:last_message_at)
     end
   end
 end
