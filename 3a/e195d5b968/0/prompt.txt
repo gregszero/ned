@@ -1,0 +1,118 @@
+Implement the following plan:
+
+# Plan: Migrate Design System from Brutalist to shadcn/ui
+
+## Context
+
+The current "Kinetic Typography" design system uses a brutalist aesthetic (sharp edges, acid yellow accent, uppercase headings, Space Grotesk font). We're migrating to a clean, minimal shadcn/ui-inspired design with rounded corners, subtle shadows, neutral grays, and proper light/dark mode support — while keeping the same stack (Tailwind CDN, custom CSS, ERB templates).
+
+**Accent color choice:** Violet (`#8B5CF6` / violet-500) — distinctive, modern, works great in both light and dark modes.
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `web/public/css/style.css` | Replace entire design system — new tokens, base styles, components |
+| `web/views/layout.erb` | New Tailwind config, font (Inter), remove marquee, update nav/sidebar/footer |
+| `web/views/conversations_index.erb` | Update classes for new design tokens |
+| `web/views/conversation_show.erb` | Update chat container and form classes |
+| `web/views/notifications.erb` | Minor class updates |
+| `web/views/settings.erb` | Update heading styles, card section headers |
+| `web/views/jobs_and_skills.erb` | Same as settings |
+| `web/views/page_show.erb` | Minor class updates |
+| `web/view_helpers.rb` | Update `render_message_html` and `render_notification_card_html` inline styles |
+
+## Design Token Mapping
+
+Replace `--ned-*` CSS variables with shadcn/ui HSL-based tokens supporting light + dark:
+
+```
+Light mode:
+  --background: white        --foreground: #0f172a (slate-900)
+  --card: white               --card-foreground: #0f172a
+  --muted: #f1f5f9 (slate-100) --muted-foreground: #64748b (slate-500)
+  --accent: #f5f3ff (violet-50) --accent-foreground: #6d28d9 (violet-700)
+  --primary: #7c3aed (violet-600) --primary-foreground: white
+  --border: #e2e8f0 (slate-200)
+  --ring: #7c3aed (violet-600)
+
+Dark mode:
+  --background: #09090b       --foreground: #fafafa
+  --card: #18181b              --card-foreground: #fafafa
+  --muted: #27272a             --muted-foreground: #a1a1aa
+  --accent: #27272a            --accent-foreground: #a78bfa (violet-400)
+  --primary: #8b5cf6 (violet-500) --primary-foreground: white
+  --border: #27272a
+  --ring: #8b5cf6
+```
+
+Tailwind custom colors will mirror these as `ned-*` to minimize class name changes across templates. We keep the `ned-` prefix for backward compatibility.
+
+## Detailed Changes
+
+### 1. `style.css` — Full Rewrite
+
+- **Tokens**: Replace `:root` block with light-mode defaults + `@media (prefers-color-scheme: dark)` override
+- **Body**: System font stack (`Inter, system-ui, sans-serif`), remove antialiased overrides (Tailwind handles it)
+- **Headings**: Remove `text-transform: uppercase`, use `font-semibold`, `tracking-tight`
+- **Links**: Use `text-primary` color, underline on hover
+- **Buttons**: Add `border-radius: 0.375rem`, remove `transform: scale()` hover, use `transition-colors duration-200`, proper height/padding
+- **Inputs**: Full border (not just bottom), `border-radius: 0.375rem`, `focus:ring-2`
+- **Cards**: `border-radius: 0.5rem`, `shadow-sm`, subtle border, no hover accent
+- **Badges**: `border-radius: 9999px` (pill), smaller and subtler
+- **Chat messages**: Rounded bubbles, user = primary color bg, AI = card bg
+- **Tables**: Rounded, subtler borders, no uppercase headers
+- **Sidebar**: Rounded corners when shown, softer overlay, nicer nav links (rounded hover states)
+- **Prose bubble**: Update code/blockquote colors to use new tokens
+- **Remove**: Marquee styles entirely, reveal animation
+- **Add**: Smooth `transition-colors duration-200` globally, focus ring utilities
+- **Mobile**: Touch-friendly sizing (min 44px tap targets), safe-area insets
+
+### 2. `layout.erb`
+
+- Replace Google Fonts link: load Inter instead of Space Grotesk
+- Update Tailwind config: new color palette, `borderRadius` defaults, font family
+- Add dark mode class detection script (respect `prefers-color-scheme`)
+- Remove marquee section entirely
+- Update header: softer border (`border-b` not `border-b-2`), rounded elements
+- Update sidebar: rounded nav links with hover bg, softer brand text
+- Update footer: subtle border, muted text
+- Update `<meta name="theme-color">` for light/dark
+
+### 3. View Templates — Zero Inline Styles
+
+**Rule: No `style="..."` anywhere.** All styling via Tailwind utilities or custom CSS classes.
+
+All templates get the same pattern of changes:
+- `text-5xl md:text-7xl` headings → `text-2xl font-semibold tracking-tight`
+- `border-2 border-ned-border` → `border border-ned-border rounded-lg`
+- Remove ALL `style="..."` attributes — replace with Tailwind classes or new CSS classes
+- Card section headings: `text-lg font-semibold` (Tailwind classes only)
+
+New CSS classes to add in `style.css` for patterns that Tailwind can't cover:
+- `.section-heading` — for card section titles (`text-lg font-semibold mb-4`)
+- `.msg-meta` — for chat message metadata (small, uppercase, muted)
+- `.notification-unread` — for unread notification left border accent
+
+### 4. `view_helpers.rb` — Zero Inline Styles
+
+- `render_message_html`: Replace all `style="..."` with CSS classes (`msg-meta`, Tailwind utilities)
+- `render_notification_card_html`: Replace all `style="..."` with CSS classes (`notification-unread`, Tailwind utilities)
+- No `style=` attribute should remain in any generated HTML
+
+## Verification
+
+1. Run `./ai.rb server` and open `http://localhost:3000`
+2. Check all pages: Conversations, Conversation detail, Notifications, Settings, Jobs & Skills, any AI Pages
+3. Test light mode (system preference) and dark mode
+4. Test mobile viewport — verify touch targets, sidebar, chat input
+5. Verify chat messages render correctly (user vs AI bubbles, markdown content)
+6. Verify notification cards with read/unread states
+7. Verify tables render properly on Settings and Jobs pages
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
