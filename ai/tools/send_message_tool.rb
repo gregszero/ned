@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'redcarpet'
+
 module Ai
   module Tools
     class SendMessageTool < FastMcp::Tool
@@ -14,6 +16,8 @@ module Ai
       def call(content:, conversation_id: nil)
         conversation = if conversation_id
           Conversation.find(conversation_id)
+        elsif ENV['CONVERSATION_ID']
+          Conversation.find(ENV['CONVERSATION_ID'])
         else
           Conversation.last
         end
@@ -23,6 +27,9 @@ module Ai
         end
 
         message = conversation.add_message(role: 'assistant', content: content)
+
+        # Broadcast via TurboBroadcast so the message appears in the UI in real-time
+        broadcast_message(conversation, message)
 
         Ai.logger.info "Message sent to conversation #{conversation.id}"
 
@@ -34,6 +41,35 @@ module Ai
       rescue => e
         Ai.logger.error "Failed to send message: #{e.message}"
         { success: false, error: e.message }
+      end
+
+      private
+
+      def broadcast_message(conversation, message)
+        renderer = Redcarpet::Markdown.new(
+          Redcarpet::Render::HTML.new(hard_wrap: true, link_attributes: { target: '_blank', rel: 'noopener' }),
+          fenced_code_blocks: true, tables: true, autolink: true, strikethrough: true, no_intra_emphasis: true
+        )
+
+        time = message.created_at.strftime('%I:%M %p')
+        content_html = renderer.render(message.content)
+
+        message_html = <<~HTML
+          <div class="chat-msg ai" id="message-#{message.id}">
+            <div class="flex items-center gap-2 mb-1" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;opacity:0.6;">
+              <span>AI</span>
+              <time>#{time}</time>
+            </div>
+            <div class="prose-bubble">
+              #{content_html}
+            </div>
+          </div>
+        HTML
+
+        turbo_html = "<turbo-stream action=\"append\" target=\"messages\"><template>#{message_html}</template></turbo-stream>"
+        Ai::Web::TurboBroadcast.broadcast("conversation:#{conversation.id}", turbo_html)
+      rescue => e
+        Ai.logger.error "Failed to broadcast message: #{e.message}"
       end
     end
   end

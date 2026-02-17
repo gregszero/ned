@@ -8,9 +8,10 @@ module Ai
 
       arguments do
         required(:skill_name).filled(:string).description('Name of the skill to run')
+        optional(:parameters).filled(:hash).description('Parameters to pass to the skill')
       end
 
-      def call(skill_name:)
+      def call(skill_name:, parameters: {})
         skill_record = SkillRecord.find_by(name: skill_name)
 
         unless skill_record
@@ -21,8 +22,8 @@ module Ai
           }
         end
 
-        Ai.logger.info "Executing skill: #{skill_name}"
-        result = skill_record.load_and_execute
+        Ai.logger.info "Executing skill: #{skill_name} with params: #{parameters.inspect}"
+        result = skill_record.load_and_execute(**parameters.transform_keys(&:to_sym))
 
         skill_record.increment_usage!
 

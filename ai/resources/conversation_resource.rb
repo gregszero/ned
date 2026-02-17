@@ -8,8 +8,11 @@ module Ai
       description 'Context and history of the current conversation'
 
       def content
-        # Get the most recent conversation (or from context if available)
-        conversation = Conversation.order(last_message_at: :desc).first
+        # Use CONVERSATION_ID env var (set by agent.rb) or fall back to most recent
+        conversation = if ENV['CONVERSATION_ID']
+          Conversation.find_by(id: ENV['CONVERSATION_ID'])
+        end
+        conversation ||= Conversation.order(last_message_at: :desc).first
 
         return { error: 'No conversations found' }.to_json unless conversation
 
