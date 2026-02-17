@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "5b91cedf6add",
+  "session_id": "17707ef9-f180-5325-9bae-2616fc0a0d81",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-17T13:28:44.157990268Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "ai/jobs/memory_sync_job.rb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 3,
+    "cache_creation_tokens": 7169,
+    "cache_read_tokens": 13732,
+    "output_tokens": 1,
+    "api_call_count": 1
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-17T13:28:44.140294642Z",
+    "agent_lines": 0,
+    "human_added": 220,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 220,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/17707ef9-f180-5325-9bae-2616fc0a0d81.jsonl"
+}
