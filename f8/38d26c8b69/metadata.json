@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "f838d26c8b69",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    ".claude/skills/debug/SKILL.md",
+    ".claude/skills/new-migration/SKILL.md",
+    ".claude/skills/new-tool/SKILL.md",
+    ".claude/skills/new-view/SKILL.md",
+    "CLAUDE.md",
+    "ai/resources/conversation_resource.rb",
+    "ai/tools/create_notification_tool.rb",
+    "ai/tools/create_page_tool.rb",
+    "ai/tools/run_skill_tool.rb",
+    "ai/tools/send_message_tool.rb",
+    "workspace/CLAUDE.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/f8/38d26c8b69/0/metadata.json",
+      "transcript": "/f8/38d26c8b69/0/full.jsonl",
+      "context": "/f8/38d26c8b69/0/context.md",
+      "content_hash": "/f8/38d26c8b69/0/content_hash.txt",
+      "prompt": "/f8/38d26c8b69/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 38,
+    "cache_creation_tokens": 49602,
+    "cache_read_tokens": 1573042,
+    "output_tokens": 9227,
+    "api_call_count": 34
+  }
+}

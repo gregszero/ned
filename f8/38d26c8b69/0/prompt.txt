@@ -1,0 +1,152 @@
+Implement the following plan:
+
+# Plan: Make ai.rb Framework Claude-Friendly
+
+## Context
+
+The ai.rb framework has structural gaps that prevent Claude from working effectively — both as "Ned" (the inner agent) and as Claude Code (the developer tool). The inner agent's system prompt references 5 tools that don't exist, 3 existing tools have bugs, there's no root CLAUDE.md for Claude Code, and the design system is undocumented for AI consumption. This plan fixes all of these so Claude can reliably build, fix, and extend the framework.
+
+---
+
+## 1. Fix Broken Tool Implementations
+
+### 1a. `send_message` — add real-time broadcast
+**File:** `ai/tools/send_message_tool.rb`
+
+The tool saves messages to the DB but never calls `TurboBroadcast`, so messages don't appear in the UI in real-time. Fix: after saving the message, broadcast via `TurboBroadcast.broadcast("conversation:#{conversation.id}", turbo_html)` using the same `render_message_html` pattern from `agent_executor_job.rb` (line ~30-40). Since ViewHelpers isn't available in the tool context, build the turbo stream HTML inline using the same `turbo_stream` helper pattern from `web/view_helpers.rb`.
+
+### 1b. `run_skill` — accept parameters
+**File:** `ai/tools/run_skill_tool.rb`
+
+The tool accepts `skill_name` but has no `parameters` argument, so skills can never receive input. Fix: add `optional(:parameters).filled(:hash).description('Parameters to pass to the skill')` and pass them through to `skill_record.load_and_execute(**parameters)`.
+
+### 1c. `ConversationResource` — use CONVERSATION_ID env var
+**File:** `ai/resources/conversation_resource.rb`
+
+Currently uses `Conversation.order(last_message_at: :desc).first` which returns the wrong conversation. The agent subprocess receives `CONVERSATION_ID` as an env var (set in `ai/agent.rb:113`). Fix: use `ENV['CONVERSATION_ID']` to find the correct conversation, falling back to most recent if unset.
+
+---
+
+## 2. Fix workspace/CLAUDE.md (Ned's System Prompt)
+
+**File:** `workspace/CLAUDE.md`
+
+The "Your Capabilities" section lists 9 tools — 5 of which don't exist (`generate`, `edit_file`, `commit`, `add_gem`, `connect_mcp`). This causes the agent to hallucinate tool calls.
+
+Fix: rewrite the capabilities section to accurately list only the 4 existing tools + any new ones we add. Also add:
+- Design system reference (CSS tokens, component classes, badge/button variants)
+- Accurate directory structure
+- Page creation instructions (using `run_code` to create AiPage records)
+- Remove references to Docker containers (the agent runs as a CLI subprocess, not in Docker)
+
+---
+
+## 3. Create Root CLAUDE.md for Claude Code
+
+**File:** `CLAUDE.md` (CREATE at project root)
+
+This is the most impactful change. When Claude Code works on this project, it currently has NO guidance. Create a concise CLAUDE.md covering:
+
+- **Architecture overview**: Roda + ActiveRecord + FastMCP + Claude CLI subprocess
+- **Key conventions**: auto-discovery via ObjectSpace, no index pages for content types, nav links in layout.erb
+- **Adding a new MCP tool**: subclass `FastMcp::Tool`, place in `ai/tools/`, auto-registered on boot
+- **Adding a new route/view**: add route in `web/app.rb`, create ERB in `web/views/`, add nav link to `layout.erb`
+- **Adding a model**: create migration in `workspace/migrations/`, model in `ai/models/`
+- **Design system tokens**: list the CSS custom properties, component classes, Tailwind custom config
+- **Running the app**: `./ai.rb server`, `./ai.rb console`, `./ai.rb db:migrate`
+- **Key files**: quick reference to the most important files
+
+---
+
+## 4. Add Missing MCP Tools
+
+### 4a. `create_page` tool
+**File:** `ai/tools/create_page_tool.rb` (CREATE)
+
+Dedicated tool for creating AiPages. Arguments: `title` (required), `content` (required), `status` (optional, default 'published'). Creates the AiPage record and returns the slug/URL. This is cleaner than forcing the agent to use `run_code` with raw ActiveRecord.
+
+### 4b. `create_notification` tool
+**File:** `ai/tools/create_notification_tool.rb` (CREATE)
+
+Tool for creating notifications. Arguments: `title` (required), `body` (optional), `kind` (optional: info/success/warning/error). Creates a Notification record and broadcasts it via TurboBroadcast to the notifications SSE channel.
+
+---
+
+## 5. Add Claude Code Development Skills
+
+These are `.claude/skills/` SKILL.md files that teach Claude Code how to extend the framework.
+
+### 5a. `/new-tool` skill
+**File:** `.claude/skills/new-tool/SKILL.md` (CREATE)
+
+Step-by-step guide for creating a new MCP tool:
+- File template (FastMcp::Tool subclass with tool_name, description, arguments, call)
+- Where to place it (`ai/tools/`)
+- How auto-discovery works
+- How to test (restart server, check via MCP)
+
+### 5b. `/new-view` skill
+**File:** `.claude/skills/new-view/SKILL.md` (CREATE)
+
+Guide for adding a new page/view:
+- Add route to `web/app.rb` following Roda patterns
+- Create ERB template in `web/views/`
+- Add nav link to `layout.erb` sidebar
+- Design system reference (which classes to use)
+- Stimulus controller patterns if needed
+
+### 5c. `/new-migration` skill
+**File:** `.claude/skills/new-migration/SKILL.md` (CREATE)
+
+Guide for creating database migrations:
+- File naming: `workspace/migrations/NNNN_description.rb`
+- ActiveRecord migration class pattern
+- Model file in `ai/models/`
+- Running: `./ai.rb db:migrate`
+
+### 5d. `/debug` skill
+**File:** `.claude/skills/debug/SKILL.md` (CREATE)
+
+Troubleshooting guide:
+- How to check if the server is running
+- How to read logs
+- Common errors (session in use, MCP connection failed, tool not found)
+- How to test tools via console
+- How to verify SSE streams are working
+
+---
+
+## File Summary
+
+| File | Action | Purpose |
+|---|---|---|
+| `CLAUDE.md` | CREATE | Root project guide for Claude Code |
+| `workspace/CLAUDE.md` | EDIT | Fix ghost tools, add design system ref |
+| `ai/tools/send_message_tool.rb` | EDIT | Add TurboBroadcast call |
+| `ai/tools/run_skill_tool.rb` | EDIT | Add parameters argument |
+| `ai/resources/conversation_resource.rb` | EDIT | Use CONVERSATION_ID env var |
+| `ai/tools/create_page_tool.rb` | CREATE | Dedicated page creation tool |
+| `ai/tools/create_notification_tool.rb` | CREATE | Notification creation tool |
+| `.claude/skills/new-tool/SKILL.md` | CREATE | Skill for creating MCP tools |
+| `.claude/skills/new-view/SKILL.md` | CREATE | Skill for creating views/routes |
+| `.claude/skills/new-migration/SKILL.md` | CREATE | Skill for creating migrations |
+| `.claude/skills/debug/SKILL.md` | CREATE | Debugging/troubleshooting skill |
+
+---
+
+## Verification
+
+1. **Start server**: `./ai.rb server` — should boot without errors
+2. **Check tools registered**: `./ai.rb console` → verify `FastMcp::Tool` subclasses include new tools
+3. **Test send_message broadcast**: Send a message via web UI, verify AI response appears in real-time
+4. **Test create_page tool**: Via console, call the tool and verify page appears in nav sidebar
+5. **Test conversation resource**: Verify it uses CONVERSATION_ID when available
+6. **Claude Code skills**: Run `/new-tool` in Claude Code and verify it gives correct guidance
+7. **CLAUDE.md**: Start a fresh Claude Code session in the project and verify it understands the framework
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
