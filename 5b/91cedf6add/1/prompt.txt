@@ -1,0 +1,164 @@
+Implement the following plan:
+
+# Plan: Compact & Optimize ai.rb Framework
+
+## Context
+The ai.rb framework (~3,200 LOC) is already well-architected, but has accumulated duplication (HTML in 3 places for messages, manual model listings, repeated patterns across models) and dead code. The goal is to make it maximally compact and AI-friendly: an AI agent should understand and extend the framework with minimal overhead, using metaprogramming and conventions so adding new models/tools/resources "just works."
+
+---
+
+## 1. Auto-discover MCP tools & resources
+**File:** `ai/mcp_server.rb`
+
+Replace manual `tool_classes`/`resource_classes` arrays with auto-discovery:
+```ruby
+def tool_classes
+  ObjectSpace.each_object(Class).select { |c| c < FastMcp::Tool }
+end
+
+def resource_classes
+  ObjectSpace.each_object(Class).select { |c| c < FastMcp::Resource }
+end
+```
+Adding a new tool/resource file is now all that's needed — no registration step.
+
+## 2. Auto-discover models in RunCodeTool
+**File:** `ai/tools/run_code_tool.rb`
+
+Replace the 7 hardcoded model method definitions with metaprogramming:
+```ruby
+def create_safe_context
+  ctx = Object.new
+  Ai.constants.map { |c| Ai.const_get(c) }
+    .select { |c| c.is_a?(Class) && c < ActiveRecord::Base }
+    .each { |model| ctx.define_singleton_method(model.name.demodulize.to_sym) { model } }
+  ctx.instance_eval { binding }
+end
+```
+New models are automatically available — zero maintenance.
+
+## 3. Eliminate HTML duplication with a ViewHelpers module
+**New file:** `web/view_helpers.rb` (~40 lines)
+
+Create a single source of truth for all repeated HTML:
+
+- `render_message_html(message)` — used by `_message.erb`, `agent_executor_job.rb`, and `app.rb`
+- `render_notification_card_html(notification)` — used by `notifications.erb` and `notification.rb`
+- `turbo_stream(action, target, &content)` — tiny helper to build Turbo Stream tags
+- `badge_class(kind)` — maps status/kind to DaisyUI badge class
+
+**Files modified:**
+- `web/views/_message.erb` → calls `render_message_html`
+- `ai/jobs/agent_executor_job.rb` → `broadcast_response` uses helper instead of inline HTML
+- `web/app.rb` → Turbo Stream response uses helper
+- `ai/models/notification.rb` → `notification_card_html` uses helpers
+- `web/views/notifications.erb` → uses `render_notification_card_html`
+
+## 4. Model concerns via metaprogramming
+**New file:** `ai/concerns/has_status.rb` (~25 lines)
+
+Extract the repeated pattern across 4 models (Session, ScheduledTask, AiPage, Notification):
+```ruby
+module HasStatus
+  extend ActiveSupport::Concern
+  class_methods do
+    def statuses(*names)
+      names.each do |name|
+        scope name, -> { where(status: name.to_s) }
+        define_method(:"#{name}?") { status == name.to_s }
+      end
+    end
+  end
+end
+```
+
+**Models simplified:**
+- `Session`: remove `running?`, `stopped?`, manual scopes → `statuses :starting, :running, :stopped, :error`
+- `ScheduledTask`: remove `pending?`, `completed?`, `failed?`, manual scopes → `statuses :pending, :running, :completed, :failed`
+- `AiPage`: remove `published?`, manual scopes → `statuses :draft, :published, :archived`
+- `Notification`: already uses scopes, add status predicates
+
+**New file:** `ai/concerns/has_json_defaults.rb` (~10 lines)
+
+Replace the `set_defaults` callbacks that appear in 5 models:
+```ruby
+module HasJsonDefaults
+  extend ActiveSupport::Concern
+  class_methods do
+    def json_defaults(**columns)
+      after_initialize do
+        columns.each { |col, default| self[col] ||= default if new_record? }
+      end
+    end
+  end
+end
+```
+Usage: `json_defaults metadata: {}, parameters: {}`
+
+## 5. Remove dead/redundant code
+
+- **`ai/jobs/memory_sync_job.rb`** — references `session.session_path` which doesn't exist. Dead code, delete it.
+- **`ai/message_router.rb`** — all 3 routes do the exact same thing (`AgentExecutorJob.perform_later`). Replace with a one-liner module or inline the call. The `send` method and `broadcast_message` are unused.
+- **`ai/skill_loader.rb` String monkeypatches** — `camelize`/`underscore` on String already provided by ActiveSupport (loaded via ActiveRecord). Remove the monkeypatch at bottom of file.
+- **`Message#update_conversation_timestamp`** callback — duplicates `Conversation#add_message` which already calls `touch(:last_message_at)`. Remove callback.
+
+## 6. Simplify MessageRouter to a one-liner
+**File:** `ai/message_router.rb`
+
+Replace 56 lines with:
+```ruby
+module Ai
+  module MessageRouter
+    def self.route(message, **)
+      Jobs::AgentExecutorJob.perform_later(message.id)
+    end
+  end
+end
+```
+
+## 7. SSE stream deduplication in app.rb
+**File:** `web/app.rb`
+
+The conversation and notification SSE endpoints are nearly identical. Extract to a helper:
+```ruby
+def sse_stream(channel)
+  queue = Thread::Queue.new
+  sub = TurboBroadcast.subscribe(channel) { |html| queue.push(html) }
+  response['Content-Type'] = 'text/event-stream'
+  response['Cache-Control'] = 'no-cache'
+  response['X-Accel-Buffering'] = 'no'
+  stream(loop: true, callback: proc { TurboBroadcast.unsubscribe(channel, sub) }) do |out|
+    html = queue.pop(timeout: 30)
+    out << (html ? "data: #{html.gsub("\n", "\ndata: ")}\n\n" : ": heartbeat\n\n")
+  end
+end
+```
+
+---
+
+## Estimated Impact
+| Area | Before | After |
+|------|--------|-------|
+| mcp_server.rb | 63 lines | ~30 lines |
+| run_code_tool.rb | 51 lines | ~30 lines |
+| message_router.rb | 56 lines | ~8 lines |
+| memory_sync_job.rb | 43 lines | deleted |
+| Model boilerplate | ~50 lines repeated | ~35 lines in 2 concerns |
+| HTML duplication | 3x message, 2x notification | 1x each in helpers |
+| String monkeypatch | 14 lines | deleted |
+| **Net reduction** | | **~150-200 lines removed** |
+
+## Verification
+1. Start the server: `ruby ai.rb server`
+2. Send a message via web UI — verify thinking indicator, response renders correctly
+3. Create a notification via `run_code` tool — verify it broadcasts and renders
+4. Schedule a task — verify it runs and creates notification
+5. Verify new tool/resource auto-discovery: temporarily rename a tool file and confirm it disappears from MCP
+6. Check no Ruby warnings/errors in server logs
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
