@@ -1,0 +1,192 @@
+Implement the following plan:
+
+# Ned Redesign — Kinetic Typography
+
+## Context
+
+Ned currently uses DaisyUI for all UI styling. The redesign replaces DaisyUI with a custom **Kinetic Typography** design system — brutalist, dark, acid yellow accent, oversized uppercase type, sharp corners, flat, CSS-only motion. The goal is **AI-friendly HTML**: plain semantic elements are styled by default, classes are only needed for variants. PWA stays intact for web + mobile.
+
+## CSS Philosophy: Element-First Styling
+
+**Core principle:** Style HTML elements directly so that `<button>Send</button>`, `<table>`, `<input>`, `<a>` all look correct with zero classes. Only add a class when you need a variant.
+
+```html
+<!-- Default button (accent style) — no class needed -->
+<button>SEND</button>
+
+<!-- Variant buttons — add a class only to change behavior -->
+<button class="ghost">CANCEL</button>
+<button class="outline">DETAILS</button>
+<button class="sm">SMALL</button>
+
+<!-- Default table — no class needed -->
+<table><tr><th>Name</th></tr></table>
+
+<!-- Default input/textarea — no class needed -->
+<input type="text" placeholder="Message Ned...">
+<textarea rows="3"></textarea>
+```
+
+This means AI-generated HTML is clean and minimal. The CSS does the heavy lifting.
+
+## Stack
+- Roda + ERB templates, Tailwind CSS CDN (kept), Hotwire Turbo + Stimulus (kept)
+- **Removed:** DaisyUI CDN
+- **Added:** Space Grotesk font (Google Fonts CDN), inline Tailwind config
+
+---
+
+## Implementation Steps
+
+### Step 1: Foundation — `style.css` (complete rewrite)
+**File:** `web/public/css/style.css`
+
+**Design tokens** (`:root` custom properties):
+```
+--ned-bg: #09090B        --ned-fg: #FAFAFA
+--ned-muted: #27272A     --ned-muted-fg: #A1A1AA
+--ned-accent: #DFE104    --ned-accent-fg: #09090B
+--ned-border: #3F3F46    --ned-card: #18181B
+```
+
+**Element-level base styles** (no classes needed):
+- `body` — background, color, font-family (Space Grotesk), antialiased
+- `button` — uppercase, bold, tracking-tight, `h-14 px-8`, acid yellow bg, black text, sharp corners, `hover:scale-105`, `active:scale-95`. This is the **primary/default** button.
+- `input`, `textarea` — transparent bg, `border-b-2` bottom border only, large text, focus → accent border color
+- `table` — full width, collapse, `border-2`, alternating row bg via `:nth-child`
+- `th` — uppercase, tracking-wider, muted bg
+- `td` — border-bottom, padding
+- `a` — accent color, underline on hover
+- `h1`–`h6` — uppercase, bold, tight leading, scaling sizes
+- `hr` — `border-top-2` in border color
+- `code` — muted bg, accent text
+- `pre` — muted bg, padding, overflow-x scroll
+
+**Variant classes** (only for non-default states):
+- `button.ghost` — transparent bg, white text, hover → accent text
+- `button.outline` — transparent bg, 2px border, hover → filled white bg + black text
+- `button.sm` — smaller padding/height
+- `button.xs` — even smaller
+- `button.icon` — square, for icon-only buttons (hamburger, bell)
+- `.badge` — small inline label (default muted style)
+- `.badge.success` / `.badge.error` / `.badge.warning` / `.badge.info` — color variants
+- `.card` — container with border-2, card background, padding. Hover → accent border
+- `.chat-msg` — chat bubble base. `.chat-msg.user` → right-aligned, accent bg. `.chat-msg.ai` → left-aligned, card bg + border
+- `.marquee` / `.marquee-inner` — CSS-only infinite scroll
+- `.reveal` — entrance animation (opacity 0 → 1, translateY), toggled by `.visible`
+
+**Sidebar CSS:**
+- `#sidebar-toggle:checked ~ .sidebar` → translateX(0) to slide in
+- Overlay via `::before` pseudo-element on sidebar container
+
+**Prose styles** (`.prose-bubble` rewritten with token vars for markdown in chat)
+
+**Motion:**
+- `@keyframes marquee` for infinite horizontal scroll
+- `@media (prefers-reduced-motion: reduce)` — disable marquees and reveals
+
+**Mobile:**
+- Reduced padding on small screens
+- Responsive type scaling via clamp()
+
+### Step 2: Application Shell — `layout.erb`
+**File:** `web/views/layout.erb`
+
+- Remove DaisyUI CDN link
+- Add Google Fonts `<link>` for Space Grotesk (400, 500, 600, 700)
+- Add inline Tailwind config with extended colors (`ned-bg`, `ned-fg`, `ned-accent`, etc.), fontFamily, `borderRadius: { DEFAULT: '0px' }`
+- Remove `data-theme="night"` from `<html>`
+- Update `theme-color` meta to `#09090B`
+- **Navbar:** Plain `<header>` with flexbox — hamburger `<button class="icon ghost">`, "NED" text in accent uppercase, notification bell `<button class="icon ghost">` with `.badge` count
+- **Sidebar:** `<input type="checkbox" id="sidebar-toggle">` + `<aside class="sidebar">` with nav links (uppercase, tracking-wider), overlay via CSS
+- **Marquee strip:** Between navbar and content or in footer — "NED — GUY IN THE CHAIR" repeating
+- **Footer:** `<footer>` with `border-t-2`, version in muted text
+- **Main content:** wider max-width
+
+### Step 3: Ruby Helpers — `view_helpers.rb`
+**File:** `web/view_helpers.rb`
+
+- `badge_class()` → returns `success`, `error`, `warning`, or `info` (plain class names, no prefix)
+- `render_message_html()` → uses `.chat-msg.user` / `.chat-msg.ai`, role label + time in muted uppercase, content in `.prose-bubble`
+- `render_notification_card_html()` → uses `.card`, plain `<button>` elements, `.badge` with variant
+
+### Step 4: Inline HTML in `app.rb`
+**File:** `web/app.rb` (~lines 129-145)
+
+- `textarea` — remove `textarea textarea-bordered` class (bare `<textarea>` is now styled)
+- `button` — remove `btn btn-primary` class (bare `<button>` is now accent-styled)
+
+### Step 5: Conversations Index — `conversations_index.erb`
+**File:** `web/views/conversations_index.erb`
+
+- Heading: oversized uppercase via Tailwind utilities (`text-5xl md:text-7xl`)
+- Empty state: plain `<div>` with border (no DaisyUI hero)
+- Cards: `<a class="card">` — hover triggers accent border via CSS
+- Badge: `<span class="badge">`
+- Input: bare `<input>` (styled by default)
+- Button: bare `<button>` (styled by default)
+
+### Step 6: Chat View — `conversation_show.erb`
+**File:** `web/views/conversation_show.erb`
+
+- Back link: plain `<a>` (styled by default in accent color)
+- Title: oversized uppercase
+- Messages container: Tailwind utilities for layout + card background
+- Textarea: bare `<textarea>` (styled by default)
+- Button: bare `<button>` (styled by default)
+
+### Step 7: Remaining Pages
+- **notifications.erb** — heading uppercase, cards from helper
+- **settings.erb** — bare `<table>` (styled by default), `.card` wrappers, `.badge` variants, bare `<button>` / `<button class="outline sm">`
+- **jobs_and_skills.erb** — same as settings
+- **page_show.erb** — `.prose-bubble` for content, bare `<hr>` (styled by default)
+
+### Step 8: Scroll Animation Controller
+**New file:** `web/public/js/controllers/scroll_animation_controller.js`
+- Stimulus controller with IntersectionObserver
+- Adds `.visible` to `.reveal` elements when they enter viewport
+- Register in `application.js`
+
+### Step 9: PWA Updates
+- **manifest.json** — `theme_color` + `background_color` → `#09090B`
+- **sw.js** — bump cache name to `ned-v3`
+
+---
+
+## Atomic Constraint
+
+**Steps 1–4 must ship together.** Removing DaisyUI breaks everything, so style.css + layout + helpers + app.rb must change simultaneously. Steps 5–9 can follow independently.
+
+## Key Files
+- `web/public/css/style.css` — all design tokens + element styles + component variants
+- `web/views/layout.erb` — shell (navbar, sidebar, footer, font loading, Tailwind config)
+- `web/view_helpers.rb` — message bubble + notification card HTML
+- `web/app.rb` — inline Turbo Stream form HTML (~line 129-145)
+- `web/views/*.erb` — 6 page templates
+- `web/public/js/controllers/scroll_animation_controller.js` — new Stimulus controller
+- `web/public/js/application.js` — register new controller
+
+## Verification
+
+1. Start the app and verify all pages render with new styling
+2. Test sidebar open/close, marquee scrolling, hover effects on cards/buttons
+3. Chat: messages display correctly (user = accent, AI = bordered), SSE streaming works
+4. Mobile: test at 320px, 375px, 768px — sidebar, text scaling, touch targets (44px+)
+5. PWA: verify updated theme color, service worker cache busts
+6. Reduced motion: verify marquee stops, reveals are instant
+7. Confirm no DaisyUI classes remain: `grep -r "btn-primary\|card-body\|base-100\|chat-bubble\|drawer-toggle\|table-zebra\|hero-content" web/`
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+the sidebar is not working
+
+---
+
+instead of guy in the chair, use bot in the chair
+
+---
+
+commit
