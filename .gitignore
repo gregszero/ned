@@ -39,8 +39,5 @@ vendor/bundle/
 # Docker
 .dockerignore
 
-# Claude Code
-.claude/
-
 # Overcommit
 .overcommit.yml
