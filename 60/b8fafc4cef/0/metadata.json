@@ -1,0 +1,43 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "60b8fafc4cef",
+  "session_id": "84eb2fa5-f654-4895-adc7-82f6baf9efb5",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-18T20:51:44.241235384Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "ai/jobs/heartbeat_runner_job.rb",
+    "ai/models/heartbeat.rb",
+    "ai/models/heartbeat_run.rb",
+    "ai/scheduler.rb",
+    "ai/tools/create_heartbeat_tool.rb",
+    "ai/tools/list_heartbeats_tool.rb",
+    "ai/tools/update_heartbeat_tool.rb",
+    "ai/widgets/heartbeat_monitor_widget.rb",
+    "web/app.rb",
+    "web/public/css/style.css",
+    "workspace/CLAUDE.md",
+    "workspace/migrations/20260219000001_create_heartbeats.rb",
+    "workspace/migrations/20260219000002_create_heartbeat_canvas_page.rb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 36,
+    "cache_creation_tokens": 64853,
+    "cache_read_tokens": 1721852,
+    "output_tokens": 5451,
+    "api_call_count": 28
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-18T20:51:43.928212229Z",
+    "agent_lines": 653,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 653,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/84eb2fa5-f654-4895-adc7-82f6baf9efb5.jsonl"
+}

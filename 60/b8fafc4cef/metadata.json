@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "60b8fafc4cef",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "ai/jobs/heartbeat_runner_job.rb",
+    "ai/models/heartbeat.rb",
+    "ai/models/heartbeat_run.rb",
+    "ai/scheduler.rb",
+    "ai/tools/create_heartbeat_tool.rb",
+    "ai/tools/list_heartbeats_tool.rb",
+    "ai/tools/update_heartbeat_tool.rb",
+    "ai/widgets/heartbeat_monitor_widget.rb",
+    "web/app.rb",
+    "web/public/css/style.css",
+    "workspace/CLAUDE.md",
+    "workspace/migrations/20260219000001_create_heartbeats.rb",
+    "workspace/migrations/20260219000002_create_heartbeat_canvas_page.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/60/b8fafc4cef/0/metadata.json",
+      "transcript": "/60/b8fafc4cef/0/full.jsonl",
+      "context": "/60/b8fafc4cef/0/context.md",
+      "content_hash": "/60/b8fafc4cef/0/content_hash.txt",
+      "prompt": "/60/b8fafc4cef/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 36,
+    "cache_creation_tokens": 64853,
+    "cache_read_tokens": 1721852,
+    "output_tokens": 5451,
+    "api_call_count": 28
+  }
+}

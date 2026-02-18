@@ -1,0 +1,691 @@
+Implement the following plan:
+
+# Heartbeat Canvas Feature
+
+## Context
+
+Build a "Heartbeat" automation system — a canvas page where periodic "pulses" run RubySkills at configurable frequencies. The key optimization: skills execute pure Ruby first (zero token cost), and only escalate to the AI agent when the code returns meaningful data. This turns the system into a smart monitoring/automation dashboard that's token-efficient by design.
+
+The UI uses an **Airflow-style grid view**: each heartbeat is a row, and recent runs are shown as a horizontal strip of small colored cells (green = data returned/AI invoked, gray = empty/skipped, red = error). Gives instant visual history at a glance.
+
+## New Files
+
+### 1. Migration: `workspace/migrations/20260219000001_create_heartbeats.rb`
+Create `heartbeats` table:
+- `name` (string, unique, not null), `description` (text)
+- `skill_name` (string, not null) — references a SkillRecord by name
+- `frequency` (integer, not null, default 300) — seconds between runs
+- `prompt_template` (text) — AI prompt with `{{result}}`, `{{skill_name}}`, `{{name}}` placeholders
+- `status` (string: active/paused/error, default 'active'), `enabled` (boolean, default true)
+- `ai_page_id` (FK, nullable) — links to the heartbeats canvas
+- Tracking: `last_run_at`, `run_count` (int), `error_count` (int)
+- `metadata` (json), timestamps
+
+Create `heartbeat_runs` table (stores execution history for the grid):
+- `heartbeat_id` (FK, not null)
+- `status` (string: success/skipped/error) — success = meaningful data + AI invoked, skipped = empty result, error = exception
+- `result` (text) — JSON-serialized skill output
+- `error_message` (text)
+- `escalated` (boolean, default false) — whether AI agent was invoked
+- `duration_ms` (integer) — how long the skill took to execute
+- `ran_at` (datetime, not null)
+- Index on `[heartbeat_id, ran_at]` for fast grid queries
+
+### 2. Migration: `workspace/migrations/20260219000002_create_heartbeat_canvas_page.rb`
+Seed an AiPage (slug: 'heartbeats', scroll_locked canvas) with one `heartbeat_monitor` CanvasComponent. Follow exact pattern from `20260218000004_create_settings_and_jobs_pages.rb`.
+
+### 3. Model: `ai/models/heartbeat.rb`
+- `has_many :heartbeat_runs, dependent: :destroy`
+- `due_now?` — true if enabled and frequency has elapsed since `last_run_at`
+- `result_meaningful?(result)` — gate that returns false for nil/empty/false (skip AI), true otherwise
+- `interpolated_prompt(result)` — fills `{{result}}`, `{{skill_name}}`, `{{name}}` into template
+- `record_run!(status:, result:, error:, escalated:, duration_ms:)` — creates a HeartbeatRun + updates tracking counters
+- `frequency_label` — human display ("30s", "5m", "1h")
+- `recent_runs(limit = 30)` — last N runs for grid display
+- Scopes: `enabled`, `due` (broad pre-filter for scheduler)
+
+### 4. Model: `ai/models/heartbeat_run.rb`
+- `belongs_to :heartbeat`
+- Simple record — status, result, error_message, escalated, duration_ms, ran_at
+- Scopes: `recent` (ordered by ran_at desc)
+
+### 5. Job: `ai/jobs/heartbeat_runner_job.rb`
+Queue: `:scheduled_tasks` (reuse existing queue). Flow:
+1. Guard: re-check `due_now?` to prevent double execution
+2. **Phase 1** — Run skill via `SkillRecord#load_and_execute`, measure duration (pure Ruby, no tokens)
+3. Record run via `heartbeat.record_run!` with appropriate status
+4. Broadcast widget refresh immediately
+5. **Phase 2** — If `result_meaningful?` returns true, find/create a persistent conversation (ID stored in `metadata['conversation_id']`), add user message with interpolated prompt, enqueue `AgentExecutorJob`
+6. On error: record error run, broadcast widget refresh
+
+Follow patterns from `scheduled_task_runner_job.rb` for conversation creation and error handling.
+
+### 6. Widget: `ai/widgets/heartbeat_monitor_widget.rb`
+- `widget_type 'heartbeat_monitor'`, refreshable, 30s interval
+- **Airflow-style grid layout:**
+  - Header row: heartbeat name/info on left, time columns on right
+  - Each heartbeat = one row
+  - Each recent run = one small colored square cell in the row
+    - `success` (AI escalated) → green (`bg-emerald-500`)
+    - `skipped` (empty result) → gray (`bg-zinc-300`/`bg-zinc-600`)
+    - `error` → red (`bg-red-500`)
+  - Cells are ~16x16px squares with 2px gap, newest on the right
+  - Hover on a cell shows tooltip with timestamp + result preview
+- Left column shows: name, skill, frequency label, status badge, toggle button
+- Summary stats row at bottom: total runs today, error rate, tokens saved (skipped count)
+- Follow `ScheduledJobsWidget` patterns for `render_content`/`refresh_data!`/`h()`
+
+### 7. MCP Tools (3 files)
+All auto-discovered, follow existing tool patterns:
+
+- **`ai/tools/create_heartbeat_tool.rb`** (`create_heartbeat`) — name, skill_name, frequency, description, prompt_template, enabled. Validates skill exists, auto-links to heartbeats canvas page.
+- **`ai/tools/update_heartbeat_tool.rb`** (`update_heartbeat`) — find by name, update any field. Resets error status when re-enabling.
+- **`ai/tools/list_heartbeats_tool.rb`** (`list_heartbeats`) — returns all heartbeats with status, stats, due_now flag.
+
+## Modified Files
+
+### 8. `ai/scheduler.rb`
+Add after existing jobs in `start!`:
+```ruby
+@instance.every '30s', first: :now do
+  run_due_heartbeats
+end
+```
+Add private `run_due_heartbeats` method: query `Heartbeat.due`, filter with `due_now?`, enqueue `HeartbeatRunnerJob` per record.
+
+### 9. `web/app.rb`
+Add before the catch-all `r.on String` block (line ~428):
+- `/heartbeats` canvas route (same pattern as `/jobs` and `/settings`)
+- `/api/heartbeats/:id/toggle` POST route — toggles enabled/status, triggers widget refresh
+
+### 10. `web/public/css/style.css`
+- `heartbeat-pulse` keyframe animation (subtle scale/opacity pulse)
+- `.hb-grid` — the grid container styles
+- `.hb-cell` — 16x16px rounded square base style
+- `.hb-cell.success`, `.hb-cell.skipped`, `.hb-cell.error` — color variants
+- Tooltip styles for hover on cells
+
+### 11. `workspace/CLAUDE.md`
+Add `create_heartbeat`, `update_heartbeat`, `list_heartbeats` to Ned's MCP tools table.
+
+## Execution Order
+1. Migration 1 (heartbeats + heartbeat_runs tables)
+2. Migration 2 (canvas page seed)
+3. Models (heartbeat.rb, heartbeat_run.rb)
+4. Job
+5. Widget + CSS
+6. MCP tools (3 files)
+7. Scheduler modification
+8. Route additions in web/app.rb
+9. workspace/CLAUDE.md update
+10. Run `./ai.rb db:migrate`
+
+## Verification
+1. `./ai.rb db:migrate` — migrations run cleanly
+2. `./ai.rb server` — start app, no boot errors
+3. Navigate to `/heartbeats` — canvas loads with empty heartbeat monitor widget
+4. In chat, ask Ned to create a heartbeat with a test skill — verify it appears in the grid
+5. Wait for frequency to elapse — check logs for skill execution, see colored cell appear
+6. Skill that returns data → green cell, AI agent invoked
+7. Skill that returns nil → gray cell, AI agent NOT invoked (token savings)
+8. Skill that raises → red cell, error recorded
+9. Toggle button pauses/resumes heartbeat
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+<task-notification>
+<task-id>ac2e96d</task-id>
+<status>completed</status>
+<summary>Agent "Explore codebase patterns" completed</summary>
+<result>I now have a thorough understanding of all the patterns in the codebase. Here is a comprehensive reference for implementing the "Heartbeat" feature:
+
+---
+
+## Complete Pattern Reference for "Heartbeat" Feature
+
+### 1. Migration Patterns
+
+**File location:** `/home/greg/Developer/ai.rb/workspace/migrations/`
+
+**Pattern A — `create_table` migration** (like `20260216000004_create_scheduled_tasks.rb`):
+```ruby
+# frozen_string_literal: true
+
+class CreateHeartbeats < ActiveRecord::Migration[8.0]
+  def change
+    create_table :heartbeats do |t|
+      t.string :name, null: false
+      t.string :status, default: 'pending', null: false  # pending, running, completed, failed
+      t.text :description
+      t.datetime :last_run_at
+      t.datetime :next_run_at
+      t.string :interval           # e.g. "60s", "5m", "1h"
+      t.text :result
+      t.json :metadata, default: {}
+      t.timestamps
+    end
+
+    add_index :heartbeats, :name, unique: true
+    add_index :heartbeats, :status
+  end
+end
+```
+
+**Pattern B — seed page migration** (like `20260218000004_create_settings_and_jobs_pages.rb`):
+```ruby
+# frozen_string_literal: true
+
+class CreateHeartbeatPage < ActiveRecord::Migration[8.0]
+  def up
+    page = execute(<<~SQL).first
+      INSERT INTO ai_pages (title, slug, content, status, published_at, metadata, canvas_state, created_at, updated_at)
+      VALUES ('Heartbeat', 'heartbeat', '', 'published', datetime('now'), '{}', '{"scroll_locked":true}', datetime('now'), datetime('now'))
+      RETURNING id
+    SQL
+    page_id = page['id']
+
+    execute(<<~SQL)
+      INSERT INTO canvas_components (ai_page_id, component_type, content, x, y, width, height, z_index, metadata, created_at, updated_at)
+      VALUES (#{page_id}, 'heartbeat', '', 0, 0, 1200, NULL, 0, '{}', datetime('now'), datetime('now'))
+    SQL
+  end
+
+  def down
+    execute("DELETE FROM canvas_components WHERE ai_page_id IN (SELECT id FROM ai_pages WHERE slug = 'heartbeat')")
+    execute("DELETE FROM ai_pages WHERE slug = 'heartbeat'")
+  end
+end
+```
+
+Key patterns to note:
+- `canvas_state: '{"scroll_locked":true}'` is used for full-page canvas widgets (jobs, settings)
+- `height: NULL` means auto-height
+- `width: 1200` is used for full-width scroll-locked pages
+- `component_type` must match the widget's `widget_type` name
+- Migration files use raw SQL for seed data (not ActiveRecord models)
+- `RETURNING id` is SQLite-compatible
+
+---
+
+### 2. Model Patterns
+
+**File location:** `/home/greg/Developer/ai.rb/ai/models/`
+
+**Standard model pattern** (from `scheduled_task.rb`, `skill_record.rb`):
+```ruby
+# frozen_string_literal: true
+
+module Ai
+  class Heartbeat < ActiveRecord::Base
+    self.table_name = 'heartbeats'
+
+    include HasStatus
+    include HasJsonDefaults
+
+    # Validations
+    validates :name, presence: true, uniqueness: true
+    validates :status, presence: true, inclusion: { in: %w[pending running completed failed] }
+
+    # HasStatus concern creates scopes (e.g. Heartbeat.pending) and predicates (e.g. heartbeat.pending?)
+    statuses :pending, :running, :completed, :failed
+
+    # Scopes
+    scope :due, -> { where('next_run_at <= ?', Time.current).where(status: 'pending') }
+    scope :recent, -> { order(last_run_at: :desc) }
+
+    # HasJsonDefaults sets default json column values
+    json_defaults metadata: {}
+
+    # Methods
+    def mark_running! = update!(status: 'running', last_run_at: Time.current)
+    def mark_completed!(result = nil) = update!(status: 'completed', result: result)
+    def mark_failed!(msg) = update!(status: 'failed', result: msg)
+  end
+end
+```
+
+Key model patterns:
+- `self.table_name = 'heartbeats'` — always explicit
+- `include HasStatus` + `statuses :pending, :running, :completed, :failed` — creates `pending?`, `running?` predicates and `.pending`, `.running` scopes
+- `include HasJsonDefaults` + `json_defaults metadata: {}` — initializes JSON columns on `after_initialize`
+- `validates :name, uniqueness: true` — used for name-keyed records
+- `scope :due` pattern — selects records where time has passed
+
+---
+
+### 3. Job Patterns
+
+**File location:** `/home/greg/Developer/ai.rb/ai/jobs/`
+
+**Background job pattern** (from `scheduled_task_runner_job.rb`):
+```ruby
+# frozen_string_literal: true
+
+module Ai
+  module Jobs
+    class HeartbeatRunnerJob < ApplicationJob
+      queue_as :default   # or :scheduled_tasks, :agent_execution
+
+      def perform(heartbeat_id)
+        heartbeat = Heartbeat.find(heartbeat_id)
+        heartbeat.mark_running!
+
+        # ... do work ...
+
+        heartbeat.mark_completed!(result.to_json)
+
+        # Create success notification and broadcast
+        notification = Notification.create!(
+          title: "Heartbeat completed: #{heartbeat.name}",
+          body: "...",
+          kind: 'success'
+        )
+        notification.broadcast!
+
+      rescue ActiveRecord::RecordNotFound => e
+        Ai.logger.error "Heartbeat not found: #{e.message}"
+      rescue => e
+        Ai.logger.error "Heartbeat failed: #{e.message}"
+        heartbeat&.mark_failed!(e.message)
+      end
+    end
+  end
+end
+```
+
+Key job patterns:
+- Always inherit from `ApplicationJob` (which has retry_on, logging callbacks)
+- `queue_as :default` / `:scheduled_tasks` / `:agent_execution`
+- `perform_later(id)` is the standard invocation (never pass full objects)
+- Error handling always rescues `ActiveRecord::RecordNotFound` separately
+- Notifications are created and `.broadcast!` is called for user visibility
+- `Ai.logger.info` / `Ai.logger.error` throughout
+
+**Jobs are auto-discovered** via `Dir[root.join('ai/jobs/**/*.rb')]` in `bootstrap.rb` — just create the file.
+
+---
+
+### 4. Widget Patterns
+
+**File location:** `/home/greg/Developer/ai.rb/ai/widgets/`
+
+**Full widget pattern** (from `scheduled_jobs_widget.rb` and `settings_widget.rb`):
+```ruby
+# frozen_string_literal: true
+
+module Ai
+  module Widgets
+    class HeartbeatWidget < BaseWidget
+      widget_type 'heartbeat'          # matches component_type in canvas_components
+      menu_label 'Heartbeat'           # shown in canvas context menu
+      menu_icon "\u{1F493}"            # emoji
+
+      def self.refreshable?    = true
+      def self.refresh_interval = 30   # seconds between auto-refresh checks
+
+      def render_content
+        heartbeats = Ai::Heartbeat.order(last_run_at: :desc)
+
+        html = +%(<div class="max-w-5xl mx-auto space-y-6">)
+        html << %(<h2 class="text-2xl font-semibold tracking-tight">Heartbeat</h2>)
+
+        html << %(<div class="card"><h3 class="section-heading">Monitors (#{heartbeats.count})</h3>)
+        if heartbeats.any?
+          html << %(<div class="overflow-x-auto"><table><thead><tr>)
+          html << %(<th>Name</th><th>Status</th><th>Last Run</th><th>Next Run</th>)
+          html << %(</tr></thead><tbody>)
+          heartbeats.each do |hb|
+            badge = case hb.status
+                    when 'pending'   then 'warning'
+                    when 'running'   then 'info'
+                    when 'completed' then 'success'
+                    when 'failed'    then 'error'
+                    else ''
+                    end
+            html << %(<tr>)
+            html << %(<td class="font-semibold">#{h hb.name}</td>)
+            html << %(<td><span class="badge #{badge}">#{h hb.status}</span></td>)
+            html << %(<td>#{hb.last_run_at&.strftime('%b %d, %H:%M') || '-'}</td>)
+            html << %(<td>#{hb.next_run_at&.strftime('%b %d, %H:%M') || '-'}</td>)
+            html << %(</tr>)
+          end
+          html << %(</tbody></table></div>)
+        else
+          html << %(<p class="text-ned-muted-fg">No heartbeat monitors yet.</p>)
+        end
+        html << %(</div>)
+        html << %(</div>)
+        html
+      end
+
+      def refresh_data!
+        new_content = render_content
+        if new_content != @component.content
+          @component.update!(content: new_content)
+          true  # returns true = triggers broadcast in WidgetRefreshJob
+        else
+          false # returns false = no broadcast needed
+        end
+      end
+
+      private
+
+      def h(text)
+        Rack::Utils.escape_html(text.to_s)
+      end
+    end
+  end
+end
+```
+
+Key widget patterns:
+- Always inherit from `BaseWidget` (provides `render_component_html`, `evaluate_data_source`, `h()`)
+- `widget_type 'heartbeat'` — must match the `component_type` stored in `canvas_components`
+- `def self.refreshable? = true` + `def self.refresh_interval = 30` — opts into auto-refresh via `WidgetRefreshJob`
+- `render_content` returns raw HTML string, used inside `.canvas-component-content` div
+- `refresh_data!` returns `true` if content changed (triggers Turbo Stream broadcast), `false` if unchanged
+- The `h()` helper is defined locally (same as in base, but shadowed here for clarity)
+- `@component` is the `CanvasComponent` instance, `@metadata` is `@component.metadata || {}`
+- Use CSS classes: `card`, `section-heading`, `badge success/error/warning/info`, `overflow-x-auto`, `text-ned-muted-fg`, `font-semibold`
+- **Widgets are auto-discovered** via `Dir[root.join('ai/widgets/**/*.rb')]` in `bootstrap.rb`
+
+**`WidgetRefreshJob` flow:**
+1. Scheduler calls `WidgetRefreshJob.perform_later` every 5 minutes
+2. Job iterates all refreshable widget types in the registry
+3. For each `CanvasComponent` of that type, skips if `updated_at > interval.seconds.ago`
+4. Calls `widget.refresh_data!` — if true, broadcasts a `turbo-stream replace` to `"canvas:#{page_id}"`
+
+---
+
+### 5. MCP Tool Patterns
+
+**File location:** `/home/greg/Developer/ai.rb/ai/tools/`
+
+**Create tool pattern** (like `schedule_task_tool.rb`):
+```ruby
+# frozen_string_literal: true
+
+module Ai
+  module Tools
+    class CreateHeartbeatTool < FastMcp::Tool
+      tool_name 'create_heartbeat'
+      description 'Create a new heartbeat monitor'
+
+      arguments do
+        required(:name).filled(:string).description('Unique monitor name')
+        optional(:description).filled(:string).description('What this monitors')
+        optional(:interval).filled(:string).description('Run interval (e.g. "60s", "5m", "1h")')
+      end
+
+      def call(name:, description: nil, interval: nil)
+        heartbeat = Heartbeat.create!(
+          name: name,
+          description: description,
+          interval: interval,
+          status: 'pending'
+        )
+
+        Ai.logger.info "Created heartbeat: #{name}"
+
+        {
+          success: true,
+          heartbeat_id: heartbeat.id,
+          name: heartbeat.name
+        }
+      rescue => e
+        Ai.logger.error "Failed to create heartbeat: #{e.message}"
+        { success: false, error: e.message }
+      end
+    end
+  end
+end
+```
+
+**Update tool pattern** (like `update_canvas_component_tool.rb`):
+```ruby
+def call(heartbeat_id:, status: nil, result: nil, metadata: nil)
+  heartbeat = Heartbeat.find_by(id: heartbeat_id)
+  return { success: false, error: "Not found" } unless heartbeat
+
+  updates = {}
+  updates[:status] = status if status
+  updates[:result] = result if result
+  updates[:metadata] = (heartbeat.metadata || {}).merge(metadata) if metadata
+
+  heartbeat.update!(updates) if updates.any?
+  { success: true, heartbeat: heartbeat.as_json }
+rescue => e
+  { success: false, error: e.message }
+end
+```
+
+Key tool patterns:
+- Inherit from `FastMcp::Tool`
+- `tool_name` is the string used in tool calls
+- `arguments do ... end` uses dry-validation DSL: `required(:x).filled(:string).description('...')`
+- `optional` vs `required`, always `.filled(:string)` / `.filled(:integer)` / `.filled(:float)` / `.filled(:hash)`
+- `def call(...)` receives keyword args matching argument names
+- Return `{ success: true, ... }` on success, `{ success: false, error: e.message }` on failure
+- Rescue all errors at the end with a `rescue => e` block
+- **Tools are auto-discovered** via `FastMCP` scanning `ObjectSpace` for `FastMcp::Tool` subclasses
+
+---
+
+### 6. Scheduler Pattern
+
+**File:** `/home/greg/Developer/ai.rb/ai/scheduler.rb`
+
+The scheduler uses `rufus-scheduler`. To add a new recurring check for heartbeats, the pattern in `Ai::Scheduler.start!` is:
+
+```ruby
+# Poll for due heartbeats every 30 seconds
+@instance.every '30s' do
+  run_due_heartbeats
+end
+```
+
+```ruby
+def run_due_heartbeats
+  heartbeats = Heartbeat.due
+  return if heartbeats.empty?
+
+  heartbeats.each do |hb|
+    Jobs::HeartbeatRunnerJob.perform_later(hb.id)
+  end
+rescue => e
+  Ai.logger.error "Heartbeat scheduler error: #{e.message}"
+end
+```
+
+Existing scheduled intervals:
+- `every '60s', first: :now` — due task polling
+- `every '5m'` — widget refresh
+
+The private `run_due_tasks` and `refresh_widgets` methods follow the same pattern: query for due records, enqueue jobs, rescue errors.
+
+---
+
+### 7. Route Patterns
+
+**File:** `/home/greg/Developer/ai.rb/web/app.rb`
+
+**Canvas page route pattern** (like `/jobs` and `/settings`):
+```ruby
+# Heartbeat — canvas page
+r.on 'heartbeat' do
+  @page = AiPage.find_by(slug: 'heartbeat')
+  r.on String do |chat_slug|
+    @conversation = @page&.conversations&.find_by(slug: chat_slug)
+    render_canvas_or_layout(:canvas_view)
+  end
+  r.is do
+    render_canvas_or_layout(:canvas_view)
+  end
+end
+```
+
+This uses `render_canvas_or_layout` which:
+- If it's a Turbo Frame request (`HTTP_TURBO_FRAME: canvas-content`), returns a `<turbo-frame>` fragment
+- Otherwise renders the full layout via `view :canvas_view`
+
+**API route pattern** (from existing `/api/...` block):
+```ruby
+r.on 'heartbeats' do
+  r.is do
+    r.get do
+      heartbeats = Heartbeat.recent.limit(50).map { |h| h.as_json }
+      { heartbeats: heartbeats }
+    end
+
+    r.post do
+      body = JSON.parse(r.body.read) rescue r.params
+      heartbeat = Heartbeat.create!(name: body['name'], ...)
+      heartbeat.as_json
+    end
+  end
+
+  r.on Integer do |id|
+    heartbeat = Heartbeat.find(id)
+
+    r.patch do
+      # update
+    end
+
+    r.delete do
+      heartbeat.destroy!
+      { success: true }
+    end
+  end
+end
+```
+
+Route order matters — the catch-all `r.on String` for canvas slugs is **last** in the file.
+
+The `render_canvas_or_layout` helper is defined in the `App` class itself (not `ViewHelpers`).
+
+---
+
+### 8. CSS / Animation Patterns
+
+**File:** `/home/greg/Developer/ai.rb/web/public/css/style.css`
+
+Existing animation patterns:
+
+```css
+/* Pop-in animation (used on dropdown menus) */
+@keyframes ctx-menu-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Pulsing highlight on canvas components */
+@keyframes comp-highlight-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 30%, transparent); }
+  50%       { box-shadow: 0 0 0 6px color-mix(in srgb, var(--primary) 15%, transparent); }
+}
+
+/* Reduced motion override */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+```
+
+A "heartbeat pulse" animation would follow this pattern:
+```css
+@keyframes heartbeat-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.05); opacity: 0.8; }
+}
+.heartbeat-pulse {
+  animation: heartbeat-pulse 1.5s ease-in-out infinite;
+}
+```
+
+CSS custom properties to use:
+- `var(--primary)` — violet accent (#7c3aed light / #8b5cf6 dark)
+- `var(--muted)` — muted background
+- `var(--muted-foreground)` — muted text
+- `var(--border)` — border color
+- `var(--card)` — card background
+- `var(--foreground)` — primary text
+- `color-mix(in srgb, var(--primary) 30%, transparent)` — tinted glow
+
+Badge color classes (pre-existing): `.badge.success`, `.badge.error`, `.badge.warning`, `.badge.info`
+
+---
+
+### 9. workspace/CLAUDE.md — Existing Tools Table Format
+
+**File:** `/home/greg/Developer/ai.rb/workspace/CLAUDE.md`
+
+The tools table in the `## Your MCP Tools` section uses this format:
+
+```markdown
+| Tool | Purpose |
+|---|---|
+| `run_code` | Execute Ruby code directly (has access to all ActiveRecord models) |
+| `run_skill` | Execute a saved Ruby skill by name, with optional parameters |
+| `send_message` | Send a message back to the user (broadcasts in real-time) |
+| `schedule_task` | Schedule a task for future execution (reminders, timed tasks) |
+| `create_page` | Create a web page (AiPage) with title and HTML/markdown content |
+| `create_notification` | Create a notification (info/success/warning/error) linked to a canvas |
+| `add_canvas_component` | Add a positioned component/widget to the current canvas |
+| `update_canvas_component` | Update content, position, or size of a canvas component |
+| `remove_canvas_component` | Remove a component from the canvas |
+| `get_canvas` | Get all components on the current canvas (for context) |
+| `web_fetch` | Fetch content from a URL and return it as text |
+| `define_widget` | Define a new widget type at runtime (Ruby class + optional JS) |
+```
+
+New tool entries to add for Heartbeat would use the same pipe-delimited format, backtick-quoted tool name, short imperative description.
+
+---
+
+### 10. layout.erb Nav Structure
+
+**File:** `/home/greg/Developer/ai.rb/web/views/layout.erb`
+
+The sidebar nav is **fully dynamic** — it renders all published `AiPage` records automatically:
+
+```erb
+<nav class="flex flex-col gap-0.5">
+  <% Ai::AiPage.published.recent.each do |page| %>
+    <a href="/<%= page.slug %>" onclick="if(window.chatFooter){chatFooter.openCanvas(<%= page.id %>, '<%= page.title.gsub("'", "\\\\'") %>', '<%= page.slug %>');return false}"><%= page.title %></a>
+  <% end %>
+</nav>
+```
+
+This means: **any `AiPage` with `status: 'published'` automatically appears in the nav**. No manual layout edits needed — the seed migration that creates the `AiPage` for heartbeat automatically gets a nav link.
+
+The `onclick` handler calls `chatFooter.openCanvas(pageId, title, slug)` for canvas navigation via the chat footer JS controller. Falls back to normal `href` navigation if chatFooter is not available.
+
+---
+
+### Key Auto-Discovery Summary
+
+The framework auto-discovers everything — no manual registration:
+
+| Thing | Auto-discovery via |
+|---|---|
+| MCP Tools | `ObjectSpace` scanning for `FastMcp::Tool` subclasses |
+| Widget types | `ObjectSpace.each_object(Class).select { \|c\| c < BaseWidget }` |
+| Models | `Dir[root.join('ai/models/**/*.rb')]` in `bootstrap.rb` |
+| Jobs | `Dir[root.join('ai/jobs/**/*.rb')]` in `bootstrap.rb` |
+| Nav links | `AiPage.published.recent` query in `layout.erb` |
+
+Just create the files in the right directories and restart the server.</result>
+<usage>total_tokens: 61843
+tool_uses: 32
+duration_ms: 138689</usage>
+</task-notification>
+Full transcript available at: /tmp/claude-1000/-home-greg-Developer-ai-rb/tasks/ac2e96d.output
+
+---
+
+commit this
