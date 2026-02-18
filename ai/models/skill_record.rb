@@ -22,8 +22,8 @@ module Ai
     end
 
     def load_and_execute(**params)
-      # Load the skill file
-      load full_file_path unless defined?(class_name.constantize)
+      # Load the skill file if the class isn't already defined
+      load full_file_path unless Object.const_defined?(class_name)
 
       # Execute the skill
       klass = class_name.constantize

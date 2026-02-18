@@ -726,6 +726,13 @@ button.icon.sm {
   font-size: 0.875rem;
   overflow: hidden;
 }
+.canvas-component-content[contenteditable="true"] {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+  border-radius: 0.375rem;
+  cursor: text;
+  overflow: auto;
+}
 .canvas-component-content > *:first-child { margin-top: 0; }
 .canvas-component-content > *:last-child { margin-bottom: 0; }
 
