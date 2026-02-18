@@ -23,11 +23,11 @@ module Ai
 
     def load_and_execute(**params)
       # Load the skill file
-      load file_path unless defined?(class_name.constantize)
+      load full_file_path unless defined?(class_name.constantize)
 
       # Execute the skill
       klass = class_name.constantize
-      klass.new.call(**params)
+      klass.new.execute(**params)
     rescue => e
       Ai.logger.error "Failed to execute skill #{name}: #{e.message}"
       raise
