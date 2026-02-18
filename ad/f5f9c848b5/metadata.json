@@ -5,9 +5,7 @@
   "branch": "master",
   "checkpoints_count": 1,
   "files_touched": [
-    "Gemfile",
-    "web/app.rb",
-    "web/public/js/controllers/notifications_controller.js"
+    "web/app.rb"
   ],
   "sessions": [
     {
@@ -19,10 +17,10 @@
     }
   ],
   "token_usage": {
-    "input_tokens": 21,
-    "cache_creation_tokens": 19066,
-    "cache_read_tokens": 516696,
-    "output_tokens": 1725,
-    "api_call_count": 17
+    "input_tokens": 7,
+    "cache_creation_tokens": 3624,
+    "cache_read_tokens": 199055,
+    "output_tokens": 201,
+    "api_call_count": 5
   }
 }
