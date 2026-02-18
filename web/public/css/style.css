@@ -956,6 +956,29 @@ button.icon.sm {
   color: var(--muted-foreground);
   z-index: 10;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.canvas-scroll-lock-btn {
+  all: unset;
+  cursor: pointer;
+  padding: 0.125rem;
+  border-radius: 0.25rem;
+  line-height: 1;
+  font-size: 0.8rem;
+  pointer-events: auto;
+}
+.canvas-scroll-lock-btn:hover {
+  background: var(--muted);
+}
+
+/* --- Scroll Lock Mode --- */
+.conversation-canvas.scroll-locked {
+  overflow-y: auto;
+}
+.conversation-canvas.scroll-locked .canvas-dot-grid {
+  display: none;
 }
 
 /* --- Mobile --- */

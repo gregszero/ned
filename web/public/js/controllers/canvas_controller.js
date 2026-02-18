@@ -1,7 +1,7 @@
 import { Controller } from "https://cdn.jsdelivr.net/npm/@hotwired/stimulus@3.2.2/dist/stimulus.js"
 
 export default class extends Controller {
-  static values = { pageId: Number }
+  static values = { pageId: Number, scrollLocked: { type: Boolean, default: false } }
 
   connect() {
     this.scale = 1.0
@@ -14,10 +14,15 @@ export default class extends Controller {
     this.startY = 0
     this.startElX = 0
     this.startElY = 0
-    this.scrollLock = false
+    this.scrollLock = this.scrollLockedValue
 
     this.world = this.element.querySelector(".canvas-world")
     if (!this.world) return
+
+    // Apply scroll lock class if initial value is true
+    if (this.scrollLock) {
+      this.element.classList.add("scroll-locked")
+    }
 
     // Bind events
     this.onMouseDown = this.onMouseDown.bind(this)
@@ -94,6 +99,7 @@ export default class extends Controller {
     this.world.querySelectorAll(".canvas-component").forEach(c => this.initComponent(c))
 
     this.updateTransform()
+    this._updateWorldSize()
     this.updateZoomIndicator()
   }
 
@@ -421,16 +427,31 @@ export default class extends Controller {
   }
 
   toggleScrollLock() {
+    if (!this.scrollLock) {
+      // Entering scroll lock — save current transform state
+      this._savedPanX = this.panX
+      this._savedPanY = this.panY
+      this._savedScale = this.scale
+      // Reset transform so canvas-world is at origin; scrolling replaces panning
+      this.scale = 1.0
+      this.panX = 0
+      this.panY = 0
+    } else {
+      // Leaving scroll lock — restore previous transform state
+      this.panX = this._savedPanX ?? 0
+      this.panY = this._savedPanY ?? 0
+      this.scale = this._savedScale ?? 1.0
+    }
     this.scrollLock = !this.scrollLock
-    this.updateScrollLockIndicator()
+    this.element.classList.toggle("scroll-locked", this.scrollLock)
+    this.updateTransform()
+    this._updateWorldSize()
+    this.updateZoomIndicator()
   }
 
   updateScrollLockIndicator() {
-    const indicator = this.element.querySelector(".canvas-zoom-indicator")
-    if (indicator) {
-      const zoom = Math.round(this.scale * 100) + "%"
-      indicator.textContent = this.scrollLock ? `${zoom} \ud83d\udd12` : zoom
-    }
+    // Merged into updateZoomIndicator
+    this.updateZoomIndicator()
   }
 
   resetView() {
@@ -449,7 +470,7 @@ export default class extends Controller {
     if (this.editingComponent) return
     const component = e.target.closest(".canvas-component")
     if (component) {
-      // Start dragging component
+      // Start dragging component (works in both normal and scroll-lock mode)
       this.isDragging = true
       this.dragTarget = component
       this.startX = e.clientX
@@ -458,8 +479,8 @@ export default class extends Controller {
       this.startElY = parseFloat(component.style.top) || 0
       component.classList.add("dragging")
       e.preventDefault()
-    } else if (e.target === this.element || e.target === this.world || e.target.classList.contains("canvas-dot-grid")) {
-      // Start panning
+    } else if (!this.scrollLock && (e.target === this.element || e.target === this.world || e.target.classList.contains("canvas-dot-grid"))) {
+      // Start panning (disabled in scroll-lock mode)
       this.isPanning = true
       this.startX = e.clientX
       this.startY = e.clientY
@@ -503,6 +524,7 @@ export default class extends Controller {
     const touch = e.touches[0]
     const component = touch.target.closest(".canvas-component")
     if (component) {
+      // Allow dragging in both normal and scroll-lock mode
       this.isDragging = true
       this.dragTarget = component
       this.startX = touch.clientX
@@ -511,7 +533,7 @@ export default class extends Controller {
       this.startElY = parseFloat(component.style.top) || 0
       component.classList.add("dragging")
       e.preventDefault()
-    } else {
+    } else if (!this.scrollLock) {
       this.isPanning = true
       this.startX = touch.clientX
       this.startY = touch.clientY
@@ -550,15 +572,12 @@ export default class extends Controller {
   // --- Zoom ---
 
   onWheel(e) {
-    e.preventDefault()
-
     if (this.scrollLock) {
-      // Scroll lock: wheel pans the canvas instead of zooming
-      this.panX -= e.deltaX || 0
-      this.panY -= e.deltaY || 0
-      this.updateTransform()
+      // Let browser handle scrolling naturally in scroll-lock mode
       return
     }
+
+    e.preventDefault()
 
     const delta = e.deltaY > 0 ? -0.08 : 0.08
     const newScale = Math.min(Math.max(this.scale + delta, 0.1), 3.0)
@@ -579,16 +598,61 @@ export default class extends Controller {
 
   updateTransform() {
     if (this.world) {
-      this.world.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.scale})`
+      if (this.scrollLock) {
+        // In scroll-lock mode, no transform — components stay absolute, container scrolls
+        this.world.style.transform = "none"
+      } else {
+        this.world.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.scale})`
+        // Clear explicit size when not scroll-locked
+        this.world.style.width = ""
+        this.world.style.height = ""
+      }
     }
   }
 
   updateZoomIndicator() {
     const indicator = this.element.querySelector(".canvas-zoom-indicator")
-    if (indicator) {
-      const zoom = Math.round(this.scale * 100) + "%"
-      indicator.textContent = this.scrollLock ? `${zoom} \ud83d\udd12` : zoom
+    if (!indicator) return
+
+    const zoom = Math.round(this.scale * 100) + "%"
+    const lockIcon = this.scrollLock ? "\ud83d\udd12" : "\ud83d\udd13"
+    indicator.innerHTML = `<span>${zoom} </span><button class="canvas-scroll-lock-btn" title="Toggle scroll lock">${lockIcon}</button>`
+    indicator.style.pointerEvents = "auto"
+
+    // Bind lock button click
+    const lockBtn = indicator.querySelector(".canvas-scroll-lock-btn")
+    if (lockBtn) {
+      lockBtn.onclick = (e) => {
+        e.stopPropagation()
+        this.toggleScrollLock()
+      }
     }
+  }
+
+  // --- Dynamic world sizing for scroll lock ---
+
+  _updateWorldSize() {
+    if (!this.world) return
+    if (!this.scrollLock) {
+      this.world.style.width = ""
+      this.world.style.height = ""
+      return
+    }
+    // Calculate bounding box of all components
+    let maxX = 0
+    let maxY = 0
+    this.world.querySelectorAll(".canvas-component").forEach(comp => {
+      const x = parseFloat(comp.style.left) || 0
+      const y = parseFloat(comp.style.top) || 0
+      const w = comp.offsetWidth || parseFloat(comp.style.width) || 320
+      const h = comp.offsetHeight || 200
+      maxX = Math.max(maxX, x + w)
+      maxY = Math.max(maxY, y + h)
+    })
+    // Add padding so there's room to scroll past the last component
+    const padding = 100
+    this.world.style.width = (maxX + padding) + "px"
+    this.world.style.height = (maxY + padding) + "px"
   }
 
   // --- Persist position ---
@@ -610,5 +674,8 @@ export default class extends Controller {
     } catch (e) {
       console.error("[Canvas] Failed to save position:", e)
     }
+
+    // Refresh world size after component moved (matters for scroll-lock)
+    this._updateWorldSize()
   }
 }

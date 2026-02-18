@@ -57,8 +57,6 @@
         <% Ai::AiPage.published.recent.each do |page| %>
           <a href="/<%= page.slug %>" onclick="if(window.chatFooter){chatFooter.openCanvas(<%= page.id %>, '<%= page.title.gsub("'", "\\\\'") %>', '<%= page.slug %>');return false}"><%= page.title %></a>
         <% end %>
-        <a href="/jobs" data-turbo-frame="canvas-content">Jobs & Skills</a>
-        <a href="/settings" data-turbo-frame="canvas-content">Settings</a>
       </nav>
     </aside>
   </div>

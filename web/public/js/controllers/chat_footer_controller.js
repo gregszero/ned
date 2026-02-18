@@ -490,6 +490,11 @@ export default class extends Controller {
       container.setAttribute("data-controller", "canvas")
       container.setAttribute("data-canvas-page-id-value", pageId)
 
+      // Pass scroll lock state from canvas_state
+      if (data.canvas_state && data.canvas_state.scroll_locked) {
+        container.setAttribute("data-canvas-scroll-locked-value", "true")
+      }
+
       const world = container.querySelector(".canvas-world")
       for (const comp of data.components) {
         world.insertAdjacentHTML("beforeend", this._renderCanvasComponent(comp))

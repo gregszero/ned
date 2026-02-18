@@ -203,26 +203,27 @@ module Ai
           end
         end
 
-        # Jobs & Skills
+        # Jobs & Skills — canvas page
         r.on 'jobs' do
+          @page = AiPage.find_by(slug: 'jobs')
+          r.on String do |chat_slug|
+            @conversation = @page&.conversations&.find_by(slug: chat_slug)
+            render_canvas_or_layout(:canvas_view)
+          end
           r.is do
-            r.get do
-              @tasks = Ai::ScheduledTask.order(scheduled_for: :desc)
-              @skills = SkillRecord.all.order(usage_count: :desc)
-              render_canvas_or_layout(:jobs_and_skills)
-            end
+            render_canvas_or_layout(:canvas_view)
           end
         end
 
-        # Settings
+        # Settings — canvas page
         r.on 'settings' do
+          @page = AiPage.find_by(slug: 'settings')
+          r.on String do |chat_slug|
+            @conversation = @page&.conversations&.find_by(slug: chat_slug)
+            render_canvas_or_layout(:canvas_view)
+          end
           r.is do
-            r.get do
-              @skills = SkillRecord.all.order(usage_count: :desc)
-              @mcp_connections = McpConnection.all
-              @config = Config.all_config
-              render_canvas_or_layout(:settings)
-            end
+            render_canvas_or_layout(:canvas_view)
           end
         end
 
@@ -341,8 +342,16 @@ module Ai
 
             r.on 'canvas' do
               r.get do
+                components = page.canvas_components.ordered.map do |comp|
+                  # Auto-render widget content if stored content is blank
+                  if comp.content.blank?
+                    rendered = comp.render_content_html
+                    comp.update_column(:content, rendered) if rendered.present?
+                  end
+                  comp.as_canvas_json
+                end
                 {
-                  components: page.canvas_components.ordered.map(&:as_canvas_json),
+                  components: components,
                   canvas_state: page.canvas_state || {}
                 }
               end
