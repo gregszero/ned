@@ -1,0 +1,177 @@
+Implement the following plan:
+
+# Chat Footer + Canvas UI Restructure
+
+## Context
+
+Currently, chat lives on a dedicated `/conversations/:id` page. The goal is to make chat omnipresent as a resizable footer panel with terminal-like tabs, and turn the main content area into a "canvas" that the AI can update via Turbo Streams per conversation.
+
+## Architecture
+
+```
++------------------------------------------+
+| Header (56px)                            |
++------------------------------------------+
+|                                          |
+|  Canvas Area (turbo-frame, flex-1)       |
+|  - Regular pages (notifications, etc.)   |
+|  - Per-conversation AI canvas            |
+|                                          |
++==========================================+  ← drag handle
+| [Conv 1] [Conv 2] [+]                   |  ← tab bar
+|------------------------------------------|
+|  Chat messages (scrollable)              |
+|  [textarea] [Send]                       |
++------------------------------------------+
+```
+
+## Implementation Steps
+
+### 1. Migration: Add `canvas_html` to conversations
+
+**File:** `workspace/migrations/20260217000001_add_canvas_to_conversations.rb`
+
+Add a `canvas_html` text column so the AI can persist canvas content per conversation.
+
+### 2. Restructure layout.erb
+
+**File:** `web/views/layout.erb`
+
+- Change `<body>` to `h-dvh flex flex-col overflow-hidden`
+- Wrap `<%= yield %>` in a `<turbo-frame id="canvas-content">` so nav clicks only replace the canvas, keeping the footer alive
+- Add a `#conversation-canvases` container for per-conversation canvas divs
+- Replace the old `<footer>` with the chat footer structure (resize handle, tab bar, panels area)
+- Attach `data-controller="chat-footer"` to the wrapper div
+
+### 3. New Stimulus controller: `ChatFooterController`
+
+**File:** `web/public/js/controllers/chat_footer_controller.js`
+
+Core responsibilities:
+- **Tab management**: open/close/switch tabs, render tab buttons, persist open tabs in `sessionStorage`
+- **Panel management**: fetch `/conversations/:id/panel` to load chat panel HTML, show/hide panels on tab switch
+- **SSE management**: one `EventSource` per open tab, connected to `/conversations/:id/stream`, renders Turbo Streams
+- **Canvas switching**: when switching tabs, show that conversation's canvas div, hide others and the turbo-frame page content
+- **Resize**: mousedown/touchstart on drag handle → track mousemove → set footer height, persist in `sessionStorage`
+- **New tab**: POST `/api/conversations` to create a conversation, open it as a tab
+- **Message sending**: intercept form submit via `fetch()`, append user message HTML client-side, clear textarea
+
+### 4. Register controller in application.js
+
+**File:** `web/public/js/application.js`
+
+Import and register `ChatFooterController`.
+
+### 5. New route: conversation panel (chat fragment)
+
+**File:** `web/app.rb`
+
+Add `GET /conversations/:id/panel` — returns a bare HTML fragment (no layout) with the conversation's messages and chat input form. This is what gets loaded into a footer tab panel.
+
+### 6. New view: conversation_panel.erb
+
+**File:** `web/views/conversation_panel.erb`
+
+Stripped-down chat UI for the footer: scrollable messages div (`id="messages-{id}"`), compact form with textarea + send button.
+
+### 7. New route: conversation canvas
+
+**File:** `web/app.rb`
+
+Add `GET /conversations/:id/canvas` — returns the stored `canvas_html` or a placeholder.
+
+### 8. API route: create conversation (JSON)
+
+**File:** `web/app.rb`
+
+Add `POST /api/conversations` — creates a conversation, returns `{ id, title }` as JSON. Used by the "+" tab button.
+
+### 9. Update Turbo Stream targets for multi-tab support
+
+**File:** `ai/jobs/agent_executor_job.rb`
+
+Change targets from generic `messages` to `messages-{conversation.id}`, and `thinking-indicator` to `thinking-indicator-{conversation.id}`. Also fix the stale DaisyUI classes in the thinking indicator to use current `.chat-msg.ai` styling.
+
+### 10. Update message POST route for footer
+
+**File:** `web/app.rb`
+
+Update `POST /conversations/:id/messages` turbo response to use `messages-{conversation.id}` as the append target (matching step 9).
+
+### 11. Add Turbo Frame support to page routes
+
+**File:** `web/app.rb`
+
+Add a `turbo_frame_request?` helper. When a request has `Turbo-Frame: canvas-content` header, return just the content wrapped in `<turbo-frame id="canvas-content">` instead of the full layout. Apply to all page routes (notifications, settings, jobs, pages).
+
+### 12. Update sidebar nav links
+
+**File:** `web/views/layout.erb`
+
+Add `data-turbo-frame="canvas-content"` to all sidebar nav links so they update the canvas without destroying the footer.
+
+### 13. CSS: chat footer styles
+
+**File:** `web/public/css/style.css`
+
+Add styles for:
+- `.chat-footer` — fixed height (overridden by JS), min/max height
+- `.chat-footer-handle` — 6px drag bar, hover highlight
+- `.chat-tab` / `.chat-tab.active` — tab buttons with bottom border accent
+- `.chat-tab-close` — small X button on tabs
+- `.chat-panel` / `.chat-panel.active` — absolute positioned panels, toggle visibility
+- Compact overrides for messages inside `.chat-footer` (smaller font, tighter spacing)
+- `.conversation-canvas` — hidden by default, `.active` shows it
+
+### 14. New MCP tool: `update_canvas`
+
+**File:** `ai/tools/update_canvas_tool.rb`
+
+Allows the AI to push HTML to the active conversation's canvas:
+- Saves HTML to `conversation.canvas_html`
+- Broadcasts a Turbo Stream (`update` or `append`) to `canvas-{conversation.id}`
+- Supports `replace` (default) and `append` modes
+
+### 15. Update conversation_show.erb for backward compat
+
+**File:** `web/views/conversation_show.erb`
+
+Update `id="messages"` to `id="messages-{id}"` so the turbo stream targets match. This view still works as a standalone page (useful for direct links).
+
+## Key Files to Modify
+
+| File | Change |
+|------|--------|
+| `web/views/layout.erb` | Major restructure: flex layout, turbo-frame canvas, chat footer |
+| `web/app.rb` | New routes (panel, canvas, API create), turbo-frame helper |
+| `web/public/js/controllers/chat_footer_controller.js` | New — main controller |
+| `web/public/js/application.js` | Register new controller |
+| `web/public/css/style.css` | Footer, tabs, handle, canvas styles |
+| `ai/jobs/agent_executor_job.rb` | Per-conversation turbo stream targets |
+| `web/views/conversation_panel.erb` | New — compact chat panel for footer |
+| `web/views/conversation_show.erb` | Update message target ID |
+| `ai/tools/update_canvas_tool.rb` | New — AI canvas update tool |
+| `workspace/migrations/...` | Add `canvas_html` column |
+
+## Verification
+
+1. Start the server with `./ai.rb server`
+2. Open the browser — footer should appear at bottom with "+" button
+3. Click "+" to create a new conversation tab
+4. Type a message, verify it appears in the chat panel and AI responds
+5. Open a second tab, verify both tabs work independently
+6. Click sidebar links (notifications, settings) — canvas updates, footer persists
+7. Drag the resize handle — footer resizes, persists across page navigations
+8. Reload the page — open tabs restore from sessionStorage
+9. Test the `update_canvas` tool from a conversation — canvas should update in real-time
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+make that user can have multiple canvas and give it names, save it as page in sidebar. user should be able to start a new conversation (footer) for an existing canvas or create a new one.
+
+---
+
+[Request interrupted by user for tool use]
