@@ -5,18 +5,18 @@
 
 /* --- Design Tokens (Light Mode) --- */
 :root {
-  --background: #ffffff;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --background: #d5d8dc;
+  --foreground: #1a1a1a;
+  --card: #c8ccd0;
+  --card-foreground: #1a1a1a;
+  --muted: #bcc1c6;
+  --muted-foreground: #4a5568;
   --accent: #f0fdf4;
-  --accent-foreground: #166534;
-  --primary: #16a34a;
+  --accent-foreground: #14532d;
+  --primary: #15803d;
   --primary-foreground: #ffffff;
-  --border: #e2e8f0;
-  --ring: #16a34a;
+  --border: #b0b5bb;
+  --ring: #15803d;
 
   /* Backward-compat aliases */
   --ned-bg: var(--background);
@@ -39,11 +39,11 @@
     --muted: #27272a;
     --muted-foreground: #a1a1aa;
     --accent: #27272a;
-    --accent-foreground: #4ade80;
-    --primary: #22c55e;
+    --accent-foreground: #22c55e;
+    --primary: #16a34a;
     --primary-foreground: #ffffff;
     --border: #27272a;
-    --ring: #22c55e;
+    --ring: #16a34a;
   }
 }
 
