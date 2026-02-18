@@ -1,0 +1,99 @@
+Implement the following plan:
+
+# Plan: Fix Scroll Lock to Be a True Canvas Mode + Route Settings/Jobs as Canvas Pages
+
+## Context
+The previous implementation made scroll-lock mode too aggressive — it converted components to `position: relative` flow layout, breaking the canvas metaphor entirely. The user wants:
+- Settings and Jobs are **real canvas pages** with the full canvas+chat architecture (`/settings/chat_slug`)
+- Scroll lock is just a **view mode toggle**: hides dots, replaces zoom-on-wheel with vertical scroll, but components stay absolutely positioned and draggable
+- Toggle scroll lock on/off anytime — it's a preference, not a different page type
+
+## Changes
+
+### 1. Fix scroll lock CSS — keep it a canvas
+**File:** `web/public/css/style.css`
+
+Replace the current scroll-lock CSS block. The key insight: components stay `position: absolute`, canvas-world stays absolute too. We just need:
+- Hide dots: `.scroll-locked .canvas-dot-grid { display: none }`
+- Enable scroll on container: `.scroll-locked { overflow-y: auto }`
+- Give canvas-world a real height so scroll works: set `min-height` dynamically via JS (not CSS)
+- Keep components absolutely positioned (remove the `position: relative !important` rules)
+
+```css
+.conversation-canvas.scroll-locked { overflow-y: auto; }
+.conversation-canvas.scroll-locked .canvas-dot-grid { display: none; }
+```
+Remove all the `.scroll-locked .canvas-world` and `.scroll-locked .canvas-component` position overrides.
+
+### 2. Fix scroll lock JS — dynamic height + allow dragging
+**File:** `web/public/js/controllers/canvas_controller.js`
+
+- **Re-enable component dragging** when scroll-locked (remove the `if (this.scrollLock) return` in `onMouseDown` and `onTouchStart` for components)
+- **Panning** stays disabled in scroll-lock mode (user scrolls instead)
+- **onWheel**: already correct — lets browser handle scroll when locked
+- **updateTransform()**: when scroll-locked, set `transform: none` and instead apply `panX`/`panY` as the world's natural position. Actually simpler: just don't transform, reset scale to 1.0, and let scroll handle vertical movement.
+- **New method `_updateWorldSize()`**: calculate the bounding box of all components (max x+width, max y+height) and set `canvas-world` to that size + padding so the container has something to scroll. Call this on `connect()`, after `toggleScrollLock()`, and after component position saves.
+- When toggling scroll lock OFF → restore previous pan/zoom transform
+
+### 3. Routes — make `/settings` and `/jobs` render as canvas pages
+**File:** `web/app.rb`
+
+Change the explicit `/settings` and `/jobs` routes to render `canvas_view.erb` instead of the old ERB templates. Set `@page` to the corresponding `AiPage` record. Add nested `/:chat_slug` handling.
+
+```ruby
+r.on 'jobs' do
+  @page = AiPage.find_by(slug: 'jobs')
+  r.on String do |chat_slug|
+    @conversation = @page&.conversations&.find_by(slug: chat_slug)
+    render_canvas_or_layout(:canvas_view)
+  end
+  r.is do
+    render_canvas_or_layout(:canvas_view)
+  end
+end
+
+r.on 'settings' do
+  @page = AiPage.find_by(slug: 'settings')
+  r.on String do |chat_slug|
+    @conversation = @page&.conversations&.find_by(slug: chat_slug)
+    render_canvas_or_layout(:canvas_view)
+  end
+  r.is do
+    render_canvas_or_layout(:canvas_view)
+  end
+end
+```
+
+This means `/settings` opens the canvas view (which triggers `chatFooter.openCanvas()` via JS), and `/settings/my-chat` opens it with that conversation active — same URL pattern as every other canvas.
+
+### 4. Minor: zoom indicator always shows zoom % even when locked
+**File:** `web/public/js/controllers/canvas_controller.js`
+
+Current code hides the zoom % when locked. Always show it — just add/change the lock icon.
+
+## Files to Modify
+| File | Change |
+|---|---|
+| `web/public/css/style.css` | Simplify scroll-lock CSS (remove position overrides) |
+| `web/public/js/controllers/canvas_controller.js` | Fix scroll-lock: allow dragging, dynamic world sizing, always show zoom % |
+| `web/app.rb` | `/settings` and `/jobs` routes → render `canvas_view.erb` |
+
+## Verification
+1. `./ai.rb server`
+2. Click "Settings" in nav → opens canvas overlay with settings widget, scroll-locked by default
+3. URL shows `/settings`, chat opens at `/settings/chat-slug`
+4. Scroll with mouse wheel → page scrolls vertically (no zoom)
+5. Dots are hidden
+6. Drag the settings widget → it moves (still a canvas!)
+7. Right-click → canvas context menu works
+8. Click lock toggle → dots appear, zoom works, full canvas mode
+9. Toggle back → scroll lock re-engages
+10. Same for Jobs & Skills
+11. Regular canvas pages unaffected
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit
