@@ -1,0 +1,25 @@
+run daily briefing
+
+---
+
+how does it work when you run a skill ?
+
+---
+
+fix it
+
+---
+
+using this framework, what are the core benefits?
+
+---
+
+improves the token usage or stays the same?
+
+---
+
+but i mean in the sense of asking claude to do something multiple times
+
+---
+
+what would be a complex case of skill usage that would be good for this framework?

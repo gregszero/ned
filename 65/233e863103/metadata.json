@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "65233e863103",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "ai/models/skill_record.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/65/233e863103/0/metadata.json",
+      "transcript": "/65/233e863103/0/full.jsonl",
+      "context": "/65/233e863103/0/context.md",
+      "content_hash": "/65/233e863103/0/content_hash.txt",
+      "prompt": "/65/233e863103/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 35,
+    "cache_creation_tokens": 54391,
+    "cache_read_tokens": 525136,
+    "output_tokens": 126,
+    "api_call_count": 19
+  }
+}
