@@ -8,7 +8,7 @@ export default class extends Controller {
     // { pageId, title, slug, conversations: [{ id, title, slug }], activeConvId }
     this.canvases = []
     this.activeCanvasPageId = null
-    this.eventSources = {} // pageId → EventSource (one per canvas)
+    this.activeEventSource = null // single SSE connection for active canvas
     this.footerHeight = parseInt(sessionStorage.getItem("chatFooterHeight")) || 350
 
     // Expose for cross-component access
@@ -43,8 +43,10 @@ export default class extends Controller {
   }
 
   disconnect() {
-    Object.values(this.eventSources).forEach(src => src.close())
-    this.eventSources = {}
+    if (this.activeEventSource) {
+      this.activeEventSource.close()
+      this.activeEventSource = null
+    }
     window.chatFooter = null
   }
 
@@ -75,9 +77,6 @@ export default class extends Controller {
 
       // Create canvas overlay div
       this._createCanvasOverlay(pageId)
-
-      // Connect SSE for this canvas
-      this.connectSSE(pageId)
     }
 
     // Expand footer if collapsed
@@ -97,6 +96,15 @@ export default class extends Controller {
   }
 
   switchCanvas(pageId) {
+    // Switch SSE to new active canvas
+    if (this.activeCanvasPageId !== pageId) {
+      if (this.activeEventSource) {
+        this.activeEventSource.close()
+        this.activeEventSource = null
+      }
+      this.connectSSE(pageId)
+    }
+
     this.activeCanvasPageId = pageId
     const canvas = this.canvases.find(c => c.pageId === pageId)
 
@@ -134,10 +142,10 @@ export default class extends Controller {
     const canvas = this.canvases.find(c => c.pageId === pageId)
     if (!canvas) return
 
-    // Close SSE
-    if (this.eventSources[pageId]) {
-      this.eventSources[pageId].close()
-      delete this.eventSources[pageId]
+    // Close SSE if this was the active canvas
+    if (this.activeCanvasPageId === pageId && this.activeEventSource) {
+      this.activeEventSource.close()
+      this.activeEventSource = null
     }
 
     // Remove all conversation panels
@@ -273,7 +281,9 @@ export default class extends Controller {
   // --- SSE ---
 
   connectSSE(pageId) {
-    if (this.eventSources[pageId]) return
+    if (this.activeEventSource) {
+      this.activeEventSource.close()
+    }
 
     const source = new EventSource(`/api/pages/${pageId}/stream`)
     source.onmessage = (event) => {
@@ -290,7 +300,7 @@ export default class extends Controller {
     source.onerror = () => {
       console.warn(`[ChatFooter] SSE error for canvas ${pageId}, reconnecting...`)
     }
-    this.eventSources[pageId] = source
+    this.activeEventSource = source
   }
 
   // --- Message Sending ---
@@ -527,7 +537,6 @@ export default class extends Controller {
 
     this._createCanvasTabButton(canvas)
     this._createCanvasOverlay(canvas.pageId)
-    this.connectSSE(canvas.pageId)
 
     // Restore conversations
     for (const conv of (savedCanvas.conversations || [])) {

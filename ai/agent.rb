@@ -46,6 +46,49 @@ module Ai
         { 'type' => 'error', 'message' => e.message }
       end
 
+      # Execute with streaming — yields parsed NDJSON events as they arrive
+      def execute_streaming(prompt:, session_id:, conversation: nil, &block)
+        uuid = to_uuid(session_id)
+        session = find_or_create_session(conversation, uuid)
+        resumable = session.stopped?
+
+        session.start!
+
+        success = run_claude_streaming(
+          prompt: prompt, uuid: uuid, resuming: resumable,
+          env: build_env(conversation), &block
+        )
+
+        # If resume failed, retry as new session
+        unless success
+          if resumable
+            Ai.logger.warn "Resume failed (streaming), starting fresh session"
+            success = run_claude_streaming(
+              prompt: prompt, uuid: uuid, resuming: false,
+              env: build_env(conversation), &block
+            )
+          end
+        end
+
+        if success
+          session.stop!
+        else
+          session.error!
+        end
+
+        success
+      rescue Errno::ENOENT
+        session&.error!
+        Ai.logger.error "claude command not found."
+        yield({ 'type' => 'error', 'message' => 'claude command not found' }) if block
+        false
+      rescue => e
+        session&.error!
+        Ai.logger.error "Streaming agent execution failed: #{e.message}"
+        yield({ 'type' => 'error', 'message' => e.message }) if block
+        false
+      end
+
       private
 
       def run_claude(prompt:, uuid:, resuming:, env:)
@@ -79,6 +122,62 @@ module Ai
           Ai.logger.error "Claude exited with code #{status.exitstatus}:\nstderr: #{stderr}\nstdout: #{stdout}"
           { failed: true, error: "Agent exited with code #{status.exitstatus}:\n#{detail}" }
         end
+      end
+
+      def run_claude_streaming(prompt:, uuid:, resuming:, env:, &block)
+        mcp_config = File.join(Ai.root, 'workspace', '.mcp.json')
+
+        cmd = [
+          'claude',
+          '-p', prompt,
+          '--output-format', 'stream-json',
+          '--max-turns', '25',
+          '--permission-mode', 'bypassPermissions',
+          '--mcp-config', mcp_config
+        ]
+
+        if resuming
+          cmd += ['--resume', uuid]
+        else
+          cmd += ['--session-id', uuid]
+        end
+
+        Ai.logger.info "#{resuming ? 'Resuming' : 'Starting'} claude streaming subprocess (session: #{uuid})"
+
+        success = false
+        Open3.popen3(env, *cmd) do |stdin, stdout, stderr, wait_thr|
+          stdin.close
+
+          # Drain stderr in a background thread to avoid pipe deadlock
+          stderr_thread = Thread.new { stderr.read }
+
+          stdout.each_line do |line|
+            line = line.strip
+            next if line.empty?
+
+            begin
+              event = JSON.parse(line)
+              yield(event) if block
+              # Track final result
+              if event['type'] == 'result'
+                success = event['subtype'] == 'success'
+              end
+            rescue JSON::ParserError
+              Ai.logger.warn "Non-JSON line from claude stream: #{line[0..200]}"
+            end
+          end
+
+          stderr_output = stderr_thread.value
+          status = wait_thr.value
+          unless status.success?
+            err = stderr_output.to_s.strip
+            Ai.logger.error "Claude streaming exited #{status.exitstatus}: #{err}"
+            yield({ 'type' => 'error', 'message' => "Agent exited with code #{status.exitstatus}: #{err}" }) if block
+          end
+          success = status.success? if !success
+        end
+
+        success
       end
 
       def find_or_create_session(conversation, uuid)

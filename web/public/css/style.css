@@ -254,23 +254,37 @@ button.icon.sm {
   transition: border-color 0.2s;
 }
 
-/* --- Chat Messages --- */
+/* --- Chat Messages (CLI-style) --- */
 
 .chat-msg {
   padding: 0.75rem 1rem;
-  max-width: 85%;
-  border-radius: 0.75rem;
+  max-width: 100%;
+  border-radius: 0;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
 }
+.chat-msg:first-child { border-top: none; }
+
 .chat-msg.user {
-  margin-left: auto;
-  background: var(--primary);
-  color: var(--primary-foreground);
+  margin-left: 0;
+  background: none;
+  color: var(--foreground);
 }
 .chat-msg.ai {
-  margin-right: auto;
-  background: var(--card);
-  border: 1px solid var(--border);
-  color: var(--card-foreground);
+  margin-right: 0;
+  background: none;
+  color: var(--foreground);
+}
+
+/* Role label styling */
+.chat-msg.user .msg-meta span:first-child {
+  color: var(--primary);
+  font-weight: 600;
+}
+.chat-msg.ai .msg-meta span:first-child {
+  color: var(--muted-foreground);
+  font-weight: 600;
 }
 
 /* --- Sidebar --- */
@@ -582,11 +596,37 @@ button.icon.sm {
 
 .prose-bubble hr { border: none; border-top: 1px solid var(--border); margin: 0.6em 0; }
 
-/* User chat bubble: invert prose colors */
-.chat-msg.user .prose-bubble a { color: var(--primary-foreground); }
-.chat-msg.user .prose-bubble code { background: rgba(255,255,255,0.15); color: var(--primary-foreground); }
-.chat-msg.user .prose-bubble pre { background: rgba(255,255,255,0.15); }
-.chat-msg.user .prose-bubble blockquote { border-left-color: var(--primary-foreground); color: var(--primary-foreground); }
+/* --- Agent Steps (streaming progress) --- */
+
+.agent-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-bottom: 0.5rem;
+}
+.agent-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.agent-step-icon {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+  flex-shrink: 0;
+}
+/* Pulse the active (last) step */
+.agent-step:last-child .agent-step-icon {
+  background: var(--primary);
+  animation: step-pulse 1.5s ease-in-out infinite;
+}
+@keyframes step-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
 
 /* --- Custom Scrollbar --- */
 
@@ -771,7 +811,7 @@ button.icon.sm {
 .chat-panel-messages .chat-msg {
   padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
-  max-width: 90%;
+  max-width: 100%;
 }
 .chat-panel-messages .msg-meta {
   font-size: 0.6rem;
@@ -1022,10 +1062,10 @@ button.icon.sm {
   .card { padding: 1rem; }
   button { min-height: 2.75rem; }
   button.icon { width: 2.75rem; height: 2.75rem; }
-  .chat-msg { max-width: 92%; }
+  .chat-msg { max-width: 100%; }
   .sidebar nav a { min-height: 2.75rem; display: flex; align-items: center; }
 
   .chat-tab { padding: 0.25rem 0.375rem; font-size: 0.6875rem; }
   .chat-tab-title { max-width: 80px; }
-  .chat-panel-messages .chat-msg { max-width: 95%; }
+  .chat-panel-messages .chat-msg { max-width: 100%; }
 }
