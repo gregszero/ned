@@ -1,0 +1,5 @@
+on sidebar after selecting a link the sidebar should close
+
+---
+
+commit this
