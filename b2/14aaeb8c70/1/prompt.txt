@@ -1,0 +1,141 @@
+Implement the following plan:
+
+# Canvas Context Menu + Weather Widget
+
+## Context
+
+The infinite canvas currently only supports pan, zoom, and drag. There's no way for users to right-click and perform actions like adding premade components or interacting with existing ones. We're adding a reusable context menu system with configurable actions, plus a weather widget for Curitiba as the first demo component.
+
+## Files to Modify
+
+| File | Changes |
+|---|---|
+| `web/public/js/controllers/canvas_controller.js` | Add context menu logic, action methods, menu item registries |
+| `web/public/css/style.css` | Add context menu styles after canvas section (~line 717) |
+| `web/views/layout.erb` | Add singleton `#canvas-context-menu` div before `</body>` |
+| `web/app.rb` | Add `POST` and `DELETE` component API routes alongside existing `PATCH` |
+
+No new files or migrations needed.
+
+## Implementation
+
+### 1. Layout — Add context menu DOM (`layout.erb`)
+
+Add before `</body>` (line 135):
+```html
+<div id="canvas-context-menu" class="canvas-context-menu" style="display:none">
+  <div id="canvas-context-menu-items"></div>
+</div>
+```
+
+### 2. CSS — Context menu styles (`style.css`)
+
+Add after canvas section:
+- `.canvas-context-menu` — fixed position, card bg, border, shadow, subtle scale-in animation
+- `.canvas-context-menu-item` — button styled as menu row (icon + label), hover highlight, `height: auto` to override global button height
+- `.canvas-context-menu-item.destructive` — red text variant
+- `.canvas-context-menu-separator` — 1px border divider
+
+### 3. Canvas Controller — Context menu integration (`canvas_controller.js`)
+
+**Event wiring in `connect()`:**
+- Listen for `contextmenu` on `this.element` (prevent default)
+- Listen for `click` on document (close menu if outside)
+- Listen for `keydown` Escape (close menu)
+- Grab reference to `#canvas-context-menu` singleton
+- Expose `window.canvasController = this` for extensibility
+
+**Menu item registries** (configurable arrays):
+
+Canvas background menu:
+- "Add Note" — creates a card component at cursor position
+- "Add Weather Widget" — creates weather component with Curitiba data
+- separator
+- "Reset View" — resets pan/zoom to default
+
+Component menu (right-click on a component):
+- "Chat about this" — opens new conversation tab with pre-filled context about the component
+- "Duplicate" — copies component with slight offset
+- separator
+- "Delete" — removes component via API
+
+**Core methods:**
+- `onContextMenu(e)` — detects if click hit a component or empty space, converts screen→world coords, shows appropriate menu
+- `showCanvasMenu(screenX, screenY, worldX, worldY)` — builds menu from `canvasMenuItems` array
+- `showComponentMenu(screenX, screenY, component)` — builds menu from `componentMenuItems` array
+- `positionAndShowMenu(x, y)` — positions menu avoiding viewport overflow
+- `hideMenu()` — hides the menu
+
+**Action methods:**
+- `createComponent(attrs)` — POST to `/api/pages/:id/components`, Turbo broadcast handles DOM insertion
+- `addNote(x, y)` — creates a simple card component
+- `addWeatherWidget(x, y)` — creates weather component with static Curitiba HTML
+- `weatherWidgetHtml()` — returns the weather widget markup (Tailwind classes, 22°C, humidity/wind/UV grid)
+- `chatAboutComponent(comp)` — calls `window.chatFooter.openCanvasTab()` then pre-fills textarea with component context
+- `duplicateComponent(comp)` — fetches component data via GET, creates copy offset by 24px
+- `deleteComponent(comp)` — DELETE via API, optimistic DOM removal
+- `resetView()` — reset scale=1, panX=panY=0
+
+**Extensibility:** Anyone can push new items via `window.canvasController.canvasMenuItems.push({...})`.
+
+### 4. API Routes (`web/app.rb`)
+
+Inside existing `r.on 'pages', Integer` block (line 325), extend the components section:
+
+**`POST /api/pages/:id/components`** — Creates a `CanvasComponent`, broadcasts Turbo Stream append (reuse pattern from `add_canvas_component_tool.rb` lines 55-75)
+
+**`GET /api/pages/:id/components/:id`** — Returns single component JSON (needed for duplicate)
+
+**`DELETE /api/pages/:id/components/:id`** — Destroys component, broadcasts Turbo Stream remove
+
+### 5. Weather Widget Content
+
+Static HTML using Tailwind utilities:
+- Header: "Curitiba, BR" + sun emoji
+- Temperature: "22°C" large display
+- Description: "Partly cloudy · Feels like 21°"
+- 3-column grid: Humidity 68%, Wind 12 km/h, UV Index 4
+
+## Verification
+
+1. Start server with `./ai.rb server`
+2. Open a canvas (click a page in sidebar or create new)
+3. Right-click on empty canvas space → should see "Add Note", "Add Weather Widget", "Reset View"
+4. Click "Add Weather Widget" → Curitiba weather card appears at cursor position
+5. Drag the widget to verify it's a normal canvas component
+6. Right-click on the weather widget → should see "Chat about this", "Duplicate", "Delete"
+7. Click "Duplicate" → copy appears offset by 24px
+8. Click "Delete" → component removed
+9. Click "Chat about this" → new conversation tab opens with pre-filled context
+10. Press Escape or click outside menu → menu closes
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+when i click in chat about this, i should stay at the same canvas but just a new chat tab with something highlighting that we are talking about this component
+
+---
+
+when i click in talk about this in the widget nothing happens, it should open a new conversation tab with reference of the widget
+
+---
+
+the button was working before but it makes a request to conversations that stuck the entire app
+
+---
+
+why the server seems to be opening two servers? i mean there are two things using port 3000 i kill and start the server and after a couple requests it starts another server and then everything stops
+
+---
+
+still opening two servers when i navigate to /conversations.
+
+---
+
+instead increasing the threads etc, lets fix our architecture. lets remove the conversation page. use canvas for everything, the bottom terminal bar should have two levels, canvas level and below the conversations. so 1 canvas may have multiple chats. i believe this may fix the navigation issues. to make things better for threads etc we may need to rethink in a more efficient way of handling the updates, maybe the canvas channel can be shared with the chat? idk, the framework is built to fits AIs need in a efficient way so help yourself
+
+---
+
+[Request interrupted by user for tool use]
