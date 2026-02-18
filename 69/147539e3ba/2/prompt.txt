@@ -1,0 +1,115 @@
+Implement the following plan:
+
+# Plan: Enable Real-time Streaming in Agent Job
+
+## Context
+
+The CLI-style UI redesign is done (full-width messages, role labels, agent step CSS). The job currently uses blocking `Agent.execute` (`capture3` + `--output-format json`), so the user sees "Thinking..." then the full response all at once. We need to switch to `Agent.execute_streaming` which already exists in `agent.rb` but uses the wrong event types in the job handler.
+
+The previous streaming attempt failed because:
+1. The job handled API-level events (`content_block_start`, `content_block_delta`) but `stream-json` emits **message-level events** (`assistant`, `user`, `result`)
+2. We couldn't test `stream-json` from within a nested Claude Code session — but it works fine when the server runs independently
+
+## stream-json NDJSON Event Format
+
+Each line is a JSON object with a `type` discriminator:
+
+- **`system`** — `{"type":"system","subtype":"init","session_id":"..."}` (session start)
+- **`assistant`** — `{"type":"assistant","content":[{"type":"text","text":"..."},{"type":"tool_use","name":"run_code","input":{...}}]}` (AI response with text and/or tool calls)
+- **`user`** (tool results) — `{"type":"user","content":[{"type":"tool_result","tool_use_id":"...","content":[...]}]}`
+- **`result`** — `{"type":"result","subtype":"success","result":"final text","num_turns":3,"total_cost_usd":0.004}` (terminal event)
+
+## Changes
+
+### `ai/jobs/agent_executor_job.rb` — Switch to streaming with correct event handling
+
+Switch from `Agent.execute` to `Agent.execute_streaming` with a block that handles the correct event types:
+
+```ruby
+def perform(message_id)
+  message = Message.find(message_id)
+  conversation = message.conversation
+  channel = conversation.broadcast_channel
+
+  progress_id = "agent-progress-#{message_id}"
+  broadcast_progress_container(conversation, progress_id)
+
+  accumulated_text = ""
+  last_broadcast_at = Time.now
+
+  Agent.execute_streaming(
+    prompt: message.content,
+    session_id: conversation.id,
+    conversation: conversation
+  ) do |event|
+    case event['type']
+    when 'assistant'
+      # Extract steps from content blocks
+      (event['content'] || []).each do |block|
+        case block['type']
+        when 'thinking'
+          broadcast_step(channel, progress_id, 'Thinking...', 'thinking')
+        when 'tool_use'
+          broadcast_step(channel, progress_id, "Running #{block['name']}", 'tool')
+        when 'text'
+          accumulated_text = block['text'].to_s
+          broadcast_streaming_text(channel, progress_id, accumulated_text)
+        end
+      end
+
+    when 'result'
+      result_text = event['result'].to_s.strip
+      result_text = accumulated_text.strip if result_text.empty?
+      result_text = summarize_result(event) if result_text.empty?
+
+      role = event['subtype'] == 'success' ? 'assistant' : 'system'
+      response_message = conversation.add_message(role: role, content: result_text)
+      broadcast_final(conversation, progress_id, response_message)
+      deliver_to_whatsapp(conversation, response_message)
+    end
+  end
+end
+```
+
+Key differences from previous attempt:
+- Handle `assistant` events (not `content_block_start`/`content_block_delta`)
+- Each `assistant` event has a `content` array with complete `text`/`tool_use`/`thinking` blocks
+- Text arrives as complete blocks per assistant turn, not character-by-character deltas
+- The `result` event is the terminal event with final text
+
+### `ai/agent.rb` — No changes needed
+
+`execute_streaming` and `run_claude_streaming` are already correct.
+
+### `ai/jobs/agent_executor_job.rb` — Add `summarize_result` helper
+
+For cases where `result` text is empty (all tool use, no text response):
+
+```ruby
+def summarize_result(event)
+  parts = []
+  parts << "Completed in #{event['num_turns']} turn(s)." if event['num_turns']
+  parts << "Cost: $#{'%.4f' % event['total_cost_usd']}." if event['total_cost_usd']
+  parts.empty? ? "Task completed." : parts.join(' ')
+end
+```
+
+## Files
+
+| File | Changes |
+|---|---|
+| `ai/jobs/agent_executor_job.rb` | Switch to `execute_streaming`, handle `assistant`/`result` events correctly |
+
+## Verification
+
+1. Restart server (`./ai.rb server`)
+2. Send a message — verify: pulsing "Thinking..." step appears → tool steps appear (e.g., "Running run_code") → text response streams in → final message replaces progress container
+3. Reload page — saved messages render correctly
+4. Send a message that triggers only tool use (no text) — verify fallback summary appears
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit

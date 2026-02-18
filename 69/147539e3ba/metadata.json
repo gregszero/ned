@@ -3,7 +3,7 @@
   "checkpoint_id": "69147539e3ba",
   "strategy": "manual-commit",
   "branch": "master",
-  "checkpoints_count": 5,
+  "checkpoints_count": 6,
   "files_touched": [
     ".claude/settings.local.json",
     "ai/agent.rb",
@@ -33,13 +33,20 @@
       "context": "/69/147539e3ba/1/context.md",
       "content_hash": "/69/147539e3ba/1/content_hash.txt",
       "prompt": "/69/147539e3ba/1/prompt.txt"
+    },
+    {
+      "metadata": "/69/147539e3ba/2/metadata.json",
+      "transcript": "/69/147539e3ba/2/full.jsonl",
+      "context": "/69/147539e3ba/2/context.md",
+      "content_hash": "/69/147539e3ba/2/content_hash.txt",
+      "prompt": "/69/147539e3ba/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 122,
-    "cache_creation_tokens": 189731,
-    "cache_read_tokens": 6215835,
-    "output_tokens": 18881,
-    "api_call_count": 95
+    "input_tokens": 136,
+    "cache_creation_tokens": 208105,
+    "cache_read_tokens": 6514365,
+    "output_tokens": 19724,
+    "api_call_count": 105
   }
 }
