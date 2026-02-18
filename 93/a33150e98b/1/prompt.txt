@@ -1,0 +1,207 @@
+Implement the following plan:
+
+# Named Canvases as Pages
+
+## Context
+
+The previous implementation tied canvas content to conversations via a `canvas_html` column. This plan evolves canvases into named, persistent AiPage records that appear in the sidebar. Multiple conversations can share a canvas, and users can start new conversations for existing canvases.
+
+**Key concept: Canvas = AiPage.** No new model needed.
+
+## Architecture
+
+```
+Sidebar                    Canvas Area                 Footer
+┌──────────┐   click    ┌─────────────────────┐    ┌──────────────┐
+│ My Report│ ─────────► │  AiPage content     │    │ [Conv1][Conv2]│
+│ Dashboard│            │  (canvas overlay    │    │ Chat panel   │
+│ Notifs   │            │   or turbo-frame)   │    │ [textarea]   │
+└──────────┘            └─────────────────────┘    └──────────────┘
+                              ▲                         │
+                              │ update_canvas tool      │ linked via
+                              │ writes AiPage.content   │ ai_page_id
+                              └─────────────────────────┘
+```
+
+**Relationships:**
+- `AiPage` has_many :conversations
+- `Conversation` belongs_to :ai_page (optional)
+- Multiple conversations can share one AiPage (canvas)
+- Canvas divs keyed by `canvas-page-{ai_page.id}`, not conversation ID
+
+## Steps
+
+### 1. Migration: Link conversations to ai_pages
+
+**File:** `workspace/migrations/20260217000002_link_conversations_to_ai_pages.rb`
+
+- Add `ai_page_id` integer column (nullable) + index to `conversations`
+- Remove `canvas_html` column from `conversations`
+
+### 2. Model changes
+
+**`ai/models/conversation.rb`** — Add:
+```ruby
+belongs_to :ai_page, class_name: 'Ai::AiPage', optional: true
+```
+
+**`ai/models/ai_page.rb`** — Add:
+```ruby
+has_many :conversations, foreign_key: :ai_page_id, dependent: :nullify
+```
+Change `validates :content, presence: true` → `validates :content, allow_blank: true` (new canvases start empty)
+
+### 3. Update `update_canvas` tool
+
+**File:** `ai/tools/update_canvas_tool.rb`
+
+- Write to `conversation.ai_page.content` instead of `conversation.canvas_html`
+- Auto-create an AiPage if conversation has none
+- Broadcast turbo stream to `canvas-page-{page.id}` target
+- Broadcast to ALL conversations sharing that page (so all open tabs see the update)
+
+### 4. Route changes
+
+**File:** `web/app.rb`
+
+- **Update** `GET /conversations/:id/canvas` → return `conversation.ai_page.content` (or placeholder)
+- **Add** `GET /api/pages/:id/canvas` → return AiPage content by ID (for JS canvas loading)
+- **Add** `POST /api/canvases` → create AiPage + Conversation together, return `{ id, title, ai_page_id, page_slug }`
+- **Update** `POST /api/conversations` → accept optional `ai_page_id` param, return it in response
+
+### 5. JS controller: rekey canvases by page ID
+
+**File:** `web/public/js/controllers/chat_footer_controller.js`
+
+- Tab state changes from `{ id, title }` → `{ id, title, pageId }`
+- Canvas divs keyed as `canvas-page-{pageId}` instead of `canvas-{conversationId}`
+- `newTab()` → POST `/api/canvases` (creates page + conversation)
+- `openTab(id, title, activate, pageId)` → create canvas div by pageId
+- `switchTab()` → show `canvas-page-{pageId}` for active tab
+- `closeTabById()` → only remove canvas div if no other tab shares that pageId
+- New `openCanvasTab(pageId, title)` → create conversation for existing page, open tab
+- Session restore passes pageId through
+
+### 6. View changes
+
+**`web/views/page_show.erb`** — Add "New conversation" button + list existing conversations for this page:
+```erb
+<button onclick="window.chatFooter?.openCanvasTab(pageId, title)">+ New conversation</button>
+```
+Existing conversations shown as small buttons that open their tab.
+
+**`web/views/conversations_index.erb`** — Pass `ai_page_id` in onclick:
+```erb
+onclick="window.chatFooter?.openTab(id, title, true, pageId)"
+```
+
+### 7. Minor: update create_page tool
+
+**File:** `ai/tools/create_page_tool.rb`
+
+Link page to current conversation if `ENV['CONVERSATION_ID']` is set (sets `conversation.ai_page_id`).
+
+### 8. Minor: agent environment
+
+**File:** `ai/agent.rb`
+
+Pass `AI_PAGE_ID` env var to claude subprocess when conversation has a canvas.
+
+## Key Files
+
+| File | Change |
+|------|--------|
+| `workspace/migrations/20260217000002_...` | New — add ai_page_id, drop canvas_html |
+| `ai/models/conversation.rb` | Add belongs_to :ai_page |
+| `ai/models/ai_page.rb` | Add has_many :conversations, relax content validation |
+| `ai/tools/update_canvas_tool.rb` | Rewrite to target AiPage, broadcast to all linked convs |
+| `web/app.rb` | Update canvas route, add /api/canvases, /api/pages/:id/canvas |
+| `web/public/js/controllers/chat_footer_controller.js` | Rekey by pageId, add openCanvasTab |
+| `web/views/page_show.erb` | Add conversation buttons |
+| `web/views/conversations_index.erb` | Pass pageId in onclick |
+| `ai/tools/create_page_tool.rb` | Link to current conversation |
+| `ai/agent.rb` | Pass AI_PAGE_ID env var |
+
+## Verification
+
+1. Start server with `./ai.rb server`
+2. Click "+" in footer → creates a new canvas (AiPage) + conversation tab
+3. Canvas page appears in sidebar nav
+4. Send a message asking AI to update the canvas → canvas area updates in real-time
+5. Navigate to the canvas page from sidebar → see content + "New conversation" button
+6. Click "New conversation" on page → new footer tab opens, linked to same canvas
+7. Both conversation tabs see the same canvas; updates from either tab appear on both
+8. Close tabs, reload → tabs restore from sessionStorage with correct canvas links
+9. Open conversations index → cards show canvas association, clicking opens correct tab
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+./ai.rb server
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/activemodel-8.1.2/lib/active_model/validations/validates.rb:116:in 'ActiveModel::Validations::ClassMethods#validates': You need to supply at least one validation (ArgumentError)
+
+        raise ArgumentError, "You need to supply at least one validation" if validations.empty?
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    from /home/greg/Developer/ai.rb/ai/models/ai_page.rb:12:in '<class:AiPage>'
+    from /home/greg/Developer/ai.rb/ai/models/ai_page.rb:4:in '<module:Ai>'
+    from /home/greg/Developer/ai.rb/ai/models/ai_page.rb:3:in '<top (required)>'
+    from /home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/3.4.0/bundled_gems.rb:82:in 'Kernel.require'
+    from /home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/3.4.0/bundled_gems.rb:82:in 'block (2 levels) in Kernel#replace_require'
+    from /home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/zeitwerk-2.7.4/lib/zeitwerk/core_ext/kernel.rb:34:in 'Kernel#require'
+    from /home/greg/Developer/ai.rb/ai/bootstrap.rb:43:in 'block in Ai.load_core_components'
+    from /home/greg/Developer/ai.rb/ai/bootstrap.rb:43:in 'Array#each'
+    from /home/greg/Developer/ai.rb/ai/bootstrap.rb:43:in 'Ai.load_core_components'
+    from /home/greg/Developer/ai.rb/ai/bootstrap.rb:26:in 'Ai.load!'
+    from /home/greg/Developer/ai.rb/ai/bootstrap.rb:59:in '<top (required)>'
+    from ./ai.rb:4:in 'Kernel#require_relative'
+    from ./ai.rb:4:in '<main>'
+
+---
+
+Puma caught this error: undefined method 'ai_page_id' for an instance of Ai::Conversation (NoMethodError)
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/activemodel-8.1.2/lib/active_model/attribute_methods.rb:512:in 'ActiveModel::AttributeMethods#method_missing'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/activerecord-8.1.2/lib/active_record/attribute_methods.rb:495:in 'ActiveRecord::AttributeMethods#method_missing'
+/home/greg/Developer/ai.rb/web/views/conversations_index.erb:11:in 'block in Tilt::CompiledTemplates#__tilt_2648'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/activerecord-8.1.2/lib/active_record/relation/delegation.rb:100:in 'Array#each'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/activerecord-8.1.2/lib/active_record/relation/delegation.rb:100:in 'ActiveRecord::Delegation#each'
+/home/greg/Developer/ai.rb/web/views/conversations_index.erb:9:in 'Tilt::CompiledTemplates#__tilt_2648'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/tilt-2.7.0/lib/tilt/template.rb:394:in 'UnboundMethod#bind_call'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/tilt-2.7.0/lib/tilt/template.rb:394:in 'Tilt::Template#evaluate_method'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/tilt-2.7.0/lib/tilt/template.rb:266:in 'Tilt::Template#evaluate'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/tilt-2.7.0/lib/tilt/template.rb:134:in 'Tilt::Template#render'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda/plugins/render.rb:435:in 'Roda::RodaPlugins::Render::TemplateMtimeWrapper#render'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda/plugins/render.rb:615:in 'Roda::RodaPlugins::Render::InstanceMethods#render'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda/plugins/render.rb:649:in 'Roda::RodaPlugins::Render::InstanceMethods#view'
+/home/greg/Developer/ai.rb/web/app.rb:40:in 'Ai::Web::App#render_canvas_or_layout'
+/home/greg/Developer/ai.rb/web/app.rb:82:in 'block (4 levels) in <class:App>'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda/request.rb:543:in 'Roda::RodaPlugins::Base::RequestMethods#always'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda/request.rb:534:in 'Roda::RodaPlugins::Base::RequestMethods#_verb'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda/request.rb:105:in 'Roda::RodaPlugins::Base::RequestMethods#get'
+/home/greg/Developer/ai.rb/web/app.rb:80:in 'block (3 levels) in <class:App>'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda/request.rb:543:in 'Roda::RodaPlugins::Base::RequestMethods#always'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda/request.rb:196:in 'Roda::RodaPlugins::Base::RequestMethods#is'
+/home/greg/Developer/ai.rb/web/app.rb:79:in 'block (2 levels) in <class:App>'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda/request.rb:622:in 'Roda::RodaPlugins::Base::RequestMethods#if_match'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda/request.rb:242:in 'Roda::RodaPlugins::Base::RequestMethods#on'
+/home/greg/Developer/ai.rb/web/app.rb:77:in 'block in <class:App>'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda.rb:522:in 'Roda::RodaPlugins::Base::InstanceMethods#_roda_run_main_route'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda.rb:500:in 'block in Roda::RodaPlugins::Base::InstanceMethods#_roda_handle_main_route'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda.rb:498:in 'Kernel#catch'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda.rb:498:in 'Roda::RodaPlugins::Base::InstanceMethods#_roda_handle_main_route'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda.rb:384:in 'block in Roda::RodaPlugins::Base::ClassMethods#base_rack_app_callable'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/roda-3.101.0/lib/roda.rb:53:in 'Roda::RodaPlugins::Base::ClassMethods#call'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/rack-unreloader-2.1.0/lib/rack/unreloader.rb:137:in 'Rack::Unreloader#call'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/fast-mcp-1.6.0/lib/mcp/transports/rack_transport.rb:133:in 'FastMcp::Transports::RackTransport#call'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/puma-7.2.0/lib/puma/configuration.rb:296:in 'Puma::Configuration::ConfigMiddleware#call'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/puma-7.2.0/lib/puma/request.rb:103:in 'block in Puma::Request#handle_request'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/puma-7.2.0/lib/puma/thread_pool.rb:355:in 'Puma::ThreadPool#with_force_shutdown'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/puma-7.2.0/lib/puma/request.rb:102:in 'Puma::Request#handle_request'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/puma-7.2.0/lib/puma/server.rb:503:in 'Puma::Server#process_client'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/puma-7.2.0/lib/puma/server.rb:262:in 'block in Puma::Server#run'
+/home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/puma-7.2.0/lib/puma/thread_pool.rb:182:in 'block in Puma::ThreadPool#spawn_thread'
+
+---
+
+commit
