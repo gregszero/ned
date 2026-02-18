@@ -29,3 +29,11 @@ bundler: failed to load command: puma (/home/greg/.local/share/mise/installs/rub
     from /home/greg/Developer/ai.rb/web/app.rb:11:in '<module:Ai>'
     from /home/greg/Deve...
 
+### Prompt 5
+
+! Unable to load application: FrozenError: can't modify frozen Hash: {limit: 20, limit_key: "limit", page_key: "page"}
+bundler: failed to load command: puma (/home/greg/.local/share/mise/installs/ruby/3.4.7/bin/puma)
+/home/greg/Developer/ai.rb/web/app.rb:24:in '<class:App>': can't modify frozen Hash: {limit: 20, limit_key: "limit", page_key: "page"} (FrozenError)
+    from /home/greg/Developer/ai.rb/web/app.rb:12:in '<module:Web>'
+    from /home/greg/Developer/ai.rb/web/app.rb:11:in '<module:Ai>'...
+

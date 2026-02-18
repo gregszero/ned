@@ -3,30 +3,30 @@
   "checkpoint_id": "adf5f9c848b5",
   "session_id": "414e7b58-7693-4f7d-8013-678593dfa02b",
   "strategy": "manual-commit",
-  "created_at": "2026-02-18T16:18:24.652420851Z",
+  "created_at": "2026-02-18T16:18:55.846377478Z",
   "branch": "master",
   "checkpoints_count": 1,
   "files_touched": [
     "web/app.rb"
   ],
   "agent": "Claude Code",
-  "transcript_identifier_at_start": "c0f07598-9d6a-4662-a92a-49931c6181f0",
-  "checkpoint_transcript_start": 92,
-  "transcript_lines_at_start": 92,
+  "transcript_identifier_at_start": "f617ef39-b4c8-4874-86a6-73667a88451b",
+  "checkpoint_transcript_start": 120,
+  "transcript_lines_at_start": 120,
   "token_usage": {
-    "input_tokens": 11,
-    "cache_creation_tokens": 4580,
-    "cache_read_tokens": 397258,
-    "output_tokens": 283,
-    "api_call_count": 9
+    "input_tokens": 6,
+    "cache_creation_tokens": 3490,
+    "cache_read_tokens": 191218,
+    "output_tokens": 29,
+    "api_call_count": 4
   },
   "initial_attribution": {
-    "calculated_at": "2026-02-18T16:18:24.568621377Z",
+    "calculated_at": "2026-02-18T16:18:55.753092524Z",
     "agent_lines": 0,
-    "human_added": 62,
-    "human_modified": 1,
+    "human_added": 59,
+    "human_modified": 5,
     "human_removed": 0,
-    "total_committed": 62,
+    "total_committed": 60,
     "agent_percentage": 0
   },
   "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/414e7b58-7693-4f7d-8013-678593dfa02b.jsonl"
