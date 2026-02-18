@@ -1,0 +1,5 @@
+notifications controller is paginated and its not using pagy gem, it should use because its faster to do with it.
+
+---
+
+commit this

@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "adf5f9c848b5",
+  "session_id": "414e7b58-7693-4f7d-8013-678593dfa02b",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-18T16:16:56.822879739Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "Gemfile",
+    "web/app.rb",
+    "web/public/js/controllers/notifications_controller.js"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 21,
+    "cache_creation_tokens": 19066,
+    "cache_read_tokens": 516696,
+    "output_tokens": 1725,
+    "api_call_count": 17
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-18T16:16:56.76665212Z",
+    "agent_lines": 20,
+    "human_added": 62,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 82,
+    "agent_percentage": 24.390243902439025
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/414e7b58-7693-4f7d-8013-678593dfa02b.jsonl"
+}
