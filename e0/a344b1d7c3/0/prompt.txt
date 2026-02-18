@@ -1,0 +1,147 @@
+Implement the following plan:
+
+# FigJam-like Infinite Canvas for Pages
+
+## Context
+
+Pages currently store a single HTML blob (`content`) and render it statically. Clicking a page in the sidebar shows a metadata view (`page_show.erb`) with conversation buttons — not the actual canvas content. The canvas overlay only appears when a chat tab with a `pageId` is active, and even then it's just a raw HTML dump. This makes the canvas feel empty and disconnected.
+
+**Goal**: Transform pages into FigJam-like infinite canvases with positioned components/widgets that the AI creates. Users can pan, zoom, and drag components. The chat has full context of what's on the canvas.
+
+---
+
+## Plan
+
+### 1. Migration: `canvas_components` table
+
+**File**: `workspace/migrations/20260218000001_create_canvas_components.rb`
+
+```
+canvas_components:
+  - ai_page_id (FK, not null)
+  - component_type (string, default 'card')
+  - content (text, HTML)
+  - x, y (float, default 0)
+  - width (float, default 320)
+  - height (float, nullable = auto-height)
+  - z_index (integer, default 0)
+  - metadata (json, default {})
+  - timestamps
+```
+
+Also add `canvas_state` (json) column to `ai_pages` for persisting viewport pan/zoom.
+
+### 2. Model: `CanvasComponent`
+
+**File**: `ai/models/canvas_component.rb`
+
+- `belongs_to :ai_page`
+- `scope :ordered` (by z_index, created_at)
+- `#as_canvas_json` — returns hash with id, type, content, x, y, width, height, z_index, metadata
+- Update `ai/models/ai_page.rb`: add `has_many :canvas_components, dependent: :destroy`
+
+### 3. API Routes
+
+**File**: `web/app.rb` — inside `r.on 'api'`
+
+Restructure `r.on 'pages', Integer` to add component CRUD:
+
+- `GET /api/pages/:id/canvas` — returns JSON `{ components: [...], canvas_state: {} }` (replaces current raw HTML endpoint)
+- `PATCH /api/pages/:id/components/:id` — update position (drag-drop saves)
+- No POST/DELETE endpoints needed — only AI adds/removes components via MCP tools
+
+### 4. MCP Tools (4 new tools)
+
+All follow the existing pattern in `ai/tools/`. Auto-discovered via ObjectSpace.
+
+| Tool | File | Purpose |
+|---|---|---|
+| `add_canvas_component` | `ai/tools/add_canvas_component_tool.rb` | AI adds a widget to current canvas |
+| `update_canvas_component` | `ai/tools/update_canvas_component_tool.rb` | AI updates content/position of a component |
+| `remove_canvas_component` | `ai/tools/remove_canvas_component_tool.rb` | AI removes a component |
+| `get_canvas` | `ai/tools/get_canvas_tool.rb` | AI fetches all components (for context) |
+
+Tools use `ENV['AI_PAGE_ID']` to find the current canvas. Broadcasts go through existing conversation SSE channels — each tool finds conversations linked to the page and broadcasts Turbo Streams to `conversation:#{conv.id}`.
+
+### 5. Canvas Stimulus Controller
+
+**File**: `web/public/js/controllers/canvas_controller.js`
+
+Handles pan/zoom/drag on the canvas area:
+
+- **Pan**: Click-drag on empty space translates the `.canvas-world` container
+- **Zoom**: Mouse wheel scales `.canvas-world` (clamped 0.1–3.0), zoom toward cursor
+- **Drag**: Mousedown on `.canvas-component` drags it, mouseup PATCHes new x/y to API
+- **MutationObserver**: Watches for Turbo Stream DOM updates (new/replaced/removed components)
+- **Dot grid background** for visual canvas feel
+- **Zoom indicator** (bottom-right, shows current %)
+
+Register in `web/public/js/application.js`.
+
+### 6. Update Chat Footer Controller
+
+**File**: `web/public/js/controllers/chat_footer_controller.js`
+
+Change `loadCanvasByPage()`:
+- Fetch `/api/pages/:id/canvas` as JSON
+- Render each component as a positioned div inside a `.canvas-world` container
+- Attach `data-controller="canvas"` to the canvas overlay div
+- The canvas controller handles all interaction from there
+
+### 7. Update Sidebar Navigation
+
+**File**: `web/views/layout.erb`
+
+When clicking a page in the sidebar:
+- Change sidebar page links from `<a href="..." data-turbo-frame="canvas-content">` to `<a href="#" onclick="chatFooter.openCanvasTab(pageId, 'title'); return false">`
+- This immediately opens a canvas + chat tab — no static page view
+- The turbo-frame page_show route can remain for direct URL access but is no longer the primary flow
+
+### 9. CSS Styles
+
+**File**: `web/public/css/style.css`
+
+- `.conversation-canvas` — change `overflow-y: auto` to `overflow: hidden` (canvas handles its own pan)
+- `.canvas-world` — absolutely positioned, `transform-origin: 0 0`
+- `.canvas-component` — card-styled positioned divs with hover/drag states
+- Dot grid background on active canvas
+- Zoom indicator styling
+
+### 10. Update Inner Agent System Prompt
+
+**File**: `workspace/CLAUDE.md`
+
+Add the 4 new tools to the tools table and add guidance on spatial layout (e.g., space components ~400px apart, use 300–600px widths).
+
+---
+
+## Real-time Updates Flow
+
+```
+AI calls add_canvas_component
+  → creates CanvasComponent record
+  → builds Turbo Stream HTML: <turbo-stream action="append" target="canvas-components-{pageId}">
+  → broadcasts to conversation:#{conv.id} for each linked conversation
+  → SSE delivers to browser (existing EventSource in chat_footer_controller)
+  → Turbo appends new div to .canvas-world
+  → Canvas controller's MutationObserver picks it up (applies drag handlers)
+```
+
+No new SSE channels needed — piggybacks on existing conversation streams.
+
+## Verification
+
+1. Start server: `./ai.rb server`
+2. Click "+" to create new canvas — should show empty canvas with dot grid
+3. Send a message asking AI to add components — components should appear in real-time
+4. Pan (drag empty space) and zoom (scroll wheel) the canvas
+5. Drag a component — should persist position on drop
+6. Click a page in sidebar — should open canvas tab directly
+7. In a new chat on the same canvas, AI calls `get_canvas` — should see all components
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit
