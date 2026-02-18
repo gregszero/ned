@@ -319,6 +319,67 @@ module Ai
             end
           end
 
+          # Action system — execute actions from widget buttons
+          r.on 'actions' do
+            r.post do
+              body = JSON.parse(r.body.read) rescue r.params
+              action_type = body['action_type']
+
+              result = case action_type
+              when 'run_skill'
+                skill = Ai::SkillRecord.find_by(name: body['skill_name'])
+                unless skill
+                  r.halt 404, { success: false, error: "Skill '#{body['skill_name']}' not found" }
+                end
+                params = (body['params'] || {}).transform_keys(&:to_sym)
+                output = skill.load_and_execute(**params)
+                skill.increment_usage!
+                { success: true, result: output }
+
+              when 'run_code'
+                code = body['code'] || body['ruby_code']
+                unless code
+                  r.halt 400, { success: false, error: 'Missing code parameter' }
+                end
+                ctx = Object.new
+                Ai.constants.map { |c| Ai.const_get(c) }
+                  .select { |c| c.is_a?(Class) && c < ActiveRecord::Base }
+                  .each { |model| ctx.define_singleton_method(model.name.demodulize.to_sym) { model } }
+                output = ctx.instance_eval(code)
+                { success: true, result: output.inspect }
+
+              when 'send_message'
+                conv = Ai::Conversation.find(body['conversation_id'])
+                message = conv.add_message(role: 'user', content: body['content'])
+                Ai::Jobs::AgentExecutorJob.perform_later(message.id)
+                { success: true, message_id: message.id }
+
+              when 'refresh_component'
+                component = Ai::CanvasComponent.find(body['component_id'])
+                widget_class = Ai::Widgets::BaseWidget.for_type(component.component_type)
+                if widget_class
+                  widget = widget_class.new(component)
+                  if widget.refresh_data!
+                    turbo = "<turbo-stream action=\"replace\" target=\"canvas-component-#{component.id}\">" \
+                            "<template>#{widget.render_component_html}</template></turbo-stream>"
+                    TurboBroadcast.broadcast("canvas:#{component.ai_page_id}", turbo)
+                  end
+                  { success: true, refreshed: true }
+                else
+                  { success: false, error: 'Unknown widget type' }
+                end
+
+              else
+                r.halt 400, { success: false, error: "Unknown action_type: #{action_type}" }
+              end
+
+              result
+            rescue => e
+              Ai.logger.error "Action failed: #{e.message}"
+              { success: false, error: e.message }
+            end
+          end
+
           # Widget type registry
           r.on 'widget_types' do
             r.get do

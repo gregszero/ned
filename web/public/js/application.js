@@ -8,6 +8,7 @@ const application = Application.start()
 // Widget behavior registry + built-in widgets
 import "/js/widgets/registry.js"
 import "/js/widgets/clock.js"
+import "/js/widgets/chart.js"
 
 // Import controllers
 import ConversationController from "/js/controllers/conversation_controller.js"
