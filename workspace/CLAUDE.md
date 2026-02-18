@@ -54,6 +54,10 @@ These are the tools available to you. **Only use these — do not invent or hall
 | `schedule_task` | Schedule a task for future execution (reminders, timed tasks) |
 | `create_page` | Create a web page (AiPage) with title and HTML/markdown content |
 | `create_notification` | Create a notification (info/success/warning/error) |
+| `add_canvas_component` | Add a positioned component/widget to the current canvas |
+| `update_canvas_component` | Update content, position, or size of a canvas component |
+| `remove_canvas_component` | Remove a component from the canvas |
+| `get_canvas` | Get all components on the current canvas (for context) |
 
 ## Creating Pages
 
@@ -64,6 +68,18 @@ Use `create_page` to create web pages. Pages appear automatically in the sidebar
 - **status**: 'published' (default), 'draft', or 'archived'
 
 For complex pages, use the design system tokens and components listed below.
+
+## Canvas Components
+
+Pages are infinite canvases. Use `add_canvas_component` to place positioned widgets on them. Each component has x/y coordinates and a width.
+
+### Spatial Layout Guidelines
+- Space components **~400px apart** vertically for comfortable reading
+- Use widths between **300–600px** (default 320)
+- Start first component at roughly **(100, 100)**
+- Use `get_canvas` first to see what's already on the canvas before adding
+- Component types: `card` (default) — more types can be added via `component_type`
+- Content is HTML — use the design system classes for styling
 
 ## Design System Reference
 

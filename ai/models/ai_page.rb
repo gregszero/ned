@@ -13,6 +13,7 @@ module Ai
     validates :status, presence: true, inclusion: { in: %w[draft published archived] }
 
     has_many :conversations, foreign_key: :ai_page_id, dependent: :nullify
+    has_many :canvas_components, dependent: :destroy
 
     # Statuses
     statuses :draft, :published, :archived

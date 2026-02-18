@@ -55,7 +55,7 @@
       <div class="text-ned-primary font-semibold text-lg tracking-tight mb-6">Ned</div>
       <nav class="flex flex-col gap-0.5">
         <% Ai::AiPage.published.recent.each do |page| %>
-          <a href="/pages/<%= page.slug %>" data-turbo-frame="canvas-content"><%= page.title %></a>
+          <a href="#" onclick="chatFooter.openCanvasTab(<%= page.id %>, '<%= page.title.gsub("'", "\\\\'") %>'); return false"><%= page.title %></a>
         <% end %>
         <a href="/notifications" data-turbo-frame="canvas-content" class="flex items-center justify-between">
           Notifications

@@ -228,10 +228,34 @@ export default class extends Controller {
   async loadCanvasByPage(pageId, container) {
     try {
       const resp = await fetch(`/api/pages/${pageId}/canvas`)
-      if (resp.ok) {
-        container.innerHTML = await resp.text()
+      if (!resp.ok) return
+
+      const data = await resp.json()
+
+      // Build canvas structure
+      container.innerHTML = `
+        <div class="canvas-dot-grid"></div>
+        <div class="canvas-world" id="canvas-components-${pageId}"></div>
+        <div class="canvas-zoom-indicator">100%</div>
+      `
+      container.setAttribute("data-controller", "canvas")
+      container.setAttribute("data-canvas-page-id-value", pageId)
+
+      const world = container.querySelector(".canvas-world")
+      for (const comp of data.components) {
+        world.insertAdjacentHTML("beforeend", this.renderCanvasComponent(comp))
       }
-    } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.error("[ChatFooter] Failed to load canvas:", e)
+    }
+  }
+
+  renderCanvasComponent(comp) {
+    let style = `left:${comp.x}px;top:${comp.y}px;width:${comp.width}px;`
+    if (comp.height) style += `height:${comp.height}px;`
+    return `<div class="canvas-component" id="canvas-component-${comp.id}" data-component-id="${comp.id}" style="${style}" data-z="${comp.z_index}">
+      <div class="canvas-component-content">${comp.content || ''}</div>
+    </div>`
   }
 
   // --- SSE ---

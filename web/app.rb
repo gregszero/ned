@@ -322,11 +322,29 @@ module Ai
           end
 
           # Page canvas content by page ID
-          r.on 'pages', Integer, 'canvas' do |page_id|
-            r.get do
-              page = AiPage.find(page_id)
-              response['Content-Type'] = 'text/html'
-              page.content.presence || '<div class="p-6 text-center text-ned-muted-fg text-sm">Canvas is empty</div>'
+          r.on 'pages', Integer do |page_id|
+            page = AiPage.find(page_id)
+
+            r.on 'canvas' do
+              r.get do
+                {
+                  components: page.canvas_components.ordered.map(&:as_canvas_json),
+                  canvas_state: page.canvas_state || {}
+                }
+              end
+            end
+
+            r.on 'components', Integer do |component_id|
+              component = page.canvas_components.find(component_id)
+
+              r.patch do
+                updates = {}
+                %w[x y width height z_index].each do |attr|
+                  updates[attr] = r.params[attr].to_f if r.params[attr]
+                end
+                component.update!(updates) if updates.any?
+                component.as_canvas_json
+              end
             end
           end
         end

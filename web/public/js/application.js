@@ -10,10 +10,12 @@ import ConversationController from "/js/controllers/conversation_controller.js"
 import NotificationsController from "/js/controllers/notifications_controller.js"
 import ScrollAnimationController from "/js/controllers/scroll_animation_controller.js"
 import ChatFooterController from "/js/controllers/chat_footer_controller.js"
+import CanvasController from "/js/controllers/canvas_controller.js"
 application.register("conversation", ConversationController)
 application.register("notifications", NotificationsController)
 application.register("scroll-animation", ScrollAnimationController)
 application.register("chat-footer", ChatFooterController)
+application.register("canvas", CanvasController)
 
 // Close sidebar on Turbo navigation
 document.addEventListener('turbo:before-visit', () => {
