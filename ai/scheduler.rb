@@ -22,7 +22,12 @@ module Ai
           refresh_widgets
         end
 
-        Ai.logger.info "Scheduler started (polling every 60s, widget refresh every 5m)"
+        # Poll for due heartbeats every 30 seconds
+        @instance.every '30s', first: :now do
+          run_due_heartbeats
+        end
+
+        Ai.logger.info "Scheduler started (polling every 60s, heartbeats every 30s, widget refresh every 5m)"
       end
 
       def stop!
@@ -50,6 +55,19 @@ module Ai
         end
       rescue => e
         Ai.logger.error "Scheduler error: #{e.message}"
+      end
+
+      def run_due_heartbeats
+        heartbeats = Heartbeat.due.select(&:due_now?)
+        return if heartbeats.empty?
+
+        Ai.logger.info "Found #{heartbeats.count} due heartbeat(s)"
+
+        heartbeats.each do |hb|
+          Jobs::HeartbeatRunnerJob.perform_later(hb.id)
+        end
+      rescue => e
+        Ai.logger.error "Heartbeat scheduler error: #{e.message}"
       end
 
       def refresh_widgets

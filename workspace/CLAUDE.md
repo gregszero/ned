@@ -60,6 +60,9 @@ These are the tools available to you. **Only use these — do not invent or hall
 | `get_canvas` | Get all components on the current canvas (for context) |
 | `web_fetch` | Fetch content from a URL and return it as text |
 | `define_widget` | Define a new widget type at runtime (Ruby class + optional JS) |
+| `create_heartbeat` | Create a periodic heartbeat that runs a skill and escalates to AI on meaningful results |
+| `update_heartbeat` | Update heartbeat configuration (frequency, enabled, prompt, etc.) |
+| `list_heartbeats` | List all heartbeats with status, stats, and due_now flag |
 
 ## Creating Pages
 

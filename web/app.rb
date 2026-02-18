@@ -221,6 +221,18 @@ module Ai
           end
         end
 
+        # Heartbeats — canvas page
+        r.on 'heartbeats' do
+          @page = AiPage.find_by(slug: 'heartbeats')
+          r.on String do |chat_slug|
+            @conversation = @page&.conversations&.find_by(slug: chat_slug)
+            render_canvas_or_layout(:canvas_view)
+          end
+          r.is do
+            render_canvas_or_layout(:canvas_view)
+          end
+        end
+
         # Settings — canvas page
         r.on 'settings' do
           @page = AiPage.find_by(slug: 'settings')
@@ -369,6 +381,15 @@ module Ai
                   { success: false, error: 'Unknown widget type' }
                 end
 
+              when 'toggle_heartbeat'
+                heartbeat = Ai::Heartbeat.find(body['heartbeat_id'])
+                if heartbeat.enabled?
+                  heartbeat.update!(enabled: false, status: 'paused')
+                else
+                  heartbeat.update!(enabled: true, status: 'active')
+                end
+                { success: true, enabled: heartbeat.enabled?, status: heartbeat.status }
+
               else
                 r.halt 400, { success: false, error: "Unknown action_type: #{action_type}" }
               end
@@ -377,6 +398,37 @@ module Ai
             rescue => e
               Ai.logger.error "Action failed: #{e.message}"
               { success: false, error: e.message }
+            end
+          end
+
+          # Heartbeat toggle
+          r.on 'heartbeats', Integer, 'toggle' do |hb_id|
+            r.post do
+              heartbeat = Ai::Heartbeat.find(hb_id)
+              if heartbeat.enabled?
+                heartbeat.update!(enabled: false, status: 'paused')
+              else
+                heartbeat.update!(enabled: true, status: 'active')
+              end
+
+              # Trigger widget refresh
+              page = heartbeat.ai_page || AiPage.find_by(slug: 'heartbeats')
+              if page
+                component = page.canvas_components.find_by(component_type: 'heartbeat_monitor')
+                if component
+                  widget_class = Ai::Widgets::BaseWidget.for_type('heartbeat_monitor')
+                  if widget_class
+                    widget = widget_class.new(component)
+                    if widget.refresh_data!
+                      turbo = "<turbo-stream action=\"replace\" target=\"canvas-component-#{component.id}\">" \
+                              "<template>#{widget.render_component_html}</template></turbo-stream>"
+                      TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
+                    end
+                  end
+                end
+              end
+
+              { success: true, enabled: heartbeat.enabled?, status: heartbeat.status }
             end
           end
 
