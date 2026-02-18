@@ -27,6 +27,9 @@ gem 'redcarpet'               # Markdown rendering
 # Deployment
 gem 'kamal', require: false   # Deployment
 
+# Pagination
+gem 'pagy'                    # Fast pagination
+
 # Utilities (commonly needed)
 gem 'httparty'                # HTTP client
 gem 'nokogiri'                # HTML/XML parsing

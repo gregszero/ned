@@ -3,6 +3,7 @@
 require 'roda'
 require 'tilt/erubi'
 require 'json'
+require 'pagy'
 require_relative 'turbo_broadcast'
 require_relative 'view_helpers'
 
@@ -16,6 +17,11 @@ module Ai
       plugin :all_verbs
       plugin :symbol_views
       plugin :streaming
+
+      include Pagy::Method
+
+      # Pagy::Method expects a `params` method
+      def params = request.params
 
       # Make models and helpers available in views
       plugin :render_locals, locals: {
@@ -255,16 +261,11 @@ module Ai
           r.on 'notifications' do
             r.is do
               r.get do
-                offset = (r.params['offset'] || 0).to_i
-                limit = (r.params['limit'] || 5).to_i.clamp(1, 20)
-
-                notifications = Ai::Notification.recent.offset(offset).limit(limit + 1).to_a
-                has_more = notifications.length > limit
-                notifications = notifications.first(limit)
+                pagy, notifications = pagy(Ai::Notification.recent, limit: (r.params['limit'] || 5).to_i.clamp(1, 20), page: (r.params['page'] || 1).to_i)
 
                 html = notifications.map { |n| render_notification_card_html(n) }.join
 
-                { html: html, count: notifications.length, has_more: has_more }
+                { html: html, count: notifications.size, has_more: !pagy.next.nil?, page: pagy.page, pages: pagy.last }
               end
             end
           end

@@ -4,7 +4,7 @@ export default class extends Controller {
   static targets = ["dropdown", "list", "loadMore"]
 
   connect() {
-    this.offset = 0
+    this.page = 1
     this.limit = 5
     this.open = false
     this.loaded = false
@@ -15,7 +15,7 @@ export default class extends Controller {
       window.Turbo.renderStreamMessage(event.data)
       // If dropdown is open, refresh the list
       if (this.open) {
-        this.offset = 0
+        this.page = 1
         this._fetchNotifications(false)
       }
     }
@@ -51,7 +51,7 @@ export default class extends Controller {
     this.open = true
     this.dropdownTarget.style.display = ""
     if (!this.loaded) {
-      this.offset = 0
+      this.page = 1
       this._fetchNotifications(false)
     }
   }
@@ -63,7 +63,7 @@ export default class extends Controller {
 
   async _fetchNotifications(append) {
     try {
-      const resp = await fetch(`/api/notifications?offset=${this.offset}&limit=${this.limit}`)
+      const resp = await fetch(`/api/notifications?page=${this.page}&limit=${this.limit}`)
       const data = await resp.json()
 
       if (append) {
@@ -72,11 +72,11 @@ export default class extends Controller {
         this.listTarget.innerHTML = data.html || '<div class="p-4 text-center text-ned-muted-fg text-xs">No notifications</div>'
       }
 
-      this.offset += data.count
       this.loaded = true
 
       // Show/hide load more
       if (data.has_more) {
+        this.page += 1
         this.loadMoreTarget.style.display = ""
       } else {
         this.loadMoreTarget.style.display = "none"

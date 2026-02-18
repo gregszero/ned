@@ -173,6 +173,10 @@ GEM
       childprocess (>= 0.6.3, < 6)
       iniparse (~> 1.4)
       rexml (>= 3.3.9)
+    pagy (43.2.10)
+      json
+      uri
+      yaml
     pg (1.6.3)
     pg (1.6.3-aarch64-linux)
     pg (1.6.3-aarch64-linux-musl)
@@ -268,6 +272,7 @@ GEM
       base64
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
+    yaml (0.4.0)
     zeitwerk (2.7.4)
 
 PLATFORMS
@@ -290,6 +295,7 @@ DEPENDENCIES
   kamal
   nokogiri
   overcommit
+  pagy
   pg
   pry
   puma
