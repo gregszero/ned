@@ -1,0 +1,38 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "096ec7003e99",
+  "session_id": "6e3cbef6-42f1-4a83-b8d5-c4fe3b22a785",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-18T16:12:44.183054867Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "ai/widgets/scheduled_jobs_widget.rb",
+    "ai/widgets/settings_widget.rb",
+    "web/app.rb",
+    "web/public/css/style.css",
+    "web/public/js/controllers/canvas_controller.js",
+    "web/public/js/controllers/chat_footer_controller.js",
+    "web/views/layout.erb",
+    "workspace/migrations/20260218000004_create_settings_and_jobs_pages.rb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 49,
+    "cache_creation_tokens": 95389,
+    "cache_read_tokens": 3140840,
+    "output_tokens": 4982,
+    "api_call_count": 41
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-18T16:12:43.964423638Z",
+    "agent_lines": 371,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 371,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/6e3cbef6-42f1-4a83-b8d5-c4fe3b22a785.jsonl"
+}

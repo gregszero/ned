@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "096ec7003e99",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "ai/widgets/scheduled_jobs_widget.rb",
+    "ai/widgets/settings_widget.rb",
+    "web/app.rb",
+    "web/public/css/style.css",
+    "web/public/js/controllers/canvas_controller.js",
+    "web/public/js/controllers/chat_footer_controller.js",
+    "web/views/layout.erb",
+    "workspace/migrations/20260218000004_create_settings_and_jobs_pages.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/09/6ec7003e99/0/metadata.json",
+      "transcript": "/09/6ec7003e99/0/full.jsonl",
+      "context": "/09/6ec7003e99/0/context.md",
+      "content_hash": "/09/6ec7003e99/0/content_hash.txt",
+      "prompt": "/09/6ec7003e99/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 49,
+    "cache_creation_tokens": 95389,
+    "cache_read_tokens": 3140840,
+    "output_tokens": 4982,
+    "api_call_count": 41
+  }
+}

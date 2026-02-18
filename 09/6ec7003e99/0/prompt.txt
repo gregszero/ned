@@ -1,0 +1,299 @@
+Implement the following plan:
+
+# Plan: Transform Settings & Jobs into Canvas Pages with Widgets
+
+## Context
+Settings and Jobs & Skills are currently plain HTML pages loaded via turbo-frame. The user wants them as proper canvas pages using the widget system, with scroll lock ON by default — vertically scrollable like a normal page, no dots, no pan/zoom. A scroll lock toggle button near the zoom % (bottom left).
+
+## Implementation
+
+### 1. Create `settings` widget
+**New file:** `ai/widgets/settings_widget.rb`
+
+- `widget_type 'settings'`, `menu_label 'Settings'`, `menu_icon '⚙️'`
+- `refreshable? true`, `refresh_interval 60`
+- `render_content` generates the same HTML as current `settings.erb`: skills table, MCP connections table, WhatsApp integration card, configuration card
+- `refresh_data!` re-queries models and updates content
+- `default_metadata {}` (no config needed)
+
+### 2. Create `scheduled_jobs` widget
+**New file:** `ai/widgets/scheduled_jobs_widget.rb`
+
+- `widget_type 'scheduled_jobs'`, `menu_label 'Jobs & Skills'`, `menu_icon '📋'`
+- `refreshable? true`, `refresh_interval 30`
+- `render_content` generates the same HTML as current `jobs_and_skills.erb`: scheduled jobs table + skills table
+- `refresh_data!` re-queries ScheduledTask, SkillRecord
+
+### 3. Migration: seed Settings and Jobs pages
+**New file:** `workspace/migrations/XXXXXXXX_create_settings_and_jobs_pages.rb`
+
+- Create `AiPage` "Settings" (slug: `settings`, status: `published`, canvas_state: `{ "scroll_locked": true }`)
+- Create `AiPage` "Jobs & Skills" (slug: `jobs`, status: `published`, canvas_state: `{ "scroll_locked": true }`)
+- Create one `CanvasComponent` per page (type: `settings` / `scheduled_jobs`, position: `x:0, y:0`, width: `1200`)
+
+### 4. Canvas controller — scroll lock enhancements
+**File:** `web/public/js/controllers/canvas_controller.js`
+
+- Add `scrollLocked: { type: Boolean, default: false }` to `static values`
+- In `connect()`: `this.scrollLock = this.scrollLockedValue` and apply `.scroll-locked` class if true
+- `toggleScrollLock()`: toggle `.scroll-locked` class on `this.element`, toggle `overflow-y` behavior
+- When scroll-locked:
+  - `onWheel`: don't `preventDefault()` — let browser handle vertical scroll naturally
+  - `onMouseDown`: skip panning logic (still allow component interaction)
+- **Lock button** in zoom indicator area: render a clickable lock/unlock icon next to the zoom %. Update in `updateZoomIndicator()` and `updateScrollLockIndicator()`
+- When scroll-locked, the `.canvas-world` should NOT use `transform` — instead use normal flow so content scrolls naturally. Apply `position: relative` instead of transform when locked.
+
+### 5. CSS changes
+**File:** `web/public/css/style.css`
+
+- `.conversation-canvas.scroll-locked .canvas-dot-grid { display: none; }`
+- `.conversation-canvas.scroll-locked { overflow-y: auto; }` — enable vertical scroll
+- `.conversation-canvas.scroll-locked .canvas-world { transform: none !important; }` — disable pan/zoom transform
+- `.conversation-canvas.scroll-locked .canvas-component { position: relative; left: auto; top: auto; }` — normal flow layout
+- Style the lock button in `.canvas-zoom-indicator`
+
+### 6. Chat footer — pass scroll lock from API
+**File:** `web/public/js/controllers/chat_footer_controller.js`
+
+In `_loadCanvasByPage()`: after parsing `data`, check `data.canvas_state.scroll_locked`. If true, set `container.setAttribute("data-canvas-scroll-locked-value", "true")`. The `canvas_state` is already returned by the `/api/pages/:id/canvas` endpoint (line 346 of `web/app.rb`).
+
+### 7. Nav link changes
+**File:** `web/views/layout.erb`
+
+Change settings/jobs nav links from turbo-frame links to `onclick` canvas openers:
+```html
+<a href="/settings" onclick="if(window.chatFooter){chatFooter.openCanvas(SETTINGS_PAGE_ID, 'Settings', 'settings');return false}">Settings</a>
+<a href="/jobs" onclick="if(window.chatFooter){chatFooter.openCanvas(JOBS_PAGE_ID, 'Jobs & Skills', 'jobs');return false}">Jobs & Skills</a>
+```
+The page IDs will come from the seeded AiPages (rendered server-side in the ERB).
+
+### 8. Clean up old routes (optional)
+**File:** `web/app.rb`
+
+Keep `/settings` and `/jobs` routes as fallbacks (for direct URL access) but they can redirect to the canvas view or render the `canvas_view.erb` template that auto-opens the canvas.
+
+## Files to Modify
+| File | Action |
+|---|---|
+| `ai/widgets/settings_widget.rb` | Create |
+| `ai/widgets/scheduled_jobs_widget.rb` | Create |
+| `workspace/migrations/..._create_settings_and_jobs_pages.rb` | Create |
+| `web/public/js/controllers/canvas_controller.js` | Edit |
+| `web/public/css/style.css` | Edit |
+| `web/public/js/controllers/chat_footer_controller.js` | Edit |
+| `web/views/layout.erb` | Edit |
+| `web/app.rb` | Edit (routes for settings/jobs) |
+
+## Verification
+1. `./ai.rb db:migrate`
+2. `./ai.rb server`
+3. Click "Settings" → opens canvas overlay, scroll-locked, no dots, content scrolls vertically
+4. Click "Jobs & Skills" → same behavior
+5. Click lock button (bottom left) → unlocks: dots appear, pan/zoom enabled, content becomes draggable widget
+6. Toggle back → re-locks
+7. Regular AiPage canvases still work (dots, pan/zoom, no scroll lock)
+8. Widget refresh keeps content up-to-date (check after 60s for settings, 30s for jobs)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+<task-notification>
+<task-id>aa706ab</task-id>
+<status>completed</status>
+<summary>Agent "Explore codebase for plan" completed</summary>
+<result>Here is the complete summary of everything you need to implement the plan.
+
+---
+
+## Codebase Summary
+
+### 1. Widget Pattern (`ai/widgets/`)
+
+**`base_widget.rb`** — The base class for all widgets:
+- Class-level DSL: `widget_type(name)`, `menu_label(label)`, `menu_icon(icon)`, `refreshable?`, `refresh_interval`, `default_metadata`
+- Auto-discovered via `ObjectSpace.each_object(Class).select { |c| c < BaseWidget }` — just create the file
+- Instance takes a `CanvasComponent` in `initialize`; `@metadata` is `component.metadata`
+- `render_content` returns inner HTML string (override in subclasses)
+- `render_component_html` wraps content in the standard `.canvas-component` div with `data-component-id`, `data-widget-type`, `data-widget-metadata`, position styles, and z-index
+- `refresh_data!` returns false unless overridden (used by refreshable widgets like WeatherWidget)
+
+**`note_widget.rb`** (`widget_type 'card'`) — Simplest widget, renders `@metadata['text']` or `@component.content` or a placeholder.
+
+**`clock_widget.rb`** (`widget_type 'clock'`) — Renders a time display div with `data-clock-display` attribute; JS behavior hooks onto this attribute.
+
+**`weather_widget.rb`** (`widget_type 'weather'`) — Refreshable (30-min interval), fetches from wttr.in, renders a weather card.
+
+**`hacker_news_widget.rb`** — Not read yet, but follows the same pattern.
+
+---
+
+### 2. `web/views/settings.erb` — Current Settings Page
+
+A plain `<div class="max-w-5xl mx-auto space-y-6">` with four `.card` sections:
+1. **Skills** — table of `@skills` (name, description, usage_count, file_path)
+2. **MCP Connections** — table of `@mcp_connections` (name, transport_type, connection_string, enabled badge)
+3. **WhatsApp Integration** — badge + optional GOWA dashboard button
+4. **Configuration** — table of framework version, Ruby version, environment, DB adapter, queue adapter
+
+No canvas/widget code at all; purely static HTML.
+
+---
+
+### 3. `web/views/jobs_and_skills.erb` — Current Jobs Page
+
+A plain `<div class="max-w-5xl mx-auto space-y-6">` with two `.card` sections:
+1. **Scheduled Jobs** — table of `@tasks` (title, scheduled_for, skill_name, status badge, result)
+2. **Skills** — same skills table as settings
+
+No canvas/widget code at all; purely static HTML.
+
+---
+
+### 4. `web/public/js/controllers/canvas_controller.js`
+
+Full Stimulus controller (614 lines). Key points:
+- `static values = { pageId: Number }` — receives the AiPage id via `data-canvas-page-id-value`
+- Manages pan/zoom (`this.scale`, `this.panX`, `this.panY`) on `.canvas-world` inside the host element
+- **Widget lifecycle**: `initComponent(el)` and `destroyComponent(el)` call `window.widgetBehaviors[type].init/destroy(el, meta)` — client-side JS behaviors registered on `window.widgetBehaviors`
+- **Context menu** populated from `/api/widget_types` via `_loadWidgetTypes()`
+- `addWidget(type, x, y, metadata)` POSTs to `/api/pages/:pageId/components`
+- `saveComponentPosition(el)` PATCHes to `/api/pages/:pageId/components/:id`
+- `deleteComponent(comp)`, `duplicateComponent(comp)`, `chatAboutComponent(comp)` — context menu actions
+- `finishEditing(comp, contentEl)` — PATCHes content on double-click blur
+- Uses `MutationObserver` on `.canvas-world` to auto-init/destroy components added via Turbo Streams
+- Exposes itself as `window.canvasController`
+
+---
+
+### 5. `web/public/js/controllers/chat_footer_controller.js`
+
+Full Stimulus controller (605 lines). Key points:
+- State: `this.canvases` array of `{ pageId, title, slug, conversations: [{id, title, slug}], activeConvId }`
+- `this.activeCanvasPageId` — currently displayed canvas
+- `this.eventSources` — map of `pageId → EventSource` (one SSE per canvas)
+- Session state persisted in `sessionStorage` as `chatState`
+- **Opening a canvas**: `openCanvas(pageId, title, slug, convId, convTitle, convSlug)` — creates tab button, canvas overlay div, connects SSE
+- **Canvas overlay**: `_createCanvasOverlay(pageId)` appends a `.conversation-canvas` div to `#conversation-canvases`, then calls `_loadCanvasByPage(pageId, overlay)` which GETs `/api/pages/:pageId/canvas` and renders components
+- `_renderCanvasComponent(comp)` builds the `.canvas-component` HTML with correct `data-*` attributes
+- Canvas tab bar is `data-chat-footer-target="canvasTabs"`, conversation tab bar is `data-chat-footer-target="conversationTabs"`
+- `newTab()` POSTs to `/api/canvases` which creates both an AiPage and a Conversation together
+- `connectSSE(pageId)` opens `EventSource` to `/api/pages/:pageId/stream`
+
+---
+
+### 6. `web/views/layout.erb`
+
+Key structural points:
+- **Sidebar nav** (lines 57-62): Loops `Ai::AiPage.published.recent` and renders links with an `onclick` that calls `chatFooter.openCanvas(...)` to open canvas in the footer overlay — falling back to normal `href` navigation
+- Two non-canvas nav links at the bottom: `<a href="/jobs" data-turbo-frame="canvas-content">Jobs & Skills</a>` and `<a href="/settings" data-turbo-frame="canvas-content">Settings</a>` — these load in the `turbo-frame#canvas-content` frame
+- **Canvas area** (lines 99-110): `<turbo-frame id="canvas-content">` hosts page content (used by settings/jobs), and `<div id="conversation-canvases">` hosts canvas overlays
+- **Chat footer** (lines 113-130): Two tab bars (canvas-level + conversation-level), panels container
+- **JS in layout** (lines 132-152): Closes sidebar on nav click; `turbo:frame-load` on `#canvas-content` removes `.active` from all canvas overlays (so navigating to settings/jobs hides the canvas)
+- **Canvas context menu** singleton div at the bottom of the body
+
+---
+
+### 7. `web/app.rb` — Routes
+
+**Settings**: `GET /settings` → loads `@skills`, `@mcp_connections`, `@config`, renders `:settings` via `render_canvas_or_layout`
+
+**Jobs**: `GET /jobs` → loads `@tasks`, `@skills`, renders `:jobs_and_skills` via `render_canvas_or_layout`
+
+**Canvas API** (`/api/pages/:page_id/...`):
+- `GET /api/pages/:id/stream` — SSE for canvas channel `"canvas:#{page.id}"`
+- `GET /api/pages/:id/canvas` — returns `{ components: [...], canvas_state: {} }`
+- `POST /api/pages/:id/components` — creates component, merges widget defaults, auto-renders content, broadcasts Turbo Stream append to `canvas-components-#{page.id}`
+- `GET/PATCH/DELETE /api/pages/:id/components/:cid` — CRUD with broadcast on delete
+- `GET /api/widget_types` — returns widget registry as JSON (`type`, `label`, `icon`, `defaults`)
+- `POST /api/canvases` — creates AiPage + Conversation together
+
+**Canvas URL routing** (catch-all, must be last):
+- `GET /:canvas_slug` or `GET /:canvas_slug/:chat_slug` → renders `:canvas_view`
+
+**`render_canvas_or_layout(template)`** helper: if Turbo Frame header `HTTP_TURBO_FRAME == 'canvas-content'`, returns a bare `<turbo-frame id="canvas-content">` fragment; otherwise renders the full layout.
+
+---
+
+### 8. Canvas CSS (from `style.css`)
+
+Key selectors:
+- **`.conversation-canvas`** — `display:none; position:absolute; inset:0` — shown via `.active`
+- **`.canvas-dot-grid`** — radial-gradient dot background, `pointer-events:none`
+- **`.canvas-world`** — `position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform`
+- **`.canvas-component`** — `position:absolute; background:var(--card); border; border-radius:0.5rem; cursor:grab`
+- **`.canvas-component.dragging`** — z-index 9999, grab cursor, elevated shadow
+- **`.canvas-component-highlight`** — pulse animation on context-menu chat action
+- **`.canvas-component-content`** — `padding:1rem; font-size:0.875rem`; when `contenteditable="true"` shows ring outline
+- **`.canvas-context-menu`** — fixed position, z-index 10000, card styling with animation
+- **`.canvas-zoom-indicator`** — absolute bottom-right, small pill
+- Chat footer CSS: tab bar, tabs, panels, resize handle, loading state — all fully styled
+
+---
+
+### 9. Migrations — Latest Number and Pattern
+
+Latest migration: **`20260218000003`** (add_ai_page_id_to_notifications)
+
+Migration pattern:
+```ruby
+# frozen_string_literal: true
+class DescriptiveName < ActiveRecord::Migration[8.0]
+  def change
+    # ...
+  end
+end
+```
+
+Next migration number would be: **`20260218000004`** (or `20260219000001` for a new day).
+
+---
+
+### 10. Models
+
+**`AiPage`** (`ai_pages` table):
+- Columns: `title`, `slug` (unique), `content` (text), `status` (draft/published/archived), `published_at`, `metadata` (json), `canvas_state` (json — added in canvas migration)
+- `has_many :conversations`, `has_many :canvas_components`
+- Scopes: `.published`, `.recent`
+- `before_validation :generate_slug` (auto-parameterizes title)
+- Methods: `publish!`, `archive!`
+
+**`CanvasComponent`** (`canvas_components` table):
+- Columns: `ai_page_id` (FK), `component_type` (default: 'card'), `content` (text), `x/y/width` (float, required), `height` (float, optional), `z_index` (int, default 0), `metadata` (json)
+- `belongs_to :ai_page`
+- `scope :ordered` — order by z_index, then created_at
+- `as_canvas_json` — returns hash for API responses
+- `render_html` — delegates to widget class or `fallback_html`
+- `render_content_html` — delegates to widget class's `render_content`
+
+---
+
+### Implementation Summary for Canvas-ifying Settings & Jobs
+
+To transform Settings and Jobs into canvas pages, the plan would involve:
+
+1. **Create new widget classes** in `ai/widgets/` for each data section (e.g., `SkillsWidget`, `JobsWidget`, `McpConnectionsWidget`, `ConfigWidget`, `WhatsAppWidget`) following the `BaseWidget` pattern — override `render_content` to return HTML using the design tokens.
+
+2. **Seed AiPage records** for Settings and Jobs via a new migration (e.g., `20260219000001_seed_settings_and_jobs_pages.rb`), creating them as `published` pages with fixed slugs like `settings` and `jobs`.
+
+3. **Seed CanvasComponent records** linked to those pages with appropriate widget types and initial positions.
+
+4. **Update routes** in `web/app.rb`: change `/settings` and `/jobs` to open their respective AiPages via canvas (either redirect to `/:slug` or call `openCanvas` client-side), OR keep the routes but render a canvas view instead of the static ERB.
+
+5. **Update `layout.erb` nav**: change the `/jobs` and `/settings` anchor tags to use `onclick="chatFooter.openCanvas(...)"` like the AI pages do, removing `data-turbo-frame`.
+
+6. **Widget JS behaviors**: for refreshable/live data widgets, register behaviors on `window.widgetBehaviors['widget_type'] = { init(el, meta) {...}, destroy(el) {...} }` in a new JS file loaded by `application.js`.</result>
+<usage>total_tokens: 62213
+tool_uses: 22
+duration_ms: 93372</usage>
+</task-notification>
+Full transcript available at: /tmp/claude-1000/-home-greg-Developer-ai-rb/tasks/aa706ab.output
+
+---
+
+still. it should be a canvas. i still should be able to activate/deactivate the scroll lock. move things around etc. also the pages should behave like the canvas + chat. so if i go to settings page i go to the route /settings/chat_settings the entire app should be a canvas. but when we apply the scroll lock the canvas lose the dots and it only scrolls instead of zoom
+
+---
+
+[Request interrupted by user for tool use]
