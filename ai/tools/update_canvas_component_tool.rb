@@ -46,19 +46,9 @@ module Ai
       private
 
       def broadcast_component_replace(component)
-        html = component_html(component)
+        html = component.render_html
         turbo = "<turbo-stream action=\"replace\" target=\"canvas-component-#{component.id}\"><template>#{html}</template></turbo-stream>"
         Ai::Web::TurboBroadcast.broadcast("canvas:#{component.ai_page.id}", turbo)
-      end
-
-      def component_html(c)
-        style = "left:#{c.x}px;top:#{c.y}px;width:#{c.width}px;"
-        style += "height:#{c.height}px;" if c.height
-        <<~HTML
-          <div class="canvas-component" id="canvas-component-#{c.id}" data-component-id="#{c.id}" style="#{style}" data-z="#{c.z_index}">
-            <div class="canvas-component-content">#{c.content}</div>
-          </div>
-        HTML
       end
     end
   end

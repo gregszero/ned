@@ -17,7 +17,12 @@ module Ai
           run_due_tasks
         end
 
-        Ai.logger.info "Scheduler started (polling every 60s)"
+        # Refresh widgets every 5 minutes
+        @instance.every '5m' do
+          refresh_widgets
+        end
+
+        Ai.logger.info "Scheduler started (polling every 60s, widget refresh every 5m)"
       end
 
       def stop!
@@ -45,6 +50,12 @@ module Ai
         end
       rescue => e
         Ai.logger.error "Scheduler error: #{e.message}"
+      end
+
+      def refresh_widgets
+        Jobs::WidgetRefreshJob.perform_later
+      rescue => e
+        Ai.logger.error "Widget refresh scheduling error: #{e.message}"
       end
     end
   end

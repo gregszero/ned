@@ -502,7 +502,8 @@ export default class extends Controller {
   _renderCanvasComponent(comp) {
     let style = `left:${comp.x}px;top:${comp.y}px;width:${comp.width}px;`
     if (comp.height) style += `height:${comp.height}px;`
-    return `<div class="canvas-component" id="canvas-component-${comp.id}" data-component-id="${comp.id}" style="${style}" data-z="${comp.z_index}">
+    const metaJson = JSON.stringify(comp.metadata || {}).replace(/"/g, '&quot;')
+    return `<div class="canvas-component" id="canvas-component-${comp.id}" data-component-id="${comp.id}" data-widget-type="${comp.type || ''}" data-widget-metadata="${metaJson}" style="${style}" data-z="${comp.z_index}">
       <div class="canvas-component-content">${comp.content || ''}</div>
     </div>`
   }

@@ -298,6 +298,17 @@ module Ai
             end
           end
 
+          # Widget type registry
+          r.on 'widget_types' do
+            r.get do
+              types = Ai::Widgets::BaseWidget.registry.map do |type, klass|
+                { type: type, label: klass.menu_label_text || type.tr('_', ' ').capitalize,
+                  icon: klass.menu_icon_text, defaults: klass.default_metadata }
+              end
+              { widget_types: types }
+            end
+          end
+
           # Page canvas content by page ID
           r.on 'pages', Integer do |page_id|
             page = AiPage.find(page_id)
@@ -322,25 +333,32 @@ module Ai
               r.is do
                 r.post do
                   body = JSON.parse(r.body.read) rescue r.params
+                  comp_type = body['component_type'] || 'card'
+                  metadata = body['metadata'] || {}
+
+                  # Merge widget default metadata
+                  widget_class = Ai::Widgets::BaseWidget.for_type(comp_type)
+                  metadata = widget_class.default_metadata.merge(metadata) if widget_class
+
                   component = page.canvas_components.create!(
-                    component_type: body['component_type'] || 'card',
+                    component_type: comp_type,
                     content: body['content'] || '',
                     x: body['x']&.to_f || 0,
                     y: body['y']&.to_f || 0,
                     width: body['width']&.to_f || 320,
                     height: body['height']&.to_f,
                     z_index: body['z_index']&.to_i || 0,
-                    metadata: body['metadata'] || {}
+                    metadata: metadata
                   )
 
+                  # Auto-render content from widget if content is blank
+                  if component.content.blank?
+                    rendered = component.render_content_html
+                    component.update_column(:content, rendered) if rendered.present?
+                  end
+
                   # Broadcast via canvas channel
-                  style = "left:#{component.x}px;top:#{component.y}px;width:#{component.width}px;"
-                  style += "height:#{component.height}px;" if component.height
-                  html = <<~HTML
-                    <div class="canvas-component" id="canvas-component-#{component.id}" data-component-id="#{component.id}" style="#{style}" data-z="#{component.z_index}">
-                      <div class="canvas-component-content">#{component.content}</div>
-                    </div>
-                  HTML
+                  html = component.render_html
                   turbo = "<turbo-stream action=\"append\" target=\"canvas-components-#{page.id}\"><template>#{html}</template></turbo-stream>"
                   TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
 
@@ -360,6 +378,7 @@ module Ai
                   %w[x y width height z_index].each do |attr|
                     updates[attr] = r.params[attr].to_f if r.params[attr]
                   end
+                  updates[:content] = r.params['content'] if r.params.key?('content')
                   component.update!(updates) if updates.any?
                   component.as_canvas_json
                 end

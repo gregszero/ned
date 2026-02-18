@@ -38,6 +38,10 @@ export default class extends Controller {
     document.addEventListener("touchmove", this.onTouchMove, { passive: false })
     document.addEventListener("touchend", this.onTouchEnd)
 
+    // Double-click to edit
+    this.onDblClick = this.onDblClick.bind(this)
+    this.element.addEventListener("dblclick", this.onDblClick)
+
     // Context menu
     this.onContextMenu = this.onContextMenu.bind(this)
     this.onDocumentClick = this.onDocumentClick.bind(this)
@@ -48,14 +52,16 @@ export default class extends Controller {
     this.menu = document.getElementById("canvas-context-menu")
     this.menuItems = document.getElementById("canvas-context-menu-items")
 
-    // Configurable menu item registries
+    // Configurable menu item registries — built from widget types API
     this.canvasMenuItems = [
-      { label: "Add Note", icon: "\ud83d\udcdd", action: (wx, wy) => this.addNote(wx, wy) },
-      { label: "Add Weather Widget", icon: "\u2600\ufe0f", action: (wx, wy) => this.addWeatherWidget(wx, wy) },
+      { label: "Add Note", icon: "\ud83d\udcdd", action: (wx, wy) => this.addWidget('card', wx, wy) },
       { separator: true },
       { label: () => this.scrollLock ? "Scroll Lock: On" : "Scroll Lock: Off", icon: "\ud83d\udd12", action: () => this.toggleScrollLock() },
       { label: "Reset View", icon: "\ud83d\udd04", action: () => this.resetView() },
     ]
+
+    // Fetch widget types and rebuild menu dynamically
+    this._loadWidgetTypes()
 
     this.componentMenuItems = [
       { label: "Chat about this", icon: "\ud83d\udcac", action: (comp) => this.chatAboutComponent(comp) },
@@ -73,6 +79,11 @@ export default class extends Controller {
         for (const node of mutation.addedNodes) {
           if (node.classList?.contains("canvas-component")) {
             this.initComponent(node)
+          }
+        }
+        for (const node of mutation.removedNodes) {
+          if (node.classList?.contains("canvas-component")) {
+            this.destroyComponent(node)
           }
         }
       }
@@ -94,6 +105,7 @@ export default class extends Controller {
     this.element.removeEventListener("touchstart", this.onTouchStart)
     document.removeEventListener("touchmove", this.onTouchMove)
     document.removeEventListener("touchend", this.onTouchEnd)
+    this.element.removeEventListener("dblclick", this.onDblClick)
     this.element.removeEventListener("contextmenu", this.onContextMenu)
     document.removeEventListener("click", this.onDocumentClick)
     document.removeEventListener("keydown", this.onKeyDown)
@@ -103,6 +115,94 @@ export default class extends Controller {
 
   initComponent(el) {
     el.style.zIndex = el.dataset.z || 0
+    const type = el.dataset.widgetType
+    if (type && window.widgetBehaviors?.[type]?.init) {
+      try {
+        const meta = JSON.parse(el.dataset.widgetMetadata || '{}')
+        window.widgetBehaviors[type].init(el, meta)
+      } catch (e) {
+        console.error(`[Canvas] Widget init failed for ${type}:`, e)
+      }
+    }
+  }
+
+  destroyComponent(el) {
+    const type = el.dataset.widgetType
+    if (type && window.widgetBehaviors?.[type]?.destroy) {
+      try {
+        window.widgetBehaviors[type].destroy(el)
+      } catch (e) {
+        console.error(`[Canvas] Widget destroy failed for ${type}:`, e)
+      }
+    }
+  }
+
+  // --- Double-click to Edit ---
+
+  onDblClick(e) {
+    const component = e.target.closest(".canvas-component")
+    if (!component) return
+
+    const contentEl = component.querySelector(".canvas-component-content")
+    if (!contentEl || contentEl.isContentEditable) return
+
+    // Enter edit mode
+    this.editingComponent = component
+    contentEl.contentEditable = "true"
+    contentEl.style.cursor = "text"
+    contentEl.style.userSelect = "text"
+    component.style.cursor = "auto"
+    contentEl.focus()
+
+    // Select all text
+    const range = document.createRange()
+    range.selectNodeContents(contentEl)
+    const sel = window.getSelection()
+    sel.removeAllRanges()
+    sel.addRange(range)
+
+    // Save on blur
+    const onBlur = () => {
+      contentEl.removeEventListener("blur", onBlur)
+      contentEl.removeEventListener("keydown", onKeyDown)
+      this.finishEditing(component, contentEl)
+    }
+
+    // Escape cancels, Cmd/Ctrl+Enter confirms
+    const onKeyDown = (ev) => {
+      if (ev.key === "Escape") {
+        ev.preventDefault()
+        contentEl.removeEventListener("blur", onBlur)
+        contentEl.removeEventListener("keydown", onKeyDown)
+        this.finishEditing(component, contentEl)
+      }
+    }
+
+    contentEl.addEventListener("blur", onBlur)
+    contentEl.addEventListener("keydown", onKeyDown)
+
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  finishEditing(component, contentEl) {
+    contentEl.contentEditable = "false"
+    contentEl.style.cursor = ""
+    contentEl.style.userSelect = ""
+    component.style.cursor = "grab"
+    this.editingComponent = null
+
+    // Persist updated content
+    const compId = component.dataset.componentId
+    const pageId = this.pageIdValue
+    if (!compId || !pageId) return
+
+    const newContent = contentEl.innerHTML
+    fetch(`/api/pages/${pageId}/components/${compId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `content=${encodeURIComponent(newContent)}`
+    }).catch(e => console.error("[Canvas] Failed to save content:", e))
   }
 
   // --- Context Menu ---
@@ -193,50 +293,39 @@ export default class extends Controller {
     }
   }
 
-  addNote(x, y) {
+  addWidget(type, x, y, metadata = {}) {
+    const widgetType = this._widgetTypes?.find(w => w.type === type)
+    const defaults = widgetType?.defaults || {}
     this.createComponent({
-      component_type: "card",
-      content: '<p style="color:var(--muted-foreground);margin:0">Double-click to edit...</p>',
-      x, y, width: 240
+      component_type: type,
+      x, y,
+      width: type === 'card' ? 240 : 280,
+      metadata: { ...defaults, ...metadata }
     })
   }
 
-  addWeatherWidget(x, y) {
-    this.createComponent({
-      component_type: "weather",
-      content: this.weatherWidgetHtml(),
-      x, y, width: 280
-    })
-  }
+  async _loadWidgetTypes() {
+    try {
+      const resp = await fetch('/api/widget_types')
+      const data = await resp.json()
+      this._widgetTypes = data.widget_types || []
 
-  weatherWidgetHtml() {
-    return `<div class="flex flex-col gap-2">
-  <div class="flex items-center justify-between">
-    <div>
-      <div class="font-semibold text-sm" style="color:var(--foreground)">Curitiba, BR</div>
-      <div class="text-xs" style="color:var(--muted-foreground)">Partly cloudy</div>
-    </div>
-    <span class="text-2xl">\u2600\ufe0f</span>
-  </div>
-  <div class="flex items-baseline gap-1">
-    <span class="text-3xl font-bold" style="color:var(--foreground)">22\u00b0C</span>
-    <span class="text-xs" style="color:var(--muted-foreground)">Feels like 21\u00b0</span>
-  </div>
-  <div class="grid grid-cols-3 gap-2 pt-1" style="border-top:1px solid var(--border)">
-    <div class="text-center">
-      <div class="text-xs" style="color:var(--muted-foreground)">Humidity</div>
-      <div class="text-sm font-medium" style="color:var(--foreground)">68%</div>
-    </div>
-    <div class="text-center">
-      <div class="text-xs" style="color:var(--muted-foreground)">Wind</div>
-      <div class="text-sm font-medium" style="color:var(--foreground)">12 km/h</div>
-    </div>
-    <div class="text-center">
-      <div class="text-xs" style="color:var(--muted-foreground)">UV Index</div>
-      <div class="text-sm font-medium" style="color:var(--foreground)">4</div>
-    </div>
-  </div>
-</div>`
+      // Rebuild canvas menu: widget items + separator + utility items
+      const widgetItems = this._widgetTypes.map(w => ({
+        label: w.label,
+        icon: w.icon || "\ud83d\udccc",
+        action: (wx, wy) => this.addWidget(w.type, wx, wy)
+      }))
+
+      const utilityItems = [
+        { label: () => this.scrollLock ? "Scroll Lock: On" : "Scroll Lock: Off", icon: "\ud83d\udd12", action: () => this.toggleScrollLock() },
+        { label: "Reset View", icon: "\ud83d\udd04", action: () => this.resetView() },
+      ]
+
+      this.canvasMenuItems = [...widgetItems, { separator: true }, ...utilityItems]
+    } catch (e) {
+      console.warn("[Canvas] Failed to load widget types, using defaults:", e)
+    }
   }
 
   async chatAboutComponent(comp) {
@@ -301,13 +390,14 @@ export default class extends Controller {
       const resp = await fetch(`/api/pages/${pageId}/components/${compId}`)
       const data = await resp.json()
       this.createComponent({
-        component_type: data.component_type,
+        component_type: data.type,
         content: data.content,
         x: (data.x || 0) + 24,
         y: (data.y || 0) + 24,
         width: data.width,
         height: data.height,
-        z_index: data.z_index
+        z_index: data.z_index,
+        metadata: data.metadata
       })
     } catch (e) {
       console.error("[Canvas] Failed to duplicate component:", e)
@@ -319,7 +409,8 @@ export default class extends Controller {
     const pageId = this.pageIdValue
     if (!compId || !pageId) return
 
-    // Optimistic DOM removal
+    // Clean up widget behavior before removal
+    this.destroyComponent(comp)
     comp.remove()
 
     try {
@@ -354,6 +445,8 @@ export default class extends Controller {
 
   onMouseDown(e) {
     if (e.button !== 0) return // Only primary (left) button
+    // Don't drag while editing
+    if (this.editingComponent) return
     const component = e.target.closest(".canvas-component")
     if (component) {
       // Start dragging component

@@ -42,6 +42,10 @@ module Ai
       Dir[root.join('ai/concerns/**/*.rb')].sort.each { |f| require f }
       Dir[root.join('ai/models/**/*.rb')].sort.each { |f| require f }
 
+      # Load widgets
+      require_relative 'widgets/base_widget'
+      Dir[root.join('ai/widgets/**/*.rb')].sort.each { |f| require f unless f.include?('base_widget') }
+
       # Load jobs
       require_relative 'jobs/application_job'
       Dir[root.join('ai/jobs/**/*.rb')].sort.each { |f| require f unless f.include?('application_job') }

@@ -5,6 +5,10 @@ window.Turbo = Turbo
 
 const application = Application.start()
 
+// Widget behavior registry + built-in widgets
+import "/js/widgets/registry.js"
+import "/js/widgets/clock.js"
+
 // Import controllers
 import ConversationController from "/js/controllers/conversation_controller.js"
 import NotificationsController from "/js/controllers/notifications_controller.js"
