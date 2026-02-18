@@ -100,7 +100,7 @@ end
 
 ## Design System
 
-Clean, minimal shadcn/ui-inspired design with violet accent. Supports light/dark mode via `prefers-color-scheme`. Inter font, rounded corners, subtle shadows.
+Clean, minimal shadcn/ui-inspired design with terminal green accent. Supports light/dark mode via `prefers-color-scheme`. Inter font, rounded corners, subtle shadows.
 
 ### CSS Tokens (defined in `web/public/css/style.css`)
 
@@ -113,15 +113,15 @@ Light and dark mode tokens are defined as CSS custom properties. The `--ned-*` a
 | `--card` | `#ffffff` | `#18181b` | Card backgrounds |
 | `--muted` | `#f1f5f9` | `#27272a` | Muted backgrounds |
 | `--muted-foreground` | `#64748b` | `#a1a1aa` | Muted text |
-| `--primary` | `#7c3aed` | `#8b5cf6` | Accent (violet) |
+| `--primary` | `#16a34a` | `#22c55e` | Accent (green) |
 | `--primary-foreground` | `#ffffff` | `#ffffff` | Text on accent |
 | `--border` | `#e2e8f0` | `#27272a` | Borders |
-| `--ring` | `#7c3aed` | `#8b5cf6` | Focus rings |
+| `--ring` | `#16a34a` | `#22c55e` | Focus rings |
 
 ### Components
 - **`.card`** — rounded card with subtle border and shadow
 - **`.badge`** — pill label (variants: `.success`, `.error`, `.warning`, `.info`)
-- **`button`** — violet bg, rounded. Variants: `.ghost`, `.outline`, `.sm`, `.xs`, `.icon`
+- **`button`** — green bg, rounded. Variants: `.ghost`, `.outline`, `.sm`, `.xs`, `.icon`
 - **`.chat-msg.user`** / **`.chat-msg.ai`** — rounded chat bubbles
 - **`.prose-bubble`** — markdown content inside chat bubbles
 - **`.section-heading`** — card section titles

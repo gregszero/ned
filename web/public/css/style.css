@@ -1,6 +1,6 @@
 /* ============================================
    NED — shadcn/ui Design System
-   Clean · Minimal · Violet Accent · Light/Dark
+   Clean · Minimal · Terminal Green Accent · Light/Dark
    ============================================ */
 
 /* --- Design Tokens (Light Mode) --- */
@@ -11,12 +11,12 @@
   --card-foreground: #0f172a;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #f5f3ff;
-  --accent-foreground: #6d28d9;
-  --primary: #7c3aed;
+  --accent: #f0fdf4;
+  --accent-foreground: #166534;
+  --primary: #16a34a;
   --primary-foreground: #ffffff;
   --border: #e2e8f0;
-  --ring: #7c3aed;
+  --ring: #16a34a;
 
   /* Backward-compat aliases */
   --ned-bg: var(--background);
@@ -39,11 +39,11 @@
     --muted: #27272a;
     --muted-foreground: #a1a1aa;
     --accent: #27272a;
-    --accent-foreground: #a78bfa;
-    --primary: #8b5cf6;
+    --accent-foreground: #4ade80;
+    --primary: #22c55e;
     --primary-foreground: #ffffff;
     --border: #27272a;
-    --ring: #8b5cf6;
+    --ring: #22c55e;
   }
 }
 
