@@ -1,0 +1,297 @@
+Implement the following plan:
+
+# Canvas-First Architecture Refactor
+
+## Context
+
+The app has a thread exhaustion problem: each conversation tab opens its own SSE connection, and Puma threads are finite. The root cause is that conversations — not canvases — are the primary unit. This refactor makes **canvases the primary unit**, consolidates SSE to one connection per canvas, removes the `/conversations` index page, introduces a two-level tab bar, and adds URL-driven routing so every canvas and chat has a shareable URL.
+
+## URL Scheme
+
+```
+/                          → home (redirect to last canvas or empty state)
+/:canvas_slug              → opens canvas, switches to its last active chat
+/:canvas_slug/:chat_slug   → opens canvas + specific chat tab
+/notifications             → notifications (turbo-frame, no canvas)
+/jobs                      → jobs & skills (turbo-frame)
+/settings                  → settings (turbo-frame)
+```
+
+Browser URL updates via `history.pushState` as tabs switch — no full page reloads.
+
+## Files to Modify
+
+| File | What changes |
+|---|---|
+| `ai/models/conversation.rb` | Add `slug` generation, `ensure_canvas!`, `broadcast_channel` |
+| `ai/models/ai_page.rb` | No changes (already has slug) |
+| `workspace/migrations/new` | Add `slug` column to conversations |
+| `web/app.rb` | New canvas SSE route, URL-based routing for `/:slug/:chat_slug`, remove `/conversations` index, update broadcasts |
+| `ai/jobs/agent_executor_job.rb` | Broadcast to `conversation.broadcast_channel` |
+| `ai/tools/send_message_tool.rb` | Same |
+| `ai/tools/add_canvas_component_tool.rb` | Single `broadcast("canvas:#{page.id}")` |
+| `ai/tools/update_canvas_component_tool.rb` | Same |
+| `ai/tools/remove_canvas_component_tool.rb` | Same |
+| `web/public/js/controllers/chat_footer_controller.js` | Two-level tabs, one SSE per canvas, pushState URL sync |
+| `web/views/layout.erb` | Two-row tab bar HTML, update sidebar links |
+| `web/public/css/style.css` | Two-level tab bar styling |
+
+**Delete:** `web/views/conversations_index.erb`
+**Create:** `web/views/home.erb`, migration file
+
+## Implementation
+
+### Step 1: Migration — Add slug to conversations
+
+Create `workspace/migrations/YYYYMMDDNNNNNN_add_slug_to_conversations.rb`:
+
+```ruby
+class AddSlugToConversations < ActiveRecord::Migration[8.0]
+  def change
+    add_column :conversations, :slug, :string
+    add_index :conversations, :slug, unique: true
+  end
+end
+```
+
+### Step 2: Conversation model updates
+
+In `ai/models/conversation.rb`:
+
+```ruby
+# Slug generation (same pattern as AiPage)
+before_validation :generate_slug, if: -> { slug.blank? }
+
+def ensure_canvas!
+  return ai_page if ai_page
+  page = Ai::AiPage.create!(title: title.presence || 'Untitled Canvas', content: '', status: 'draft')
+  update!(ai_page_id: page.id)
+  reload.ai_page
+end
+
+def broadcast_channel
+  "canvas:#{ensure_canvas!.id}"
+end
+
+private
+
+def generate_slug
+  base = (title.presence || "chat-#{SecureRandom.hex(3)}").parameterize
+  self.slug = base
+  counter = 1
+  while Conversation.exists?(slug: slug)
+    self.slug = "#{base}-#{counter}"
+    counter += 1
+  end
+end
+```
+
+Backfill existing conversations: run a one-off in the migration or seed.
+
+### Step 3: Canvas SSE route
+
+In `web/app.rb`, inside `r.on 'api'` > `r.on 'pages', Integer do |page_id|`, add:
+
+```ruby
+r.on 'stream' do
+  r.get do
+    sse_stream("canvas:#{page.id}")
+  end
+end
+```
+
+### Step 4: Migrate all 7 broadcast sites to canvas channel
+
+**`agent_executor_job.rb`** lines 65, 83 — change `"conversation:#{conversation.id}"` to `conversation.broadcast_channel`
+
+**`send_message_tool.rb`** line 71 — same
+
+**`add_canvas_component_tool.rb`** `broadcast_to_page` — replace `page.conversations.each` loop with single `Ai::Web::TurboBroadcast.broadcast("canvas:#{page.id}", turbo)`
+
+**`update_canvas_component_tool.rb`** lines 51-53 — same simplification
+
+**`remove_canvas_component_tool.rb`** lines 21-23 — same
+
+**`web/app.rb`** POST/DELETE component routes — same (replace `page.conversations.each` with single broadcast)
+
+### Step 5: URL routing in `web/app.rb`
+
+Remove the conversations index route. Change root:
+
+```ruby
+r.root do
+  recent = AiPage.published.recent.first
+  if recent
+    r.redirect "/#{recent.slug}"
+  else
+    render_canvas_or_layout(:home)
+  end
+end
+```
+
+Add catch-all canvas/chat routes **after** all other named routes (`notifications`, `jobs`, `settings`, `api`, `webhooks`, `health`):
+
+```ruby
+# Canvas URL: /:canvas_slug or /:canvas_slug/:chat_slug
+r.on String do |canvas_slug|
+  @page = AiPage.find_by(slug: canvas_slug)
+  next unless @page  # fall through to 404
+
+  r.on String do |chat_slug|
+    @conversation = @page.conversations.find_by(slug: chat_slug)
+    # Return page data — JS handles the tab activation
+    render_canvas_or_layout(:canvas_view)
+  end
+
+  r.is do
+    render_canvas_or_layout(:canvas_view)
+  end
+end
+```
+
+Create `web/views/canvas_view.erb` — minimal template that passes page/conversation data to JS:
+
+```erb
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.chatFooter) {
+      chatFooter.openCanvas(<%= @page.id %>, '<%= @page.title.gsub("'", "\\\\'") %>', '<%= @page.slug %>'
+        <% if @conversation %>, <%= @conversation.id %>, '<%= @conversation.title.gsub("'", "\\\\'") %>', '<%= @conversation.slug %>'<% end %>
+      )
+    }
+  })
+</script>
+```
+
+Create `web/views/home.erb`:
+```erb
+<div class="py-12 text-center">
+  <p class="text-ned-muted-fg text-sm">Open a canvas from the sidebar, or create one with + below.</p>
+</div>
+```
+
+Delete `web/views/conversations_index.erb`.
+
+### Step 6: Two-level tab bar — Layout HTML
+
+In `web/views/layout.erb`, replace the tab bar section inside `.chat-footer`:
+
+```html
+<!-- Canvas tabs (top) -->
+<div class="chat-tab-bar canvas-level" data-chat-footer-target="tabBar">
+  <div class="chat-tabs" data-chat-footer-target="canvasTabs"></div>
+  <button class="chat-tab-new ghost xs" data-action="click->chat-footer#newTab" type="button" title="New canvas">+</button>
+</div>
+<!-- Conversation tabs (bottom, scoped to active canvas) -->
+<div class="chat-tab-bar conversation-level" data-chat-footer-target="conversationTabBar">
+  <div class="chat-tabs" data-chat-footer-target="conversationTabs"></div>
+  <button class="chat-tab-new ghost xs" data-action="click->chat-footer#newConversation" type="button" title="New conversation">+</button>
+</div>
+```
+
+Update sidebar: `openCanvasTab(...)` → `openCanvas(...)`.
+
+### Step 7: CSS — Two-level tab bar
+
+```css
+.chat-tab-bar.canvas-level {
+  background: var(--muted);
+  border-bottom: none;
+}
+.chat-tab-bar.conversation-level {
+  min-height: 1.75rem;
+  padding-left: 0.5rem;
+}
+.chat-tab-bar.conversation-level .chat-tab {
+  font-size: 0.6875rem;
+  height: 1.75rem;
+}
+```
+
+### Step 8: Chat footer controller rewrite
+
+**New state:**
+```js
+this.canvases = []  // [{ pageId, title, slug, conversations: [{ id, title, slug }], activeConvId }]
+this.activeCanvasPageId = null
+this.eventSources = {}  // pageId → EventSource (ONE per canvas)
+```
+
+**New targets:** `canvasTabs`, `conversationTabs`, `conversationTabBar`, `panels`
+
+**Key methods:**
+
+| Method | Purpose |
+|---|---|
+| `newTab()` | POST `/api/canvases` → `openCanvas()` |
+| `openCanvas(pageId, title, slug, convId?, convTitle?, convSlug?)` | Open/switch canvas tab, connect SSE to `/api/pages/${pageId}/stream`, create canvas overlay. If convId provided, open that conversation. Otherwise create one. |
+| `newConversation()` | POST `/api/conversations` with active canvas pageId → `openConversation()` |
+| `openConversation(convId, title, slug, pageId)` | Add conversation tab in bottom row, create panel, load via `GET /conversations/${convId}/panel` |
+| `switchCanvas(pageId)` | Toggle canvas tabs/overlays, re-render conversation tabs, pushState URL |
+| `switchConversation(convId)` | Toggle conversation tabs/panels, pushState URL |
+| `closeCanvas(pageId)` | Close SSE, remove panels + overlay |
+| `closeConversation(convId)` | Remove panel, if last → close canvas |
+| `connectSSE(pageId)` | One EventSource to `/api/pages/${pageId}/stream` |
+
+**URL sync:**
+```js
+updateURL() {
+  const canvas = this.canvases.find(c => c.pageId === this.activeCanvasPageId)
+  if (!canvas) return history.pushState(null, '', '/')
+  const conv = canvas.conversations.find(c => c.id === canvas.activeConvId)
+  const path = conv ? `/${canvas.slug}/${conv.slug}` : `/${canvas.slug}`
+  if (location.pathname !== path) history.pushState(null, '', path)
+}
+```
+
+Called at the end of `switchCanvas()` and `switchConversation()`.
+
+**`popstate` handler** — on browser back/forward, parse URL and switch to matching canvas/conversation.
+
+**Persistence:** sessionStorage key `chatState`:
+```js
+{ canvases: [...], activeCanvasPageId }
+```
+On `connect()`, handle old `chatOpenTabs` format gracefully (discard it).
+
+**API response changes:** `POST /api/canvases` and `POST /api/conversations` must return slug in response JSON.
+
+### Step 9: Update API responses
+
+In `web/app.rb`:
+
+`POST /api/canvases` — add `page_slug` (already returned) and `conv_slug`:
+```ruby
+{ id: conversation.id, title: conversation.title, ai_page_id: page.id, page_slug: page.slug, conv_slug: conversation.slug }
+```
+
+`POST /api/conversations` — add `slug`:
+```ruby
+{ id: conversation.id, title: conversation.title, ai_page_id: conversation.ai_page_id, slug: conversation.slug }
+```
+
+## Verification
+
+1. `./ai.rb db:migrate` — adds slug column
+2. `./ai.rb server` — starts clean
+3. Navigate to `/` — redirects to most recent canvas slug or shows home
+4. Click `+` in footer → new canvas tab + conversation, URL updates to `/canvas-slug/chat-slug`
+5. Add a weather widget via context menu → appears via canvas SSE
+6. Click `+` on conversation level → new chat tab, URL updates
+7. Send message → response arrives via single canvas SSE
+8. Open second canvas from sidebar → second tab, URL updates
+9. Switch between canvases/conversations → URL reflects state, browser back works
+10. Copy URL, open in new tab → correct canvas + chat loads
+11. Refresh → tabs restored from sessionStorage
+12. Check thread usage: only 1 SSE per open canvas, not per conversation
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+the chat about this should open a new conversation in the same canvas with the title (name of the widget) and some reference of the widget.
+
+---
+
+commit
