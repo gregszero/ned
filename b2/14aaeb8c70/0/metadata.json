@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "b214aaeb8c70",
+  "session_id": "2cbc810d-fd0c-5632-bf82-d638ed76853c",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-18T14:06:54.602062871Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "web/views/conversations_index.erb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 5,
+    "cache_creation_tokens": 27156,
+    "cache_read_tokens": 49763,
+    "output_tokens": 28,
+    "api_call_count": 3
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-18T14:06:54.576601465Z",
+    "agent_lines": 0,
+    "human_added": 964,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 964,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/2cbc810d-fd0c-5632-bf82-d638ed76853c.jsonl"
+}
