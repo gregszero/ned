@@ -1,0 +1,127 @@
+Implement the following plan:
+
+# Plan: AI UI Toolbox — Rich Widget Primitives & Self-Automation
+
+## Context
+
+The AI agent (Ned) currently generates raw HTML via `card` widgets and `create_page`. There are no structured primitives for common UI patterns (charts, tables, metrics, lists), no way for widgets to auto-refresh from data sources, no interactive action buttons, and no way to define new widget types at runtime. This limits the AI's ability to build dashboards and automation systems for itself.
+
+**Goal**: Make the framework a composable UI toolbox where Ned can generate rich, interactive, data-bound dashboards by passing structured metadata — and extend the toolbox itself at runtime.
+
+**No database migration needed** — all new widget types use the existing `canvas_components` table with its `component_type` string and `metadata` JSON fields.
+
+---
+
+## Step 1: Client-Side Component Library
+
+Create `web/public/js/ned-components.js` — a global JS file providing:
+- **Chart rendering**: `Ned.renderChart(el, config)` wrapping Chart.js
+- **Sortable tables**: Auto-init on `[data-ned-table]` elements with click-to-sort headers
+- **Action buttons**: Click handler for `[data-ned-action]` that POSTs to `/api/actions` with loading state
+- **MutationObserver**: Auto-initializes all `data-ned-*` elements when added to DOM (catches Turbo Stream inserts)
+
+Add to `web/views/layout.erb`:
+- Chart.js CDN: `<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>`
+- `<script src="/js/ned-components.js"></script>`
+
+## Step 2: Data-Driven Widget Types
+
+Five new widgets in `ai/widgets/`, each rendering from structured `metadata`:
+
+| Widget | Type key | Metadata shape | Refreshable | Data source |
+|--------|----------|----------------|-------------|-------------|
+| **ChartWidget** | `chart` | `{chart_type, title, labels, datasets, options}` | No | — |
+| **MetricWidget** | `metric` | `{value, label, trend, trend_direction, data_source}` | Yes (5 min) | Ruby expression |
+| **TableWidget** | `table` | `{title, columns, rows, sortable, data_source}` | Yes (5 min) | Ruby expression → array |
+| **ListWidget** | `list` | `{title, items: [{text, subtitle, url}], data_source}` | Yes (5 min) | Ruby expression → array |
+| **BannerWidget** | `banner` | `{message, banner_type: info/success/warning/error}` | No | — |
+
+**Data binding**: Widgets with a `data_source` metadata key auto-refresh via the existing `WidgetRefreshJob` (every 5 min). The value is a Ruby expression evaluated in model context (e.g., `"Message.count"`, `"ScheduledTask.due.limit(10).map { |t| [t.title, t.status] }"`).
+
+**DRY helper**: Add `evaluate_data_source` method to `BaseWidget` so all refreshable widgets share the evaluation logic.
+
+### Files to create:
+- `ai/widgets/chart_widget.rb`
+- `ai/widgets/metric_widget.rb`
+- `ai/widgets/table_widget.rb`
+- `ai/widgets/list_widget.rb`
+- `ai/widgets/banner_widget.rb`
+- `web/public/js/widgets/chart.js` — JS behavior for chart init/destroy lifecycle
+
+### Files to modify:
+- `ai/widgets/base_widget.rb` — add `evaluate_data_source` shared method
+- `web/public/js/application.js` — import `chart.js` widget behavior
+
+## Step 3: Action System
+
+Add `POST /api/actions` endpoint in `web/app.rb` supporting:
+- `run_skill` — execute a named skill with params
+- `run_code` — evaluate a Ruby expression
+- `send_message` — post a user message to a conversation (triggers agent)
+- `refresh_component` — force-refresh a widget and broadcast update
+
+The AI generates buttons with `data-ned-action` attributes in widget HTML:
+```html
+<button data-ned-action='{"action_type":"run_skill","skill_name":"deploy"}'>Deploy</button>
+```
+
+The `ned-components.js` click handler manages loading state and posts to the endpoint.
+
+### Files to modify:
+- `web/app.rb` — add `/api/actions` route inside `r.on 'api'`
+
+## Step 4: Runtime Widget Definition Tool
+
+New MCP tool `define_widget` that lets Ned create entirely new widget types without server restart:
+
+1. Writes a Ruby widget class to `ai/widgets/`
+2. Optionally writes a JS behavior file to `web/public/js/widgets/`
+3. Calls `BaseWidget.reset_registry!` to pick up the new class
+4. If JS was provided, broadcasts a `<script>` tag via Turbo Stream to load it in connected browsers
+
+### Files to create:
+- `ai/tools/define_widget_tool.rb`
+
+## Step 5: Update Agent System Prompt
+
+Update `workspace/CLAUDE.md` to document:
+- All new widget types with metadata schemas and usage examples
+- `data-ned-chart`, `data-ned-table`, `data-ned-action` HTML attributes
+- Data binding via `data_source` metadata key
+- Action button patterns
+- `define_widget` tool usage
+- Add `web_fetch` and `define_widget` to the tool table (currently missing)
+
+### Files to modify:
+- `workspace/CLAUDE.md`
+
+---
+
+## Implementation Order
+
+1. `ned-components.js` + layout.erb changes (foundation)
+2. `base_widget.rb` — add `evaluate_data_source`
+3. Chart widget + JS behavior + application.js import
+4. Metric, table, list, banner widgets
+5. `/api/actions` endpoint in app.rb
+6. `define_widget` tool
+7. `workspace/CLAUDE.md` prompt update
+
+## Verification
+
+1. Start the server with `./ai.rb server`
+2. Ask Ned to create a chart dashboard: "Create a dashboard with a chart showing message counts by day"
+3. Verify the chart renders on the canvas with Chart.js
+4. Ask Ned to add a metric widget with data_source: "Add a live metric showing total conversations"
+5. Wait 5 min or manually trigger `WidgetRefreshJob.perform_now` to verify auto-refresh
+6. Ask Ned to create a table with action buttons: "Show me scheduled tasks with a cancel button"
+7. Click the cancel button — verify it hits `/api/actions` and the task is cancelled
+8. Ask Ned to define a new widget type: "Create a countdown timer widget"
+9. Verify the new widget appears in the context menu and works on canvas
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this

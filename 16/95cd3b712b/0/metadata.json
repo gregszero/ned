@@ -1,0 +1,43 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "1695cd3b712b",
+  "session_id": "a23ffd15-6a96-4ecb-a6c2-4f20082d2963",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-18T20:33:29.383378716Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "ai/tools/define_widget_tool.rb",
+    "ai/widgets/banner_widget.rb",
+    "ai/widgets/base_widget.rb",
+    "ai/widgets/chart_widget.rb",
+    "ai/widgets/list_widget.rb",
+    "ai/widgets/metric_widget.rb",
+    "ai/widgets/table_widget.rb",
+    "web/app.rb",
+    "web/public/js/application.js",
+    "web/public/js/ned-components.js",
+    "web/public/js/widgets/chart.js",
+    "web/views/layout.erb",
+    "workspace/CLAUDE.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 41,
+    "cache_creation_tokens": 106785,
+    "cache_read_tokens": 2094234,
+    "output_tokens": 7727,
+    "api_call_count": 37
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-18T20:33:29.260408846Z",
+    "agent_lines": 712,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 712,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/a23ffd15-6a96-4ecb-a6c2-4f20082d2963.jsonl"
+}

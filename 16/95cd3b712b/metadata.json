@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "1695cd3b712b",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "ai/tools/define_widget_tool.rb",
+    "ai/widgets/banner_widget.rb",
+    "ai/widgets/base_widget.rb",
+    "ai/widgets/chart_widget.rb",
+    "ai/widgets/list_widget.rb",
+    "ai/widgets/metric_widget.rb",
+    "ai/widgets/table_widget.rb",
+    "web/app.rb",
+    "web/public/js/application.js",
+    "web/public/js/ned-components.js",
+    "web/public/js/widgets/chart.js",
+    "web/views/layout.erb",
+    "workspace/CLAUDE.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/16/95cd3b712b/0/metadata.json",
+      "transcript": "/16/95cd3b712b/0/full.jsonl",
+      "context": "/16/95cd3b712b/0/context.md",
+      "content_hash": "/16/95cd3b712b/0/content_hash.txt",
+      "prompt": "/16/95cd3b712b/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 41,
+    "cache_creation_tokens": 106785,
+    "cache_read_tokens": 2094234,
+    "output_tokens": 7727,
+    "api_call_count": 37
+  }
+}
