@@ -1,0 +1,199 @@
+Implement the following plan:
+
+# Plan: CLI-style Conversation UI with Streaming
+
+## Context
+
+The current chat UI uses a typical messaging app pattern — right-aligned violet user bubbles, left-aligned AI bubbles, 85% max-width. The user wants it to feel more like Claude Code's CLI: full-width messages, role labels, visible thinking/tool-use steps, streaming text. Two changes combined: UI redesign + real-time streaming.
+
+## Part 1: UI Redesign — CLI-style Messages
+
+### What changes
+
+Replace the bubble chat layout with a full-width, terminal-inspired layout:
+
+- **No bubbles**: Remove `.chat-msg.user` violet background / `.chat-msg.ai` card background + border
+- **Full width**: Messages use 100% width, no `max-width: 85%`
+- **Role labels**: Keep `YOU` / `AI` labels but style them as compact inline badges/tags above each message (like Claude Code's `> ` prompt vs response)
+- **Separator between messages**: Use a subtle top border or spacing instead of bubble gaps
+- **Monospace code, proportional text**: Keep Inter for prose but ensure code blocks feel terminal-native
+- **Input area**: Style the textarea more like a terminal prompt (e.g., a `>` prefix, minimal border)
+
+### Files to modify
+
+**`web/public/css/style.css`** — Restyle `.chat-msg`, `.chat-msg.user`, `.chat-msg.ai`, `.prose-bubble`, `.msg-meta`, `.chat-panel-messages`:
+
+```css
+/* Remove bubble styling */
+.chat-msg {
+  padding: 0.75rem 1rem;
+  max-width: 100%;           /* was 85% */
+  border-radius: 0;          /* was 0.75rem */
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.chat-msg:first-child { border-top: none; }
+
+.chat-msg.user {
+  margin-left: 0;            /* was auto (right-align) */
+  background: none;          /* was var(--primary) */
+  color: var(--foreground);  /* was primary-foreground */
+}
+.chat-msg.ai {
+  margin-right: 0;
+  background: none;          /* was var(--card) */
+  border-left: none;
+  border-right: none;
+}
+
+/* Role label as a small colored tag */
+.msg-meta span:first-child {
+  font-weight: 600;
+  font-size: 0.6875rem;
+}
+.chat-msg.user .msg-meta span:first-child { color: var(--primary); }
+.chat-msg.ai .msg-meta span:first-child { color: var(--muted-foreground); }
+```
+
+Remove the `.chat-msg.user .prose-bubble` color overrides (white-on-violet code/link styles) since there's no violet background anymore.
+
+**`web/view_helpers.rb`** — No structural change to `render_message_html`, just the CSS takes care of it.
+
+**`web/public/js/controllers/chat_footer_controller.js`** — Update the optimistic user message in `sendMessage()` to match the new style (remove the bubble classes if needed, though CSS handles most of it).
+
+## Part 2: Real-time Streaming
+
+### What changes
+
+Switch the agent subprocess from blocking `capture3` + `--output-format json` to streaming `popen3` + `--output-format stream-json`, and broadcast progress events to the browser in real-time.
+
+### `ai/agent.rb` — Add `execute_streaming`
+
+New method alongside existing `execute` (kept for backward compat):
+
+- Use `Open3.popen3` instead of `capture3`
+- Use `--output-format stream-json`
+- Read stdout line-by-line, parse each NDJSON event, yield to a block
+- Event format: `{"type":"stream_event","event":{"type":"content_block_start|content_block_delta|...","delta":{...}}}` and final `{"type":"result","subtype":"success","result":"..."}`
+
+### `ai/jobs/agent_executor_job.rb` — Stream events to browser
+
+Replace "broadcast thinking → wait → broadcast response" with:
+
+1. **Start**: Append a progress container `#agent-progress-{id}` with an `#agent-steps-{id}` area and `#agent-response-{id}` area
+2. **On thinking event**: Append a muted "Thinking..." step with pulsing indicator
+3. **On tool_use event**: Append a step showing tool name (e.g., "Running run_code")
+4. **On text_delta events**: Accumulate text, throttle-broadcast (~300ms) the rendered markdown into the response area
+5. **On result**: Save final message to DB, replace entire progress container with the final rendered message
+
+### `web/public/css/style.css` — Agent step styles
+
+```css
+.agent-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-bottom: 0.5rem;
+}
+.agent-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.agent-step-icon {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+}
+/* Pulse the active (last) step */
+.agent-step:last-child .agent-step-icon {
+  background: var(--primary);
+  animation: step-pulse 1.5s ease-in-out infinite;
+}
+@keyframes step-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+```
+
+### No changes needed to:
+- SSE infrastructure (`turbo_broadcast.rb`, `sse_stream` in `app.rb`)
+- JS SSE handling (`Turbo.renderStreamMessage` + auto-scroll already works)
+- Conversation panel HTML structure
+
+## Files Summary
+
+| File | Changes |
+|---|---|
+| `web/public/css/style.css` | Restyle messages to full-width CLI look; add `.agent-steps`/`.agent-step` styles; remove bubble backgrounds |
+| `ai/agent.rb` | Add `execute_streaming` method with `popen3` + `stream-json` |
+| `ai/jobs/agent_executor_job.rb` | Rewrite `perform` to use streaming, add step broadcast helpers |
+| `web/public/js/controllers/chat_footer_controller.js` | Minor: update optimistic user message markup if needed |
+
+## Verification
+
+1. `./ai.rb server` — send a message, verify full-width layout with no bubbles
+2. Verify thinking indicator appears → tool steps appear → streaming text appears → final message replaces progress container
+3. Reload the page — verify saved messages render correctly in the new style
+4. Test on mobile viewport — verify responsive behavior
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.claude/projects/-home-greg-Developer-ai-rb/ae9d0b20-d52a-49e4-bc8d-9ea193c47dad.jsonl
+
+---
+
+i asked a question on chat and the app stoped and didnt responded anymore.
+
+---
+
+server restarted, when i send a message lookslike it does not even reach the app
+
+---
+
+lookslike it didnt worked
+
+---
+
+server restarted, when i send the message it get stuck. should we upgrade the threads etc?
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+<task-notification>
+<task-id>b3df3e8</task-id>
+<output-file>/tmp/claude-1000/-home-greg-Developer-ai-rb/tasks/b3df3e8.output</output-file>
+<status>failed</status>
+<summary>Background command "Capture stdout and stderr separately" failed with exit code 144</summary>
+</task-notification>
+Read the output file to retrieve the result: /tmp/claude-1000/-home-greg-Developer-ai-rb/tasks/b3df3e8.output
+
+---
+
+and lets update to be subscribed only to current canvas page, not all pages
+
+---
+
+still stuck when i send a message. looks like it doesnt even send the request
+
+---
+
+server restarted, try again
+
+---
+
+now its working but the reasoning etc is not being streamed to the page
+
+---
+
+why stoped?
+
+---
+
+[Request interrupted by user for tool use]
