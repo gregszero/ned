@@ -1,0 +1,133 @@
+Implement the following plan:
+
+# Daily Briefing Skill
+
+## Context
+
+The ai.rb framework has full skill infrastructure (base class, loader, DB model, scheduler) but **zero example skills**. A daily briefing skill is the ideal first example because it exercises every major framework feature: scheduling, web_fetch, page creation, notifications, and self-rescheduling. It's also genuinely useful — Ned greets you each morning with weather and news.
+
+## What It Does
+
+A skill that runs each morning and:
+1. Fetches weather for a configured city (wttr.in — no API key needed)
+2. Fetches top news headlines (via RSS/free API)
+3. Creates or updates a "Daily Briefing" page in the sidebar
+4. Sends a notification ("Your morning briefing is ready")
+5. Reschedules itself for the next morning
+
+## Files to Create/Modify
+
+### 1. Create `skills/daily_briefing.rb`
+
+The skill class inheriting from `Ai::Skill`:
+
+```ruby
+class DailyBriefing < Ai::Skill
+  description "Fetches weather and news, creates a daily briefing page"
+  param :city, :string, required: false, description: "City for weather (default: Zurich)"
+
+  def call(city: nil)
+    city ||= Ai::Config.get("briefing_city") || "Zurich"
+
+    # Fetch weather from wttr.in (free, no API key)
+    weather = fetch_weather(city)
+
+    # Fetch news headlines from a free RSS feed
+    news = fetch_news
+
+    # Build HTML content
+    html = build_briefing_html(city, weather, news)
+
+    # Create or update the briefing page
+    page = upsert_page(html)
+
+    # Send notification
+    create_notification(page)
+
+    # Reschedule for tomorrow morning
+    reschedule_for_tomorrow
+
+    { success: true, page_url: "/pages/#{page.slug}" }
+  end
+end
+```
+
+Key implementation details:
+- **Weather**: GET `https://wttr.in/{city}?format=j1` — returns JSON with current conditions, temperature, humidity, wind
+- **News**: GET `https://hacker-news.firebaseio.com/v0/topstories.json` for top 5 story IDs, then fetch each story's details — free, no API key
+- **Page upsert**: Find existing `AiPage` with slug `daily-briefing` and update content, or create if first run
+- **Reschedule**: Create a new `ScheduledTask` with `skill_name: "daily_briefing"` and `scheduled_for` set to tomorrow at 7:00 AM (configurable via `Config`)
+- **Notification**: Create an info notification with a link to the briefing page
+
+### 2. Create `SkillRecord` in DB (via migration or seed)
+
+Add a migration that seeds the skill record so it's available immediately:
+
+**Create `workspace/migrations/YYYYMMDDNNNNNN_seed_daily_briefing_skill.rb`**:
+```ruby
+class SeedDailyBriefingSkill < ActiveRecord::Migration[8.0]
+  def up
+    execute <<-SQL
+      INSERT INTO skills (name, description, file_path, class_name, usage_count, metadata, created_at, updated_at)
+      VALUES ('daily_briefing', 'Fetches weather and news, creates a daily briefing page',
+              'skills/daily_briefing.rb', 'DailyBriefing', 0, '{}',
+              datetime('now'), datetime('now'))
+    SQL
+  end
+
+  def down
+    execute "DELETE FROM skills WHERE name = 'daily_briefing'"
+  end
+end
+```
+
+### 3. No other files need changes
+
+- The skill auto-loads via `SkillLoader.load_all` which scans `skills/**/*.rb`
+- The `run_skill` MCP tool already handles execution
+- The scheduler already picks up `ScheduledTask.due` records
+- Published pages already appear in the sidebar nav
+
+## Self-Rescheduling Pattern
+
+Since `ScheduledTask` is one-shot (pending → completed), the skill reschedules itself:
+
+```ruby
+def reschedule_for_tomorrow
+  hour = (Ai::Config.get("briefing_hour") || "7").to_i
+  tomorrow = (Time.now + 86400).then { |t| Time.new(t.year, t.month, t.day, hour, 0, 0) }
+
+  Ai::ScheduledTask.create!(
+    title: "Daily Briefing",
+    description: "Run the daily briefing skill",
+    scheduled_for: tomorrow,
+    skill_name: "daily_briefing",
+    parameters: {}
+  )
+end
+```
+
+## Configuration
+
+Uses the existing `Config` model (key-value store):
+- `briefing_city` — city for weather (default: "Zurich", since you're in Switzerland)
+- `briefing_hour` — hour to run (default: "7")
+
+These can be set via the Settings page or by the agent.
+
+## Verification
+
+1. Run `./ai.rb db:migrate` to create the skill record
+2. Start the server: `./ai.rb server`
+3. Test manually via the MCP tool: ask Ned to "run the daily_briefing skill"
+4. Verify: a "Daily Briefing" page appears in the sidebar with weather + news
+5. Verify: a notification appears
+6. Verify: a new `ScheduledTask` is created for the next morning
+7. Check the `/jobs` page to see the scheduled task
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit
