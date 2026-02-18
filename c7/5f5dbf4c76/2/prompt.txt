@@ -1,0 +1,343 @@
+Implement the following plan:
+
+# Self-Contained Widget Package System
+
+## Context
+
+Canvas widgets are currently raw HTML blobs — no type dispatch, no widget-specific JS, no separation from core canvas code. The weather widget is hardcoded static HTML. The daily briefing skill bundles weather + HackerNews into one monolithic AiPage — these should be separate canvas widgets with independent refresh schedules.
+
+**Goal:** Each widget = one Ruby file (+ optional JS file). Auto-discovered, auto-rendered, auto-refreshable. The AI creates unlimited widget types by adding files — never touching core canvas/chat code. Weather and HN become independent refreshable widgets. The daily briefing skill is simplified to just place these widgets on a canvas.
+
+## Architecture
+
+```
+ai/widgets/
+  base_widget.rb           # Base class: registry, render_component_html, refresh DSL
+  note_widget.rb           # Static card (existing "Add Note")
+  clock_widget.rb          # Client-side JS (ticking clock)
+  weather_widget.rb        # Server-side refresh via wttr.in (extracted from daily_briefing.rb)
+  hacker_news_widget.rb    # Server-side refresh via HN Firebase API (extracted from daily_briefing.rb)
+
+web/public/js/widgets/
+  registry.js              # window.widgetBehaviors = {}; window.registerWidget(type, {init, destroy})
+  clock.js                 # Clock tick interval
+```
+
+**Convention:** `component_type` in DB maps to `widget_type` in Ruby and `data-widget-type` in DOM. Metadata JSON drives rendering — `content` is a rendered HTML cache.
+
+## Files to Modify
+
+| File | Change |
+|---|---|
+| `ai/widgets/base_widget.rb` | **New** — base class with ObjectSpace registry, `render_component_html`, `render_content`, `refresh_data!` |
+| `ai/widgets/note_widget.rb` | **New** — simple card widget |
+| `ai/widgets/clock_widget.rb` | **New** — clock with timezone metadata |
+| `ai/widgets/weather_widget.rb` | **New** — weather with refresh via wttr.in, renders from metadata |
+| `ai/widgets/hacker_news_widget.rb` | **New** — HN top stories with refresh via Firebase API |
+| `web/public/js/widgets/registry.js` | **New** — `registerWidget(type, {init, destroy})` |
+| `web/public/js/widgets/clock.js` | **New** — `setInterval` tick |
+| `ai/models/canvas_component.rb` | Add `render_html` and `render_content` delegating to widget registry |
+| `ai/bootstrap.rb` | Add `Dir[root.join('ai/widgets/**/*.rb')]` load line |
+| `ai/tools/add_canvas_component_tool.rb` | Replace inline HTML with `component.render_html` |
+| `ai/tools/update_canvas_component_tool.rb` | Same |
+| `web/app.rb` | Same in POST route; add `GET /api/widget_types` endpoint; add auto-render after create |
+| `web/public/js/controllers/canvas_controller.js` | Extend `initComponent` with widget dispatch; add `destroyComponent`; fetch widget types for dynamic context menu |
+| `web/public/js/controllers/chat_footer_controller.js` | Add `data-widget-type`/`data-widget-metadata` to `_renderCanvasComponent` |
+| `web/public/js/application.js` | Import `registry.js` and `clock.js` |
+| `skills/daily_briefing.rb` | **Modify** — simplify to place weather + HN widgets on a canvas instead of building monolithic HTML |
+
+## Implementation
+
+### Step 1: Base Widget Class
+
+Create `ai/widgets/base_widget.rb`:
+
+```ruby
+module Ai
+  module Widgets
+    class BaseWidget
+      class << self
+        attr_reader :widget_type_name, :menu_label_text, :menu_icon_text
+
+        def widget_type(name)           = @widget_type_name = name.to_s
+        def menu_label(label)           = @menu_label_text = label
+        def menu_icon(icon)             = @menu_icon_text = icon
+        def refreshable?                = false
+        def refresh_interval            = nil
+        def default_metadata            = {}
+
+        def registry
+          @registry ||= ObjectSpace.each_object(Class)
+            .select { |c| c < BaseWidget && c.widget_type_name }
+            .each_with_object({}) { |c, h| h[c.widget_type_name] = c }
+        end
+
+        def reset_registry! = @registry = nil
+        def for_type(type)  = registry[type.to_s]
+      end
+
+      def initialize(component)
+        @component = component
+        @metadata = component.metadata || {}
+      end
+
+      def render_content = @component.content || ''
+
+      def render_component_html
+        c = @component
+        style = "left:#{c.x}px;top:#{c.y}px;width:#{c.width}px;"
+        style += "height:#{c.height}px;" if c.height
+        meta_json = (@metadata || {}).to_json.gsub('"', '&quot;')
+        <<~HTML
+          <div class="canvas-component" id="canvas-component-#{c.id}"
+               data-component-id="#{c.id}" data-widget-type="#{c.component_type}"
+               data-widget-metadata="#{meta_json}"
+               style="#{style}" data-z="#{c.z_index}">
+            <div class="canvas-component-content">#{render_content}</div>
+          </div>
+        HTML
+      end
+
+      def refresh_data! = false
+    end
+  end
+end
+```
+
+### Step 2: Three Example Widgets
+
+**`ai/widgets/note_widget.rb`** — static card:
+```ruby
+widget_type 'card'
+menu_label 'Add Note'
+menu_icon '📝'
+
+def render_content
+  @metadata['text'] || @component.content || '<p style="color:var(--muted-foreground);margin:0">Double-click to edit...</p>'
+end
+```
+
+**`ai/widgets/clock_widget.rb`** — client-side JS:
+```ruby
+widget_type 'clock'
+menu_label 'Add Clock'
+menu_icon '🕐'
+def self.default_metadata = { timezone: 'UTC', label: 'UTC' }
+
+def render_content
+  # Renders static shell; JS widget behavior animates the display
+end
+```
+
+**`ai/widgets/weather_widget.rb`** — server-side refresh (data logic extracted from `skills/daily_briefing.rb`):
+```ruby
+widget_type 'weather'
+menu_label 'Add Weather'
+menu_icon '☀️'
+def self.refreshable? = true
+def self.refresh_interval = 1800 # 30 min
+def self.default_metadata = { city: 'Zurich', country: 'CH' }
+
+def render_content
+  # Renders from @metadata: city, temp_c, feels_like_c, humidity, description, wind_kmph, wind_dir
+end
+
+def refresh_data!
+  # GET https://wttr.in/{city}?format=j1 (same as daily_briefing.rb#fetch_weather)
+  # Parse current_condition, merge into metadata, re-render content, return true if changed
+end
+```
+
+**`ai/widgets/hacker_news_widget.rb`** — server-side refresh (data logic extracted from `skills/daily_briefing.rb`):
+```ruby
+widget_type 'hacker_news'
+menu_label 'Add HN Feed'
+menu_icon '📰'
+def self.refreshable? = true
+def self.refresh_interval = 3600 # 1 hour
+def self.default_metadata = { count: 5 }
+
+def render_content
+  # Renders @metadata['stories'] as a list: title, url, score
+end
+
+def refresh_data!
+  # GET HN Firebase API topstories + item details (same as daily_briefing.rb#fetch_news)
+  # Store stories array in metadata, re-render content, return true if changed
+end
+```
+
+### Step 3: CanvasComponent Model — Render Delegation
+
+Add to `ai/models/canvas_component.rb`:
+
+```ruby
+def render_html
+  widget_class = Ai::Widgets::BaseWidget.for_type(component_type)
+  widget_class ? widget_class.new(self).render_component_html : fallback_html
+end
+
+def render_content_html
+  widget_class = Ai::Widgets::BaseWidget.for_type(component_type)
+  widget_class ? widget_class.new(self).render_content : content
+end
+
+private
+
+def fallback_html
+  # Same inline HTML as today (backward compat for unknown types)
+end
+```
+
+### Step 4: DRY Up Broadcast HTML (3 sites → `component.render_html`)
+
+- `ai/tools/add_canvas_component_tool.rb` — replace `component_html(c)` method body with `component.render_html`
+- `ai/tools/update_canvas_component_tool.rb` — same
+- `web/app.rb` POST `/api/pages/:id/components` — replace inline HTML with `component.render_html`
+
+Also: after component creation, auto-render content from widget if content is blank:
+```ruby
+# In POST route / add_canvas_component_tool, after create!:
+if component.content.blank?
+  rendered = component.render_content_html
+  component.update_column(:content, rendered) if rendered != component.content
+end
+```
+
+### Step 5: Bootstrap Loading
+
+Add to `ai/bootstrap.rb` after jobs loading:
+```ruby
+Dir[root.join('ai/widgets/**/*.rb')].sort.each { |f| require f }
+```
+
+### Step 6: Widget Types API Endpoint
+
+Add to `web/app.rb` inside `r.on 'api'`:
+```ruby
+r.on 'widget_types' do
+  r.get do
+    types = Ai::Widgets::BaseWidget.registry.map do |type, klass|
+      { type: type, label: klass.menu_label_text || type.titleize,
+        icon: klass.menu_icon_text, defaults: klass.default_metadata }
+    end
+    { widget_types: types }
+  end
+end
+```
+
+### Step 7: JS Widget Registry + Clock
+
+**`web/public/js/widgets/registry.js`:**
+```js
+window.widgetBehaviors = {}
+window.registerWidget = (type, behavior) => { window.widgetBehaviors[type] = behavior }
+```
+
+**`web/public/js/widgets/clock.js`:**
+```js
+registerWidget('clock', {
+  init(el, metadata) {
+    const tz = metadata.timezone || 'UTC'
+    const display = el.querySelector('[data-clock-display]')
+    const tick = () => { display.textContent = new Date().toLocaleTimeString('en-US', { timeZone: tz, hour12: false }) }
+    tick(); el._clockInterval = setInterval(tick, 1000)
+  },
+  destroy(el) { clearInterval(el._clockInterval) }
+})
+```
+
+**`application.js`** — add imports before controllers:
+```js
+import "/js/widgets/registry.js"
+import "/js/widgets/clock.js"
+```
+
+### Step 8: Canvas Controller — Widget Lifecycle + Dynamic Menu
+
+In `canvas_controller.js`:
+
+**`initComponent`** — add widget dispatch:
+```js
+initComponent(el) {
+  el.style.zIndex = el.dataset.z || 0
+  const type = el.dataset.widgetType
+  if (type && window.widgetBehaviors?.[type]?.init) {
+    const meta = JSON.parse(el.dataset.widgetMetadata || '{}')
+    window.widgetBehaviors[type].init(el, meta)
+  }
+}
+```
+
+**Add `destroyComponent`** — called before removing nodes:
+```js
+destroyComponent(el) {
+  const type = el.dataset.widgetType
+  if (type && window.widgetBehaviors?.[type]?.destroy) {
+    window.widgetBehaviors[type].destroy(el)
+  }
+}
+```
+
+**Dynamic context menu** — on connect, fetch `/api/widget_types` and build `canvasMenuItems` from the response instead of hardcoding. Fallback to hardcoded items if fetch fails.
+
+**Remove** hardcoded `addWeatherWidget` / `weatherWidgetHtml` methods — replaced by the generic `addWidget(type, x, y)` that POSTs with `component_type` and `metadata: defaultMetadata`.
+
+### Step 9: chat_footer_controller.js — Metadata in Rendered HTML
+
+Update `_renderCanvasComponent(comp)` to include `data-widget-type` and `data-widget-metadata` attributes so widget init fires when components are loaded from the canvas API.
+
+### Step 10: Widget Refresh Job
+
+Create `ai/jobs/widget_refresh_job.rb` — a single job that refreshes all refreshable widgets:
+
+```ruby
+def perform
+  Ai::Widgets::BaseWidget.registry.each do |type, widget_class|
+    next unless widget_class.refreshable? && widget_class.refresh_interval
+    CanvasComponent.where(component_type: type).find_each do |component|
+      widget = widget_class.new(component)
+      if widget.refresh_data!
+        turbo = "<turbo-stream action=\"replace\" target=\"canvas-component-#{component.id}\">
+                   <template>#{widget.render_component_html}</template></turbo-stream>"
+        Ai::Web::TurboBroadcast.broadcast("canvas:#{component.ai_page_id}", turbo)
+      end
+    end
+  end
+end
+```
+
+Register in `ai/scheduler.rb` — poll every 5 minutes, each widget type declares its own interval and the job skips components refreshed too recently (check `updated_at` vs `refresh_interval`).
+
+### Step 11: Refactor Daily Briefing Skill
+
+Simplify `skills/daily_briefing.rb` — instead of fetching weather/HN and building monolithic HTML, it now:
+
+1. Finds or creates a "Daily Briefing" canvas (AiPage)
+2. Ensures a weather widget exists on it (component_type: 'weather', metadata: { city: configured_city })
+3. Ensures an HN widget exists on it (component_type: 'hacker_news')
+4. Triggers an immediate refresh on both widgets
+5. Creates the notification as before
+6. Reschedules for tomorrow as before
+
+The weather/HN data fetching logic moves entirely into their respective widget classes. The skill becomes a thin orchestrator — ~30 lines instead of ~150.
+
+## Verification
+
+1. `./ai.rb server` — starts clean, widgets auto-discovered
+2. Right-click canvas — menu shows "Add Note", "Add Clock", "Add Weather", "Add HN Feed" (from `/api/widget_types`)
+3. Add a clock widget — ticks every second via JS
+4. Add a note — double-click to edit still works
+5. Add a weather widget — renders from metadata, refreshes every 30 min via WidgetRefreshJob
+6. Add an HN feed widget — renders top 5 stories, refreshes every hour
+7. Turbo Stream broadcast — add component on one tab, appears on another via SSE
+8. Agent uses `add_canvas_component(component_type: 'clock', metadata: {timezone: 'Europe/Zurich', label: 'Zurich'})` — clock appears and ticks
+9. Daily briefing runs — creates/updates canvas with weather + HN widgets, both refresh independently
+10. Create a brand-new widget by adding one Ruby file — it shows up in context menu on next server restart
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit
