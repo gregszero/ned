@@ -1,0 +1,108 @@
+Implement the following plan:
+
+# Plan: Canvas-linked Notifications with Submenu
+
+## Context
+
+Notifications are currently standalone — they have an optional `conversation_id` but no canvas link. Clicking a notification navigates to the `/notifications` page. The goal is to make every notification belong to a Canvas (`AiPage`), and when clicked, show a submenu that lets the user either open an existing conversation on that canvas or create a new one prefilled with the notification content.
+
+## Changes
+
+### 1. Migration: Add `ai_page_id` to notifications
+
+**File:** `workspace/migrations/YYYYMMDDNNNNNN_add_ai_page_id_to_notifications.rb`
+
+- Add `ai_page_id` integer column (NOT NULL, FK to `ai_pages`)
+- Index on `ai_page_id`
+
+### 2. Model: Update `Ai::Notification`
+
+**File:** `ai/models/notification.rb`
+
+- Add `belongs_to :ai_page`
+- Update `start_conversation!` to create the conversation on `self.ai_page` (set `ai_page_id` on the new conversation)
+- Add validation for `ai_page_id` presence
+
+### 3. Tool: Update `create_notification`
+
+**File:** `ai/tools/create_notification_tool.rb`
+
+- Add required `canvas_id` argument (the `ai_page_id`)
+- Pass it through to `Notification.create!`
+
+### 4. View: Notification card with submenu
+
+**File:** `web/view_helpers.rb` — `render_notification_card_html`
+
+Replace "Start Chat" button with a "Go to Canvas" button that toggles a submenu dropdown inline. The submenu lists:
+- Existing conversations on the notification's canvas (clickable links)
+- A "New Chat" option that creates a conversation with the notification content
+
+The submenu is pure HTML/CSS (details/summary or a toggle class) — no JS controller needed. Each option calls JS: `chatFooter.openCanvas(...)` for existing convos, or does a POST to create + open.
+
+### 5. Route: Add API endpoint for notification→chat on canvas
+
+**File:** `web/app.rb`
+
+- Update `POST /notifications/:id/chat` to create the conversation on the notification's canvas, return JSON `{conversation_id, title, slug, page_id, page_title, page_slug}` so the JS can call `chatFooter.openCanvas(...)` directly instead of doing a full redirect.
+- Keep `POST /notifications/:id/read` as-is.
+
+### 6. Notification card interaction (JS-driven)
+
+**File:** `web/view_helpers.rb`
+
+The notification card will have:
+- Click on the card body → toggle a submenu panel below it
+- The submenu shows: canvas name, list of its conversations, and "New Chat" button
+- Clicking a conversation → `chatFooter.openCanvas(pageId, title, slug, convId, convTitle, convSlug)` + mark notification read
+- Clicking "New Chat" → `fetch POST /notifications/:id/chat` → gets back canvas+conversation info → `chatFooter.openCanvas(...)` + mark notification read
+
+### 7. Broadcast update
+
+**File:** `ai/models/notification.rb`
+
+Update `broadcast!` to include the canvas info in the rendered card HTML (the `ai_page` association data is needed for the submenu).
+
+## Files to Modify
+
+| File | Change |
+|---|---|
+| `workspace/migrations/new` | Add `ai_page_id` to notifications |
+| `ai/models/notification.rb` | `belongs_to :ai_page`, update `start_conversation!` |
+| `ai/tools/create_notification_tool.rb` | Add `canvas_id` argument |
+| `web/view_helpers.rb` | Rewrite notification card with submenu |
+| `web/app.rb` | Update `/notifications/:id/chat` to return JSON |
+| `web/public/css/style.css` | Submenu styling (if needed) |
+
+## Verification
+
+1. Run `./ai.rb db:migrate`
+2. Start server with `./ai.rb server`
+3. Create a notification via the MCP tool with a `canvas_id`
+4. Verify the notification card shows in the notification list with a submenu
+5. Click a notification → submenu appears with canvas conversations
+6. Click "New Chat" → opens canvas with new conversation prefilled with notification content
+7. Click existing conversation → opens that canvas + conversation
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+when i click in the notification bell does not open anything it seems to subscribe mutiple times to notifications,  TypeError: Cannot read properties of undefined (reading 'renderMethod')
+    at FrameView.render (turbo.es2017-esm.js:1490:79)
+    at async #loadFrameResponse (turbo.es2017-esm.js:6001:7)
+    at async FrameController.loadResponse (turbo.es2017-esm.js:5824:11)
+    at async FrameController.requestSucceededWithResponse (turbo.es2017-esm.js:5898:5)
+
+---
+
+now when i click in the bell it makes a request to notifications that is returning html but the dropdown does not appear
+
+---
+
+remove the notifications page. the bell should only show a dropdown with the latest 5 notifications with a button below to loadmore (paginate? use pagy gem if paginates)
+
+---
+
+commit
