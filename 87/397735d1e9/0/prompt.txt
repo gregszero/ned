@@ -1,0 +1,21 @@
+change the app colors to terminal green instead of purple
+
+---
+
+commit this
+
+---
+
+make a bit darker green
+
+---
+
+in lightmode can we make the white less white? its too strong in the eyes
+
+---
+
+still everything too bright look
+
+---
+
+commit this
