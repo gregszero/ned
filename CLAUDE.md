@@ -136,6 +136,19 @@ Light and dark mode tokens are defined as CSS custom properties. The `--ned-*` a
 
 Tailwind CSS is loaded via CDN with custom colors: `ned-bg`, `ned-fg`, `ned-muted`, `ned-muted-fg`, `ned-accent`, `ned-accent-fg`, `ned-border`, `ned-card`, `ned-primary`, `ned-ring`.
 
+## Event System
+
+`Ai::EventBus` is a simple in-process pub/sub for decoupled automation. Call `EventBus.emit("event:name", data)` to fire an event. Triggers and workflows listen for matching events.
+
+**Emit points** are wired into:
+- `ScheduledTaskRunnerJob` → `task:completed:*` / `task:failed:*`
+- `HeartbeatRunnerJob` → `heartbeat:escalated:*` / `heartbeat:error:*`
+- `Notification#broadcast!` → `notification:created:*`
+
+**Triggers** (`ai/models/trigger.rb`) match events via glob patterns and fire a skill or prompt.
+
+**Workflows** (`ai/models/workflow.rb`) are multi-step pipelines with step types: `skill`, `prompt`, `condition`, `wait`, `notify`. Steps pass data via a JSON context hash with `{{context.step_name}}` interpolation. Workflows can auto-start on a `trigger_event`.
+
 ## Key Files
 
 | File | Purpose |
@@ -144,6 +157,7 @@ Tailwind CSS is loaded via CDN with custom colors: `ned-bg`, `ned-fg`, `ned-mute
 | `ai/bootstrap.rb` | Framework loader |
 | `ai/agent.rb` | Claude subprocess execution |
 | `ai/mcp_server.rb` | FastMCP tool/resource registration |
+| `ai/event_bus.rb` | In-process event pub/sub for triggers and workflows |
 | `web/app.rb` | All Roda routes |
 | `web/views/layout.erb` | Main layout with sidebar nav |
 | `web/view_helpers.rb` | HTML rendering helpers (turbo_stream, markdown, message/notification cards) |
@@ -159,6 +173,8 @@ Tailwind CSS is loaded via CDN with custom colors: `ned-bg`, `ned-fg`, `ned-mute
 | `run_code` | `ai/tools/run_code_tool.rb` | Execute Ruby code with model access |
 | `run_skill` | `ai/tools/run_skill_tool.rb` | Execute saved skills by name |
 | `send_message` | `ai/tools/send_message_tool.rb` | Send message + broadcast via SSE |
-| `schedule_task` | `ai/tools/schedule_task_tool.rb` | Schedule future tasks/reminders |
+| `schedule_task` | `ai/tools/schedule_task_tool.rb` | Schedule future tasks/reminders (supports `cron:` for recurring) |
 | `create_page` | `ai/tools/create_page_tool.rb` | Create AiPage (appears in nav) |
 | `create_notification` | `ai/tools/create_notification_tool.rb` | Create + broadcast notification |
+| `create_trigger` | `ai/tools/create_trigger_tool.rb` | Create event trigger (fires skill/prompt on matching event) |
+| `create_workflow` | `ai/tools/create_workflow_tool.rb` | Create multi-step workflow pipeline |
