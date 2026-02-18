@@ -57,12 +57,6 @@
         <% Ai::AiPage.published.recent.each do |page| %>
           <a href="/<%= page.slug %>" onclick="if(window.chatFooter){chatFooter.openCanvas(<%= page.id %>, '<%= page.title.gsub("'", "\\\\'") %>', '<%= page.slug %>');return false}"><%= page.title %></a>
         <% end %>
-        <a href="/notifications" data-turbo-frame="canvas-content" class="flex items-center justify-between">
-          Notifications
-          <% if (unread = Ai::Notification.unread.count) > 0 %>
-            <span class="badge"><%= unread %></span>
-          <% end %>
-        </a>
         <a href="/jobs" data-turbo-frame="canvas-content">Jobs & Skills</a>
         <a href="/settings" data-turbo-frame="canvas-content">Settings</a>
       </nav>
@@ -77,18 +71,29 @@
       </svg>
     </label>
     <span class="text-ned-primary font-semibold text-lg tracking-tight">Ned</span>
-    <a href="/notifications" data-turbo-frame="canvas-content" class="no-underline hover:no-underline">
-      <button class="icon ghost relative" type="button">
+    <div class="relative" data-controller="notifications">
+      <button type="button" class="icon ghost relative" data-action="click->notifications#toggle">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
-        <% if (unread ||= Ai::Notification.unread.count) > 0 %>
+        <% if (unread = Ai::Notification.unread.count) > 0 %>
           <span id="notifications-badge" class="notification-badge absolute -top-1 -right-1"><%= unread %></span>
         <% else %>
           <span id="notifications-badge" class="notification-badge absolute -top-1 -right-1 hidden">0</span>
         <% end %>
       </button>
-    </a>
+      <div class="notifications-dropdown" data-notifications-target="dropdown" style="display:none">
+        <div class="notifications-dropdown-header">
+          <span class="text-sm font-semibold">Notifications</span>
+        </div>
+        <div id="notifications-list" class="notifications-dropdown-list" data-notifications-target="list">
+          <div class="p-4 text-center text-ned-muted-fg text-xs">Loading...</div>
+        </div>
+        <div data-notifications-target="loadMore" style="display:none" class="notifications-dropdown-footer">
+          <button type="button" class="ghost xs w-full" data-action="click->notifications#loadMore">Load more</button>
+        </div>
+      </div>
+    </div>
   </header>
 
   <!-- Canvas area -->
@@ -134,6 +139,14 @@
       if (!toggle || !toggle.checked) return;
       if (e.target.matches('.sidebar-container > label') || e.target.closest('.sidebar nav a')) {
         toggle.checked = false;
+      }
+    });
+    // Hide canvas overlays when turbo-frame content loads (non-canvas pages like jobs, settings)
+    document.addEventListener('turbo:frame-load', function(e) {
+      if (e.target.id === 'canvas-content') {
+        document.querySelectorAll('.conversation-canvas.active').forEach(function(c) {
+          c.classList.remove('active');
+        });
       }
     });
   </script>

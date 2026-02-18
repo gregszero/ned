@@ -350,6 +350,155 @@ button.icon.sm {
   border-left: 3px solid var(--primary);
 }
 
+/* --- Notifications Dropdown --- */
+
+.notifications-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 100;
+  width: 360px;
+  max-height: 480px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  display: flex;
+  flex-direction: column;
+  animation: ctx-menu-in 0.12s ease-out;
+}
+
+.notifications-dropdown-header {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.notifications-dropdown-list {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.notifications-dropdown-list .card {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  box-shadow: none;
+  padding: 0.75rem 1rem;
+}
+.notifications-dropdown-list .card:last-child {
+  border-bottom: none;
+}
+
+.notifications-dropdown-list .notification-unread {
+  border-left: 3px solid var(--primary);
+}
+
+.notifications-dropdown-footer {
+  border-top: 1px solid var(--border);
+  padding: 0.5rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 639px) {
+  .notifications-dropdown {
+    width: calc(100vw - 1rem);
+    right: -0.5rem;
+  }
+}
+
+/* --- Notification Card Submenu --- */
+
+.notification-submenu {
+  position: relative;
+}
+
+.notification-submenu > summary {
+  cursor: pointer;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  border-radius: 0.375rem;
+  transition: background 0.15s;
+}
+.notification-submenu > summary:hover {
+  background: var(--muted);
+}
+.notification-submenu > summary::-webkit-details-marker {
+  display: none;
+}
+.notification-submenu > summary::after {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid var(--muted-foreground);
+  margin-left: 0.25rem;
+}
+
+.notification-submenu-panel {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  min-width: 220px;
+  max-width: 320px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  padding: 0.25rem;
+  animation: ctx-menu-in 0.12s ease-out;
+}
+
+.notification-submenu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  width: 100%;
+  height: auto;
+  padding: 0.375rem 0.625rem;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  text-align: left;
+}
+.notification-submenu-item:hover {
+  background: var(--muted);
+  opacity: 1;
+}
+
+.notification-submenu-new {
+  color: var(--primary);
+}
+
+.notification-submenu-section {
+  font-weight: 500;
+}
+
+.notification-submenu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.25rem 0;
+}
+
 .nav-trigger {
   cursor: pointer;
   display: inline-flex;

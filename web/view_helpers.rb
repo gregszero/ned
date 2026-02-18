@@ -57,25 +57,46 @@ module Ai
       def render_notification_card_html(notification)
         kind = badge_class(notification.kind)
         unread_class = notification.status == 'unread' ? ' notification-unread' : ''
+        page = notification.ai_page
+        conversations = page ? page.conversations.recent.limit(5) : []
+
+        canvas_label = page ? ERB::Util.html_escape(page.title) : 'No Canvas'
+
+        submenu_items = conversations.map do |conv|
+          conv_title = ERB::Util.html_escape(conv.title)
+          %(<button type="button" class="notification-submenu-item" onclick="chatFooter.openCanvas(#{page.id}, '#{escape_js(page.title)}', '#{escape_js(page.slug)}', #{conv.id}, '#{escape_js(conv.title)}', '#{escape_js(conv.slug)}'); fetch('/notifications/#{notification.id}/read', {method:'POST'}); document.querySelector('.notifications-dropdown').style.display='none'"><span class="text-sm">#{conv_title}</span><span class="text-xs text-ned-muted-fg">#{conv.last_message_at&.strftime('%b %d, %H:%M')}</span></button>)
+        end.join("\n")
+
+        new_chat_button = %(<button type="button" class="notification-submenu-item notification-submenu-new" onclick="fetch('/notifications/#{notification.id}/chat', {method:'POST'}).then(r=>r.json()).then(d=>{chatFooter.openCanvas(d.page_id, d.page_title, d.page_slug, d.conversation_id, d.title, d.slug)}); document.querySelector('.notifications-dropdown').style.display='none'"><span class="text-sm font-medium">+ New Chat</span></button>)
 
         <<~HTML
           <div id="notification-#{notification.id}" class="card#{unread_class}">
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <h3 class="text-base font-semibold">#{ERB::Util.html_escape(notification.title)}</h3>
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-sm font-semibold truncate">#{ERB::Util.html_escape(notification.title)}</span>
                 <span class="badge #{kind}">#{notification.kind || 'info'}</span>
               </div>
-              <span class="text-xs text-ned-muted-fg">#{notification.created_at&.strftime('%b %d, %H:%M')}</span>
+              <span class="text-xs text-ned-muted-fg shrink-0">#{notification.created_at&.strftime('%b %d, %H:%M')}</span>
             </div>
-            #{"<p class=\"text-sm text-ned-muted-fg mt-1\">#{ERB::Util.html_escape(notification.body)}</p>" if notification.body.present?}
-            <div class="flex justify-end gap-2 mt-3">
-              #{"<form action=\"/notifications/#{notification.id}/read\" method=\"post\" class=\"inline\"><button type=\"submit\" class=\"ghost xs\">Mark Read</button></form>" if notification.status == 'unread'}
-              <form action="/notifications/#{notification.id}/chat" method="post" class="inline">
-                <button type="submit" class="xs">Start Chat</button>
-              </form>
+            #{"<p class=\"text-xs text-ned-muted-fg mt-0.5 line-clamp-2\">#{ERB::Util.html_escape(notification.body)}</p>" if notification.body.present?}
+            <div class="flex items-center justify-between mt-2">
+              <details class="notification-submenu">
+                <summary class="xs outline">#{canvas_label}</summary>
+                <div class="notification-submenu-panel">
+                  #{"<div class=\"notification-submenu-section text-xs text-ned-muted-fg px-2 py-1\">Conversations</div>" if conversations.any?}
+                  #{submenu_items}
+                  #{"<div class=\"notification-submenu-divider\"></div>" if conversations.any?}
+                  #{new_chat_button}
+                </div>
+              </details>
+              #{"<button type=\"button\" class=\"ghost xs\" onclick=\"fetch('/notifications/#{notification.id}/read', {method:'POST'}); this.closest('.card').classList.remove('notification-unread'); this.remove()\">Mark Read</button>" if notification.status == 'unread'}
             </div>
           </div>
         HTML
+      end
+
+      def escape_js(str)
+        str.to_s.gsub("'", "\\\\'").gsub("\n", "\\n")
       end
     end
   end

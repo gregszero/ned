@@ -53,7 +53,7 @@ These are the tools available to you. **Only use these — do not invent or hall
 | `send_message` | Send a message back to the user (broadcasts in real-time) |
 | `schedule_task` | Schedule a task for future execution (reminders, timed tasks) |
 | `create_page` | Create a web page (AiPage) with title and HTML/markdown content |
-| `create_notification` | Create a notification (info/success/warning/error) |
+| `create_notification` | Create a notification (info/success/warning/error) linked to a canvas |
 | `add_canvas_component` | Add a positioned component/widget to the current canvas |
 | `update_canvas_component` | Update content, position, or size of a canvas component |
 | `remove_canvas_component` | Remove a component from the canvas |

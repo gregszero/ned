@@ -179,24 +179,26 @@ module Ai
             r.post do
               notification = Ai::Notification.find(id)
               notification.mark_read!
-              r.redirect '/notifications'
+              { status: 'ok' }
             end
           end
 
-          # Start chat from notification
+          # Start chat from notification — returns JSON for JS-driven canvas opening
           r.on Integer, 'chat' do |id|
             r.post do
               notification = Ai::Notification.find(id)
               conversation = notification.start_conversation!
-              r.redirect "/conversations/#{conversation.id}"
-            end
-          end
+              notification.mark_read!
+              page = notification.ai_page
 
-          # List
-          r.is do
-            r.get do
-              @notifications = Ai::Notification.recent.limit(50)
-              render_canvas_or_layout(:notifications)
+              {
+                conversation_id: conversation.id,
+                title: conversation.title,
+                slug: conversation.slug,
+                page_id: page.id,
+                page_title: page.title,
+                page_slug: page.slug
+              }
             end
           end
         end
@@ -249,6 +251,23 @@ module Ai
 
         # API routes
         r.on 'api' do
+          r.on 'notifications' do
+            r.is do
+              r.get do
+                offset = (r.params['offset'] || 0).to_i
+                limit = (r.params['limit'] || 5).to_i.clamp(1, 20)
+
+                notifications = Ai::Notification.recent.offset(offset).limit(limit + 1).to_a
+                has_more = notifications.length > limit
+                notifications = notifications.first(limit)
+
+                html = notifications.map { |n| render_notification_card_html(n) }.join
+
+                { html: html, count: notifications.length, has_more: has_more }
+              end
+            end
+          end
+
           r.on 'conversations' do
             r.is do
               r.get do
