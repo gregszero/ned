@@ -17,3 +17,15 @@ bundler: failed to load command: puma (/home/greg/.local/share/mise/installs/rub
     from /home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/3.4.0/bundled_gems.rb:82:in 'block (2 levels) in Kernel#replace_require'
     from /home/greg/.local/share/mise/installs/ruby/3.4.7/lib/ruby/gems/3.4.0/gems/zeitwerk-2.7.4/lib...
 
+### Prompt 4
+
+! Unable to load application: NameError: uninitialized constant Pagy::Backend
+bundler: failed to load command: puma (/home/greg/.local/share/mise/installs/ruby/3.4.7/bin/puma)
+/home/greg/Developer/ai.rb/web/app.rb:21:in '<class:App>': uninitialized constant Pagy::Backend (NameError)
+
+      include Pagy::Backend
+                  ^^^^^^^^^
+    from /home/greg/Developer/ai.rb/web/app.rb:12:in '<module:Web>'
+    from /home/greg/Developer/ai.rb/web/app.rb:11:in '<module:Ai>'
+    from /home/greg/Deve...
+
