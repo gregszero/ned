@@ -1,0 +1,5 @@
+change the app colors to terminal green instead of purple
+
+---
+
+commit this
