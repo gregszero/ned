@@ -9,8 +9,10 @@ module Ai
     # Validations
     validates :title, presence: true
     validates :slug, presence: true, uniqueness: true
-    validates :content, presence: true
+    validates :content, length: { maximum: 1_000_000 }, allow_blank: true
     validates :status, presence: true, inclusion: { in: %w[draft published archived] }
+
+    has_many :conversations, foreign_key: :ai_page_id, dependent: :nullify
 
     # Statuses
     statuses :draft, :published, :archived

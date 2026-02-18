@@ -56,7 +56,7 @@ module Ai
 
         message_html = <<~HTML
           <div class="chat-msg ai" id="message-#{message.id}">
-            <div class="flex items-center gap-2 mb-1" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;opacity:0.6;">
+            <div class="msg-meta flex items-center gap-2 mb-1">
               <span>AI</span>
               <time>#{time}</time>
             </div>
@@ -66,7 +66,8 @@ module Ai
           </div>
         HTML
 
-        turbo_html = "<turbo-stream action=\"append\" target=\"messages\"><template>#{message_html}</template></turbo-stream>"
+        turbo_html = "<turbo-stream action=\"remove\" target=\"thinking-indicator-#{conversation.id}\"><template></template></turbo-stream>" \
+                     "<turbo-stream action=\"append\" target=\"messages-#{conversation.id}\"><template>#{message_html}</template></turbo-stream>"
         Ai::Web::TurboBroadcast.broadcast("conversation:#{conversation.id}", turbo_html)
       rescue => e
         Ai.logger.error "Failed to broadcast message: #{e.message}"

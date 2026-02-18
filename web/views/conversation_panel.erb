@@ -1,0 +1,26 @@
+<div class="chat-panel-inner" data-conversation-id="<%= @conversation.id %>">
+  <div id="messages-<%= @conversation.id %>" class="chat-panel-messages">
+    <% if @messages.empty? %>
+      <div class="py-8 text-center">
+        <p class="text-ned-muted-fg text-sm">Start a conversation...</p>
+      </div>
+    <% else %>
+      <% @messages.each do |message| %>
+        <%= render_message_html(message) %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <form class="chat-panel-form" data-action="submit->chat-footer#sendMessage">
+    <input type="hidden" name="conversation_id" value="<%= @conversation.id %>">
+    <textarea
+      name="content"
+      placeholder="Message Ned..."
+      rows="1"
+      required
+      class="chat-panel-input"
+      data-action="keydown->chat-footer#handleKeydown input->chat-footer#autoResize"
+    ></textarea>
+    <button type="submit" class="sm shrink-0">Send</button>
+  </form>
+</div>

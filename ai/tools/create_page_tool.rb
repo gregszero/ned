@@ -20,6 +20,12 @@ module Ai
           published_at: status == 'published' ? Time.current : nil
         )
 
+        # Link to current conversation if available
+        if ENV['CONVERSATION_ID']
+          conversation = Ai::Conversation.find_by(id: ENV['CONVERSATION_ID'])
+          conversation&.update!(ai_page: page) if conversation && conversation.ai_page_id.nil?
+        end
+
         Ai.logger.info "Created page '#{page.title}' at /pages/#{page.slug}"
 
         {

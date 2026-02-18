@@ -45,7 +45,7 @@
   <link rel="stylesheet" href="/css/style.css">
   <script type="module" src="/js/application.js"></script>
 </head>
-<body class="min-h-dvh">
+<body class="h-dvh flex flex-col overflow-hidden">
   <input type="checkbox" id="sidebar-toggle">
 
   <!-- Sidebar -->
@@ -54,37 +54,31 @@
     <aside class="sidebar">
       <div class="text-ned-primary font-semibold text-lg tracking-tight mb-6">Ned</div>
       <nav class="flex flex-col gap-0.5">
-        <a href="/conversations">Conversations</a>
         <% Ai::AiPage.published.recent.each do |page| %>
-          <a href="/pages/<%= page.slug %>"><%= page.title %></a>
+          <a href="/pages/<%= page.slug %>" data-turbo-frame="canvas-content"><%= page.title %></a>
         <% end %>
-        <a href="/notifications" class="flex items-center justify-between">
+        <a href="/notifications" data-turbo-frame="canvas-content" class="flex items-center justify-between">
           Notifications
           <% if (unread = Ai::Notification.unread.count) > 0 %>
             <span class="badge"><%= unread %></span>
           <% end %>
         </a>
-        <a href="/jobs">Jobs & Skills</a>
-        <a href="/settings">Settings</a>
+        <a href="/jobs" data-turbo-frame="canvas-content">Jobs & Skills</a>
+        <a href="/settings" data-turbo-frame="canvas-content">Settings</a>
       </nav>
-      <div class="mt-6">
-        <a href="/conversations" class="block">
-          <button class="sm w-full">+ New Chat</button>
-        </a>
-      </div>
     </aside>
   </div>
 
   <!-- Navbar -->
-  <header class="flex items-center justify-between px-4 h-14 border-b border-ned-border">
+  <header class="flex items-center justify-between px-4 h-14 border-b border-ned-border shrink-0">
     <label for="sidebar-toggle" class="nav-trigger">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     </label>
-    <a href="/conversations" class="text-ned-primary font-semibold text-lg tracking-tight no-underline hover:no-underline">Ned</a>
-    <a href="/notifications" class="no-underline hover:no-underline">
-      <button class="icon ghost relative" type="button" onclick="window.location='/notifications'; return false;">
+    <span class="text-ned-primary font-semibold text-lg tracking-tight">Ned</span>
+    <a href="/notifications" data-turbo-frame="canvas-content" class="no-underline hover:no-underline">
+      <button class="icon ghost relative" type="button">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
@@ -97,14 +91,33 @@
     </a>
   </header>
 
-  <!-- Page content -->
-  <main class="page-content max-w-7xl mx-auto p-6 w-full">
-    <%= yield %>
-  </main>
+  <!-- Canvas area -->
+  <div class="flex-1 overflow-hidden relative">
+    <!-- Regular page content (turbo-frame replaced) -->
+    <turbo-frame id="canvas-content" class="block h-full overflow-y-auto">
+      <main class="page-content max-w-7xl mx-auto p-6 w-full">
+        <%= yield %>
+      </main>
+    </turbo-frame>
 
-  <footer class="border-t border-ned-border px-6 py-4">
-    <p class="text-xs text-ned-muted-fg">Ned v0.1.0</p>
-  </footer>
+    <!-- Per-conversation canvas overlays -->
+    <div id="conversation-canvases"></div>
+  </div>
+
+  <!-- Chat Footer -->
+  <div class="chat-footer" data-controller="chat-footer">
+    <!-- Resize handle -->
+    <div class="chat-footer-handle" data-action="mousedown->chat-footer#startResize touchstart->chat-footer#startResize"></div>
+
+    <!-- Tab bar -->
+    <div class="chat-tab-bar" data-chat-footer-target="tabBar">
+      <div class="chat-tabs" data-chat-footer-target="tabs"></div>
+      <button class="chat-tab-new ghost xs" data-action="click->chat-footer#newTab" type="button" title="New conversation">+</button>
+    </div>
+
+    <!-- Panels container -->
+    <div class="chat-panels" data-chat-footer-target="panels"></div>
+  </div>
 
   <script>
     if ('serviceWorker' in navigator) {

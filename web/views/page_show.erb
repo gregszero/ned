@@ -4,6 +4,29 @@
   <article class="mt-6">
     <h1><%= @page.title %></h1>
     <p class="text-sm mt-2 text-ned-muted-fg">Published <%= @page.published_at&.strftime('%B %d, %Y') %></p>
+
+    <% if @page.conversations.any? %>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <% @page.conversations.recent.limit(5).each do |conv| %>
+          <button class="xs outline"
+                  onclick="window.chatFooter?.openTab(<%= conv.id %>, '<%= (conv.title || "Conversation ##{conv.id}").gsub("'", "\\\\'") %>', true, <%= @page.id %>)">
+            <%= conv.title || "Chat ##{conv.id}" %>
+          </button>
+        <% end %>
+        <button class="xs ghost"
+                onclick="window.chatFooter?.openCanvasTab(<%= @page.id %>, '<%= @page.title.gsub("'", "\\\\'") %>')">
+          + New conversation
+        </button>
+      </div>
+    <% else %>
+      <div class="mt-3">
+        <button class="xs ghost"
+                onclick="window.chatFooter?.openCanvasTab(<%= @page.id %>, '<%= @page.title.gsub("'", "\\\\'") %>')">
+          + New conversation
+        </button>
+      </div>
+    <% end %>
+
     <hr>
     <div class="prose-bubble"><%= @page.content %></div>
   </article>

@@ -28,6 +28,19 @@ module Ai
 
       include ViewHelpers
 
+      def turbo_frame_request?
+        env['HTTP_TURBO_FRAME'] == 'canvas-content'
+      end
+
+      def render_canvas_or_layout(template)
+        if turbo_frame_request?
+          content = render(template)
+          "<turbo-frame id=\"canvas-content\"><main class=\"page-content max-w-7xl mx-auto p-6 w-full\">#{content}</main></turbo-frame>"
+        else
+          view template
+        end
+      end
+
       def sse_stream(channel)
         queue = Thread::Queue.new
         subscriber = TurboBroadcast.subscribe(channel) { |html| queue.push(html) }
@@ -66,7 +79,7 @@ module Ai
           r.is do
             r.get do
               @conversations = Conversation.recent.limit(50)
-              view :conversations_index
+              render_canvas_or_layout(:conversations_index)
             end
 
             # Create new conversation
@@ -93,7 +106,27 @@ module Ai
             r.is do
               r.get do
                 @messages = @conversation.messages.chronological
-                view :conversation_show
+                render_canvas_or_layout(:conversation_show)
+              end
+            end
+
+            # Chat panel fragment (no layout)
+            r.on 'panel' do
+              r.get do
+                @messages = @conversation.messages.chronological
+                render(:conversation_panel)
+              end
+            end
+
+            # Canvas content
+            r.on 'canvas' do
+              r.get do
+                response['Content-Type'] = 'text/html'
+                if @conversation.ai_page
+                  @conversation.ai_page.content.presence || '<div class="p-6 text-center text-ned-muted-fg text-sm">Canvas is empty</div>'
+                else
+                  '<div class="p-6 text-center text-ned-muted-fg text-sm">Canvas is empty</div>'
+                end
               end
             end
 
@@ -124,7 +157,7 @@ module Ai
                   message_html = render_message_html(message)
 
                   response['Content-Type'] = 'text/vnd.turbo-stream.html'
-                  turbo_stream('append', 'messages') { message_html } +
+                  turbo_stream('append', "messages-#{@conversation.id}") { message_html } +
                   turbo_stream('replace', 'message-form') do
                     <<~HTML
                       <turbo-frame id="message-form">
@@ -144,7 +177,9 @@ module Ai
                     HTML
                   end
                 else
-                  r.redirect "/conversations/#{@conversation.id}"
+                  # Plain POST from footer panel — just return 200
+                  response.status = 200
+                  { status: 'ok' }
                 end
               end
             end
@@ -154,7 +189,7 @@ module Ai
         # AI Pages (individual page by slug)
         r.on 'pages', String do |slug|
           @page = AiPage.published.find_by!(slug: slug)
-          view :page_show
+          render_canvas_or_layout(:page_show)
         end
 
         # Notifications
@@ -188,7 +223,7 @@ module Ai
           r.is do
             r.get do
               @notifications = Ai::Notification.recent.limit(50)
-              view :notifications
+              render_canvas_or_layout(:notifications)
             end
           end
         end
@@ -199,7 +234,7 @@ module Ai
             r.get do
               @tasks = Ai::ScheduledTask.order(scheduled_for: :desc)
               @skills = SkillRecord.all.order(usage_count: :desc)
-              view :jobs_and_skills
+              render_canvas_or_layout(:jobs_and_skills)
             end
           end
         end
@@ -211,7 +246,7 @@ module Ai
               @skills = SkillRecord.all.order(usage_count: :desc)
               @mcp_connections = McpConnection.all
               @config = Config.all_config
-              view :settings
+              render_canvas_or_layout(:settings)
             end
           end
         end
@@ -255,6 +290,43 @@ module Ai
                 end
                 { conversations: conversations }
               end
+
+              r.post do
+                ai_page_id = r.params['ai_page_id']
+                conversation = Conversation.create!(
+                  title: 'New Conversation',
+                  source: 'web',
+                  ai_page_id: ai_page_id
+                )
+                { id: conversation.id, title: conversation.title, ai_page_id: conversation.ai_page_id }
+              end
+            end
+          end
+
+          # Create canvas (AiPage + Conversation together)
+          r.on 'canvases' do
+            r.post do
+              page = AiPage.create!(
+                title: r.params['title'] || 'New Canvas',
+                content: '',
+                status: 'published',
+                published_at: Time.current
+              )
+              conversation = Conversation.create!(
+                title: page.title,
+                source: 'web',
+                ai_page: page
+              )
+              { id: conversation.id, title: conversation.title, ai_page_id: page.id, page_slug: page.slug }
+            end
+          end
+
+          # Page canvas content by page ID
+          r.on 'pages', Integer, 'canvas' do |page_id|
+            r.get do
+              page = AiPage.find(page_id)
+              response['Content-Type'] = 'text/html'
+              page.content.presence || '<div class="p-6 text-center text-ned-muted-fg text-sm">Canvas is empty</div>'
             end
           end
         end

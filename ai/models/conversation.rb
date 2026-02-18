@@ -7,6 +7,7 @@ module Ai
     include HasJsonDefaults
 
     # Associations
+    belongs_to :ai_page, class_name: 'Ai::AiPage', optional: true
     has_many :messages, dependent: :destroy
     has_many :sessions, dependent: :destroy
 

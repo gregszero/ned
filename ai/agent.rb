@@ -111,6 +111,7 @@ module Ai
         end
 
         env['CONVERSATION_ID'] = conversation.id.to_s if conversation
+        env['AI_PAGE_ID'] = conversation.ai_page_id.to_s if conversation&.ai_page_id
         env
       end
 

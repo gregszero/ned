@@ -1,38 +1,28 @@
 <h2 class="text-2xl font-semibold tracking-tight mb-6">Conversations</h2>
 
-<div class="flex flex-col h-[calc(100dvh-13rem)]">
-  <div class="flex-1 overflow-y-auto space-y-6 pb-4">
-    <% if @conversations.empty? %>
-      <div class="border border-ned-border rounded-lg p-12 text-center">
-        <p class="text-ned-muted-fg text-lg">No conversations yet. Type a message below to start one!</p>
-      </div>
-    <% else %>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <% @conversations.each do |conversation| %>
-          <a href="/conversations/<%= conversation.id %>" class="card block no-underline hover:no-underline text-ned-fg hover:border-ned-primary">
-            <div class="flex justify-between items-start mb-2">
-              <h3 class="text-base font-semibold"><%= conversation.title || "Conversation ##{conversation.id}" %></h3>
-              <span class="badge"><%= conversation.source %></span>
-            </div>
-            <div class="flex gap-3 text-xs text-ned-muted-fg">
-              <span><%= conversation.messages.count %> messages</span>
-              <span><%= conversation.last_message_at&.strftime('%b %d, %Y %I:%M %p') %></span>
-            </div>
-            <% if conversation.messages.any? %>
-              <p class="text-sm mt-2 text-ned-muted-fg">
-                <%= conversation.messages.last.truncated_content(100) %>
-              </p>
-            <% end %>
-          </a>
+<% if @conversations.empty? %>
+  <div class="border border-ned-border rounded-lg p-12 text-center">
+    <p class="text-ned-muted-fg text-lg">No conversations yet. Click + in the chat bar below to start one!</p>
+  </div>
+<% else %>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <% @conversations.each do |conversation| %>
+      <div class="card block text-ned-fg cursor-pointer hover:border-ned-primary"
+           onclick="window.chatFooter?.openTab(<%= conversation.id %>, '<%= (conversation.title || "Conversation ##{conversation.id}").gsub("'", "\\\\'") %>', true, <%= conversation.ai_page_id || 'null' %>)">
+        <div class="flex justify-between items-start mb-2">
+          <h3 class="text-base font-semibold"><%= conversation.title || "Conversation ##{conversation.id}" %></h3>
+          <span class="badge"><%= conversation.source %></span>
+        </div>
+        <div class="flex gap-3 text-xs text-ned-muted-fg">
+          <span><%= conversation.messages.count %> messages</span>
+          <span><%= conversation.last_message_at&.strftime('%b %d, %Y %I:%M %p') %></span>
+        </div>
+        <% if conversation.messages.any? %>
+          <p class="text-sm mt-2 text-ned-muted-fg">
+            <%= conversation.messages.last.truncated_content(100) %>
+          </p>
         <% end %>
       </div>
     <% end %>
   </div>
-
-  <div class="shrink-0 pt-2">
-    <form action="/conversations" method="post" class="flex gap-3">
-      <input type="text" name="content" placeholder="Message Ned..." required autofocus class="flex-1 min-w-0">
-      <button type="submit" class="shrink-0">Send</button>
-    </form>
-  </div>
-</div>
+<% end %>

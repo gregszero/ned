@@ -49,12 +49,14 @@ module Ai
       private
 
       def broadcast_thinking(conversation)
-        html = turbo_stream('append', 'messages') do
+        html = turbo_stream('append', "messages-#{conversation.id}") do
           <<~HTML
-            <div class="chat chat-start" id="thinking-indicator">
-              <div class="chat-header text-xs text-base-content/50 mb-1">AI</div>
-              <div class="chat-bubble chat-bubble-secondary">
-                <span class="loading loading-dots loading-sm"></span>
+            <div class="chat-msg ai" id="thinking-indicator-#{conversation.id}">
+              <div class="msg-meta flex items-center gap-2 mb-1">
+                <span>AI</span>
+              </div>
+              <div class="prose-bubble">
+                <p class="text-ned-muted-fg">Thinking...</p>
               </div>
             </div>
           HTML
@@ -75,8 +77,8 @@ module Ai
       end
 
       def broadcast_response(conversation, message)
-        html = turbo_stream('remove', 'thinking-indicator') {} +
-               turbo_stream('append', 'messages') { render_message_html(message) }
+        html = turbo_stream('remove', "thinking-indicator-#{conversation.id}") {} +
+               turbo_stream('append', "messages-#{conversation.id}") { render_message_html(message) }
 
         Web::TurboBroadcast.broadcast("conversation:#{conversation.id}", html)
       end
