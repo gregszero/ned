@@ -1,0 +1,5 @@
+how could we have the same cli ui/ux in our conversations? i mean, the thinking, steps that the model does etc?
+
+---
+
+[Request interrupted by user for tool use]

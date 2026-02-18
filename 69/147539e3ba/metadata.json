@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "69147539e3ba",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "ai/jobs/heartbeat_runner_job.rb",
+    "ai/models/heartbeat.rb",
+    "ai/models/heartbeat_run.rb",
+    "ai/tools/create_heartbeat_tool.rb",
+    "ai/tools/list_heartbeats_tool.rb",
+    "ai/tools/update_heartbeat_tool.rb",
+    "ai/widgets/heartbeat_monitor_widget.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/69/147539e3ba/0/metadata.json",
+      "transcript": "/69/147539e3ba/0/full.jsonl",
+      "context": "/69/147539e3ba/0/context.md",
+      "content_hash": "/69/147539e3ba/0/content_hash.txt",
+      "prompt": "/69/147539e3ba/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 21,
+    "cache_creation_tokens": 36882,
+    "cache_read_tokens": 535459,
+    "output_tokens": 4065,
+    "api_call_count": 15
+  }
+}
