@@ -1,0 +1,301 @@
+Implement the following plan:
+
+# Workflow System for ai.rb
+
+## Context
+
+The AI agent can handle one-shot tasks well but lacks primitives for multi-step, reactive workflows. This plan adds: bug fixes to unblock existing features, recurring schedules, an event trigger system, and multi-step workflow pipelines.
+
+---
+
+## Phase 1: Bug Fixes (unblock existing capabilities)
+
+### 1a. Add `'heartbeat'` to Conversation source validation
+**File**: `ai/models/conversation.rb:15`
+Change: `%w[web cli scheduled_task whatsapp]` → `%w[web cli scheduled_task whatsapp heartbeat]`
+
+### 1b. Wire up Skill base class helpers
+**File**: `ai/skill_loader.rb:106-113`
+
+Replace the `send_message` stub with:
+```ruby
+def send_message(content, conversation_id: nil)
+  conv_id = conversation_id || ENV['CONVERSATION_ID']
+  return unless conv_id
+  conversation = Ai::Conversation.find(conv_id)
+  conversation.add_message(role: 'system', content: content)
+end
+```
+
+Replace the `schedule_task` stub with:
+```ruby
+def schedule_task(title:, scheduled_for:, skill_name: nil, parameters: {})
+  Ai::ScheduledTask.create!(
+    title: title,
+    scheduled_for: scheduled_for,
+    skill_name: skill_name,
+    parameters: parameters
+  )
+end
+```
+
+### 1c. Auto-sync SkillRecord from skill files
+**File**: `ai/skill_loader.rb` — add to `load_all` after loading files:
+
+```ruby
+loaded_skills.each do |klass|
+  name = skill_name_from_class(klass)
+  file = skill_files.find { |f| f.include?("/#{name}.rb") }
+  next unless file
+  relative = file.sub("#{Ai.root}/", '')
+  SkillRecord.find_or_create_by(name: name) do |r|
+    r.file_path = relative
+    r.class_name = klass.name
+  end
+end
+```
+
+---
+
+## Phase 2: Recurring Schedules
+
+### Migration: `workspace/migrations/20260219000003_add_recurring_to_scheduled_tasks.rb`
+
+```ruby
+class AddRecurringToScheduledTasks < ActiveRecord::Migration[8.0]
+  def change
+    add_column :scheduled_tasks, :cron_expression, :string
+    add_column :scheduled_tasks, :recurring, :boolean, default: false
+    add_column :scheduled_tasks, :last_completed_at, :datetime
+  end
+end
+```
+
+### Model changes: `ai/models/scheduled_task.rb`
+
+Add methods:
+- `recurring?` — returns `recurring && cron_expression.present?`
+- `schedule_next_run!` — uses `Fugit::Cron` to compute next time from `cron_expression`, creates a new pending ScheduledTask (clone of self with updated `scheduled_for`)
+
+### Job changes: `ai/jobs/scheduled_task_runner_job.rb`
+
+After `task.mark_completed!`, add:
+```ruby
+task.schedule_next_run! if task.recurring?
+```
+
+### Tool changes: `ai/tools/schedule_task_tool.rb`
+
+Add optional `cron:` argument. When provided, sets `cron_expression` and `recurring: true`. Validate cron syntax with `Fugit::Cron.parse`.
+
+### Dependency: Add `fugit` gem (already a dependency of `rufus-scheduler`, so likely already available).
+
+---
+
+## Phase 3: Event Triggers
+
+### Migration: `workspace/migrations/20260219000004_create_triggers.rb`
+
+```ruby
+class CreateTriggers < ActiveRecord::Migration[8.0]
+  def change
+    create_table :triggers do |t|
+      t.string :name, null: false
+      t.string :event_pattern, null: false  # e.g. "task:completed", "heartbeat:escalated:*"
+      t.string :action_type, null: false     # "skill" or "prompt"
+      t.text :action_config                  # JSON: { skill_name: ..., parameters: {} } or { prompt: "..." }
+      t.boolean :enabled, default: true
+      t.integer :fire_count, default: 0
+      t.datetime :last_fired_at
+      t.timestamps
+    end
+  end
+end
+```
+
+### Model: `ai/models/trigger.rb`
+
+- `matches?(event_name)` — pattern matching with glob support (`*` wildcard)
+- `fire!(event_data)` — increments `fire_count`, executes action:
+  - `skill` → `SkillRecord.find_by(name:).load_and_execute(**params)`
+  - `prompt` → creates Conversation + Message, enqueues `AgentExecutorJob`
+
+### Event bus: `ai/event_bus.rb`
+
+Simple module similar to `TurboBroadcast`:
+```ruby
+module Ai
+  module EventBus
+    def self.emit(event_name, data = {})
+      Trigger.where(enabled: true).each do |trigger|
+        next unless trigger.matches?(event_name)
+        Jobs::TriggerRunnerJob.perform_later(trigger.id, event_name, data.to_json)
+      end
+    end
+  end
+end
+```
+
+### Job: `ai/jobs/trigger_runner_job.rb`
+
+Finds trigger, calls `fire!` with event data. Handles errors, disables trigger after 5 consecutive failures.
+
+### MCP Tool: `ai/tools/create_trigger_tool.rb`
+
+Arguments: `name`, `event_pattern`, `action_type`, `action_config`. Returns trigger ID.
+
+### Emit points (add `EventBus.emit` calls):
+
+| Location | Event |
+|---|---|
+| `scheduled_task_runner_job.rb` after completion | `task:completed:{task.title.parameterize}` |
+| `scheduled_task_runner_job.rb` after failure | `task:failed:{task.title.parameterize}` |
+| `heartbeat_runner_job.rb` after escalation | `heartbeat:escalated:{heartbeat.name}` |
+| `heartbeat_runner_job.rb` after error | `heartbeat:error:{heartbeat.name}` |
+| `Notification.broadcast!` | `notification:created:{kind}` |
+
+---
+
+## Phase 4: Multi-Step Workflows
+
+### Migration: `workspace/migrations/20260219000005_create_workflows.rb`
+
+```ruby
+class CreateWorkflows < ActiveRecord::Migration[8.0]
+  def change
+    create_table :workflows do |t|
+      t.string :name, null: false
+      t.text :description
+      t.string :status, default: 'pending'  # pending, running, completed, failed, paused
+      t.integer :current_step_index, default: 0
+      t.text :context  # JSON: accumulated data from steps
+      t.references :conversation, foreign_key: { to_table: :conversations }
+      t.string :trigger_event  # optional: auto-start on event
+      t.timestamps
+    end
+
+    create_table :workflow_steps do |t|
+      t.references :workflow, null: false, foreign_key: true
+      t.integer :position, null: false
+      t.string :name
+      t.string :step_type, null: false  # skill, prompt, condition, wait, notify
+      t.text :config  # JSON: type-specific configuration
+      t.string :status, default: 'pending'  # pending, running, completed, failed, skipped
+      t.text :result  # JSON output
+      t.timestamps
+    end
+  end
+end
+```
+
+### Models
+
+**`ai/models/workflow.rb`**:
+- `has_many :workflow_steps, -> { order(:position) }`
+- `current_step` — returns step at `current_step_index`
+- `advance!` — increments index, runs next step via job
+- `complete!`, `fail!(error)`, `pause!`
+- `context` — JSON hash accumulating step results as `{ "step_name" => result }`
+
+**`ai/models/workflow_step.rb`**:
+- `belongs_to :workflow`
+- `parsed_config` — JSON parse of `config`
+- `execute!(workflow_context)` — dispatches by `step_type`:
+  - **`skill`**: `SkillRecord.find_by(name:).load_and_execute(**params)` — params can reference `{{context.step_name}}` interpolation
+  - **`prompt`**: Creates message in workflow's conversation, enqueues `AgentExecutorJob`, marks step as `running` (completed when agent finishes)
+  - **`condition`**: Evaluates Ruby expression against workflow context, returns `true`/`false`. If false, skips to named step or next
+  - **`wait`**: Sets a `ScheduledTask` to resume the workflow after duration
+  - **`notify`**: Creates a `Notification` with interpolated content
+
+### Job: `ai/jobs/workflow_runner_job.rb`
+
+```ruby
+def perform(workflow_id)
+  workflow = Workflow.find(workflow_id)
+  step = workflow.current_step
+  return workflow.complete! unless step
+
+  step.update!(status: 'running')
+  result = step.execute!(workflow.parsed_context)
+
+  step.update!(status: 'completed', result: result.to_json)
+  workflow.merge_context!(step.name => result)
+  workflow.advance!
+
+  # Continue to next step (unless it's a prompt/wait that will resume async)
+  next_step = workflow.current_step
+  if next_step && !%w[prompt wait].include?(next_step.step_type)
+    WorkflowRunnerJob.perform_later(workflow_id)
+  end
+end
+```
+
+### MCP Tool: `ai/tools/create_workflow_tool.rb`
+
+Arguments: `name`, `description`, `steps` (array of `{ name, type, config }`), optional `trigger_event`.
+
+Example call from the AI:
+```json
+{
+  "name": "morning_routine",
+  "steps": [
+    { "name": "weather", "type": "skill", "config": { "skill_name": "fetch_weather" } },
+    { "name": "news", "type": "skill", "config": { "skill_name": "fetch_news" } },
+    { "name": "briefing", "type": "prompt", "config": { "prompt": "Create morning briefing from: {{context}}" } },
+    { "name": "done", "type": "notify", "config": { "title": "Morning briefing ready", "kind": "success" } }
+  ]
+}
+```
+
+### Hook into EventBus
+
+If a `Workflow` has a `trigger_event`, register it so `EventBus.emit` can start the workflow automatically.
+
+---
+
+## File Summary
+
+| Action | File |
+|---|---|
+| Edit | `ai/models/conversation.rb` (add 'heartbeat' to source validation) |
+| Edit | `ai/skill_loader.rb` (wire helpers, add auto-sync) |
+| Edit | `ai/models/scheduled_task.rb` (add recurring methods) |
+| Edit | `ai/jobs/scheduled_task_runner_job.rb` (schedule next run) |
+| Edit | `ai/tools/schedule_task_tool.rb` (add cron argument) |
+| Edit | `ai/jobs/heartbeat_runner_job.rb` (emit events) |
+| Edit | `ai/models/notification.rb` (emit event on broadcast) |
+| New | `workspace/migrations/20260219000003_add_recurring_to_scheduled_tasks.rb` |
+| New | `workspace/migrations/20260219000004_create_triggers.rb` |
+| New | `workspace/migrations/20260219000005_create_workflows.rb` |
+| New | `ai/models/trigger.rb` |
+| New | `ai/models/workflow.rb` |
+| New | `ai/models/workflow_step.rb` |
+| New | `ai/event_bus.rb` |
+| New | `ai/jobs/trigger_runner_job.rb` |
+| New | `ai/jobs/workflow_runner_job.rb` |
+| New | `ai/tools/create_trigger_tool.rb` |
+| New | `ai/tools/create_workflow_tool.rb` |
+
+---
+
+## Verification
+
+1. `./ai.rb db:migrate` — all migrations run cleanly
+2. `./ai.rb server` — starts without error
+3. Test bug fixes:
+   - Create a heartbeat that escalates → verify conversation creates with `source: 'heartbeat'`
+   - Call `send_message` from a skill → verify message appears in conversation
+   - Add a skill file → verify `SkillRecord` is created on load
+4. Test recurring schedules:
+   - `schedule_task` with `cron: "*/5 * * * *"` → verify task reschedules after completion
+5. Test triggers:
+   - Create trigger for `task:completed:*` → complete a scheduled task → verify trigger fires
+6. Test workflows:
+   - Create a 3-step workflow (skill → skill → notify) → verify steps execute in order and context passes between them
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this

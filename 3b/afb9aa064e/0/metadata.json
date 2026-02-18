@@ -1,0 +1,49 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "3bafb9aa064e",
+  "session_id": "d2fe780e-52ba-4f7b-a5bb-6617262ee9f8",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-18T21:55:54.403135538Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "ai/bootstrap.rb",
+    "ai/event_bus.rb",
+    "ai/jobs/heartbeat_runner_job.rb",
+    "ai/jobs/scheduled_task_runner_job.rb",
+    "ai/jobs/trigger_runner_job.rb",
+    "ai/jobs/workflow_runner_job.rb",
+    "ai/models/conversation.rb",
+    "ai/models/notification.rb",
+    "ai/models/scheduled_task.rb",
+    "ai/models/trigger.rb",
+    "ai/models/workflow.rb",
+    "ai/models/workflow_step.rb",
+    "ai/skill_loader.rb",
+    "ai/tools/create_trigger_tool.rb",
+    "ai/tools/create_workflow_tool.rb",
+    "ai/tools/schedule_task_tool.rb",
+    "workspace/migrations/20260219000003_add_recurring_to_scheduled_tasks.rb",
+    "workspace/migrations/20260219000004_create_triggers.rb",
+    "workspace/migrations/20260219000005_create_workflows.rb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 34,
+    "cache_creation_tokens": 44676,
+    "cache_read_tokens": 1356918,
+    "output_tokens": 4669,
+    "api_call_count": 30
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-18T21:55:54.308686437Z",
+    "agent_lines": 530,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 68,
+    "total_committed": 530,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-ai-rb/d2fe780e-52ba-4f7b-a5bb-6617262ee9f8.jsonl"
+}

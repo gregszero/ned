@@ -1,0 +1,45 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "3bafb9aa064e",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "ai/bootstrap.rb",
+    "ai/event_bus.rb",
+    "ai/jobs/heartbeat_runner_job.rb",
+    "ai/jobs/scheduled_task_runner_job.rb",
+    "ai/jobs/trigger_runner_job.rb",
+    "ai/jobs/workflow_runner_job.rb",
+    "ai/models/conversation.rb",
+    "ai/models/notification.rb",
+    "ai/models/scheduled_task.rb",
+    "ai/models/trigger.rb",
+    "ai/models/workflow.rb",
+    "ai/models/workflow_step.rb",
+    "ai/skill_loader.rb",
+    "ai/tools/create_trigger_tool.rb",
+    "ai/tools/create_workflow_tool.rb",
+    "ai/tools/schedule_task_tool.rb",
+    "workspace/migrations/20260219000003_add_recurring_to_scheduled_tasks.rb",
+    "workspace/migrations/20260219000004_create_triggers.rb",
+    "workspace/migrations/20260219000005_create_workflows.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/3b/afb9aa064e/0/metadata.json",
+      "transcript": "/3b/afb9aa064e/0/full.jsonl",
+      "context": "/3b/afb9aa064e/0/context.md",
+      "content_hash": "/3b/afb9aa064e/0/content_hash.txt",
+      "prompt": "/3b/afb9aa064e/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 34,
+    "cache_creation_tokens": 44676,
+    "cache_read_tokens": 1356918,
+    "output_tokens": 4669,
+    "api_call_count": 30
+  }
+}
