@@ -12,7 +12,7 @@ module Ai
     has_many :sessions, dependent: :destroy
 
     # Validations
-    validates :source, presence: true, inclusion: { in: %w[web cli scheduled_task whatsapp] }
+    validates :source, presence: true, inclusion: { in: %w[web cli scheduled_task whatsapp heartbeat] }
     validates :slug, uniqueness: true, allow_nil: true
 
     # Scopes

@@ -15,6 +15,18 @@ module Ai
           Ai.logger.debug "Loaded skill: #{file}"
         end
 
+        # Auto-sync SkillRecord from loaded skill files
+        loaded_skills.each do |klass|
+          name = skill_name_from_class(klass)
+          file = skill_files.find { |f| f.include?("/#{name}.rb") }
+          next unless file
+          relative = file.sub("#{Ai.root}/", '')
+          SkillRecord.find_or_create_by(name: name) do |r|
+            r.file_path = relative
+            r.class_name = klass.name
+          end
+        end
+
         # Return list of loaded skill classes
         loaded_skills
       end
@@ -104,13 +116,19 @@ module Ai
 
     # Built-in helper methods available to all skills
     def send_message(content, conversation_id: nil)
-      # Will be implemented with MessageRouter
-      Ai.logger.info "Skill sending message: #{content[0..50]}..."
+      conv_id = conversation_id || ENV['CONVERSATION_ID']
+      return unless conv_id
+      conversation = Ai::Conversation.find(conv_id)
+      conversation.add_message(role: 'system', content: content)
     end
 
-    def schedule_task(title:, scheduled_for:, skill_name:, parameters: {})
-      # Will be implemented with ScheduledTask model
-      Ai.logger.info "Skill scheduling task: #{title}"
+    def schedule_task(title:, scheduled_for:, skill_name: nil, parameters: {})
+      Ai::ScheduledTask.create!(
+        title: title,
+        scheduled_for: scheduled_for,
+        skill_name: skill_name,
+        parameters: parameters
+      )
     end
 
     def run_query(sql)

@@ -20,6 +20,7 @@ module Ai
         end
 
         task.mark_completed!(result.to_json)
+        task.schedule_next_run! if task.recurring?
 
         # Feed result back to the originating conversation so the AI knows what happened
         feed_result_to_conversation(task, result)
@@ -34,12 +35,14 @@ module Ai
         notification.broadcast!
 
         Ai.logger.info "Completed scheduled task #{task_id}"
+        EventBus.emit("task:completed:#{task.title.parameterize}", { task_id: task.id, title: task.title })
 
       rescue ActiveRecord::RecordNotFound => e
         Ai.logger.error "Scheduled task not found: #{e.message}"
       rescue => e
         Ai.logger.error "Scheduled task execution failed: #{e.message}"
         task&.mark_failed!(e.message)
+        EventBus.emit("task:failed:#{task&.title&.parameterize}", { task_id: task&.id, error: e.message }) if task
         feed_error_to_conversation(task, e.message) if task
 
         # Create error notification

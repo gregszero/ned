@@ -33,6 +33,7 @@ module Ai
              turbo_stream('replace', 'notifications-badge') { badge_html }
 
       Web::TurboBroadcast.broadcast('notifications', html)
+      EventBus.emit("notification:created:#{kind}", { notification_id: id, title: title, kind: kind })
     end
 
     def start_conversation!

@@ -35,6 +35,7 @@ module Ai
 
           # Phase 2: Escalate to AI agent
           escalate_to_agent(heartbeat, result)
+          EventBus.emit("heartbeat:escalated:#{heartbeat.name}", { heartbeat_id: heartbeat.id })
         else
           # Empty result — record skip, no AI invocation
           heartbeat.record_run!(status: 'skipped', result: result, escalated: false, duration_ms: duration_ms)
@@ -52,6 +53,7 @@ module Ai
           heartbeat.record_run!(status: 'error', error: e.message, duration_ms: nil)
           heartbeat.update!(status: 'error') if heartbeat.error_count >= 3
           broadcast_refresh(heartbeat)
+          EventBus.emit("heartbeat:error:#{heartbeat.name}", { heartbeat_id: heartbeat.id, error: e.message })
         end
       end
 

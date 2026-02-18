@@ -11,9 +11,10 @@ module Ai
         required(:scheduled_for).filled(:string).description('ISO8601 timestamp or relative time (e.g., "2 minutes", "1 hour", "tomorrow")')
         optional(:description).filled(:string).description('Detailed task description')
         optional(:skill_name).filled(:string).description('Name of skill to execute')
+        optional(:cron).filled(:string).description('Cron expression for recurring tasks (e.g., "*/5 * * * *" for every 5 minutes)')
       end
 
-      def call(title:, scheduled_for:, description: nil, skill_name: nil)
+      def call(title:, scheduled_for:, description: nil, skill_name: nil, cron: nil)
         scheduled_time = parse_time(scheduled_for)
 
         unless scheduled_time
@@ -23,11 +24,22 @@ module Ai
           }
         end
 
+        recurring = false
+        if cron
+          parsed_cron = Fugit::Cron.parse(cron)
+          unless parsed_cron
+            return { success: false, error: "Invalid cron expression: #{cron}" }
+          end
+          recurring = true
+        end
+
         task = ScheduledTask.create!(
           title: title,
           description: description,
           scheduled_for: scheduled_time,
-          skill_name: skill_name
+          skill_name: skill_name,
+          cron_expression: cron,
+          recurring: recurring
         )
 
         Ai.logger.info "Scheduled task ##{task.id}: #{title} for #{scheduled_time}"
@@ -36,8 +48,10 @@ module Ai
           success: true,
           task_id: task.id,
           title: task.title,
-          scheduled_for: task.scheduled_for.iso8601
-        }
+          scheduled_for: task.scheduled_for.iso8601,
+          recurring: task.recurring?,
+          cron_expression: task.cron_expression
+        }.compact
       rescue => e
         Ai.logger.error "Failed to schedule task: #{e.message}"
         { success: false, error: e.message }

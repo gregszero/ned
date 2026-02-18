@@ -37,6 +37,7 @@ module Ai
       require_relative 'message_router'
       require_relative 'whatsapp'
       require_relative 'mcp_server'
+      require_relative 'event_bus'
 
       # Load concerns and models
       Dir[root.join('ai/concerns/**/*.rb')].sort.each { |f| require f }
