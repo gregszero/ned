@@ -68,37 +68,18 @@ module Ai
       route do |r|
         r.public
 
-        # Root - redirect to conversations
+        # Root — redirect to most recent canvas or show home
         r.root do
-          r.redirect '/conversations'
+          recent = AiPage.published.recent.first
+          if recent
+            r.redirect "/#{recent.slug}"
+          else
+            render_canvas_or_layout(:home)
+          end
         end
 
-        # Conversations routes
+        # Conversations routes (kept for panel loading and messages)
         r.on 'conversations' do
-          # List all conversations
-          r.is do
-            r.get do
-              @conversations = Conversation.recent.limit(50)
-              render_canvas_or_layout(:conversations_index)
-            end
-
-            # Create new conversation
-            r.post do
-              content = r.params['content']&.strip
-              conversation = Conversation.create!(
-                title: 'New Conversation',
-                source: 'web'
-              )
-
-              if content && !content.empty?
-                message = conversation.add_message(role: 'user', content: content)
-                Ai::Jobs::AgentExecutorJob.perform_later(message.id)
-              end
-
-              r.redirect "/conversations/#{conversation.id}"
-            end
-          end
-
           # Individual conversation
           r.on Integer do |id|
             @conversation = Conversation.find(id)
@@ -127,13 +108,6 @@ module Ai
                 else
                   '<div class="p-6 text-center text-ned-muted-fg text-sm">Canvas is empty</div>'
                 end
-              end
-            end
-
-            # SSE stream for Turbo Stream updates
-            r.on 'stream' do
-              r.get do
-                sse_stream("conversation:#{@conversation.id}")
               end
             end
 
@@ -177,7 +151,6 @@ module Ai
                     HTML
                   end
                 else
-                  # Plain POST from footer panel — just return 200
                   response.status = 200
                   { status: 'ok' }
                 end
@@ -283,7 +256,9 @@ module Ai
                   {
                     id: c.id,
                     title: c.title,
+                    slug: c.slug,
                     source: c.source,
+                    ai_page_id: c.ai_page_id,
                     message_count: c.messages.count,
                     last_message_at: c.last_message_at
                   }
@@ -293,12 +268,14 @@ module Ai
 
               r.post do
                 ai_page_id = r.params['ai_page_id']
+                title = r.params['title'].to_s.strip
+                title = 'New Conversation' if title.empty?
                 conversation = Conversation.create!(
-                  title: 'New Conversation',
+                  title: title,
                   source: 'web',
                   ai_page_id: ai_page_id
                 )
-                { id: conversation.id, title: conversation.title, ai_page_id: conversation.ai_page_id }
+                { id: conversation.id, title: conversation.title, slug: conversation.slug, ai_page_id: conversation.ai_page_id }
               end
             end
           end
@@ -317,13 +294,20 @@ module Ai
                 source: 'web',
                 ai_page: page
               )
-              { id: conversation.id, title: conversation.title, ai_page_id: page.id, page_slug: page.slug }
+              { id: conversation.id, title: conversation.title, ai_page_id: page.id, page_slug: page.slug, conv_slug: conversation.slug }
             end
           end
 
           # Page canvas content by page ID
           r.on 'pages', Integer do |page_id|
             page = AiPage.find(page_id)
+
+            # Canvas SSE stream — one per canvas
+            r.on 'stream' do
+              r.get do
+                sse_stream("canvas:#{page.id}")
+              end
+            end
 
             r.on 'canvas' do
               r.get do
@@ -334,18 +318,76 @@ module Ai
               end
             end
 
-            r.on 'components', Integer do |component_id|
-              component = page.canvas_components.find(component_id)
+            r.on 'components' do
+              r.is do
+                r.post do
+                  body = JSON.parse(r.body.read) rescue r.params
+                  component = page.canvas_components.create!(
+                    component_type: body['component_type'] || 'card',
+                    content: body['content'] || '',
+                    x: body['x']&.to_f || 0,
+                    y: body['y']&.to_f || 0,
+                    width: body['width']&.to_f || 320,
+                    height: body['height']&.to_f,
+                    z_index: body['z_index']&.to_i || 0,
+                    metadata: body['metadata'] || {}
+                  )
 
-              r.patch do
-                updates = {}
-                %w[x y width height z_index].each do |attr|
-                  updates[attr] = r.params[attr].to_f if r.params[attr]
+                  # Broadcast via canvas channel
+                  style = "left:#{component.x}px;top:#{component.y}px;width:#{component.width}px;"
+                  style += "height:#{component.height}px;" if component.height
+                  html = <<~HTML
+                    <div class="canvas-component" id="canvas-component-#{component.id}" data-component-id="#{component.id}" style="#{style}" data-z="#{component.z_index}">
+                      <div class="canvas-component-content">#{component.content}</div>
+                    </div>
+                  HTML
+                  turbo = "<turbo-stream action=\"append\" target=\"canvas-components-#{page.id}\"><template>#{html}</template></turbo-stream>"
+                  TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
+
+                  component.as_canvas_json
                 end
-                component.update!(updates) if updates.any?
-                component.as_canvas_json
+              end
+
+              r.on Integer do |component_id|
+                component = page.canvas_components.find(component_id)
+
+                r.get do
+                  component.as_canvas_json
+                end
+
+                r.patch do
+                  updates = {}
+                  %w[x y width height z_index].each do |attr|
+                    updates[attr] = r.params[attr].to_f if r.params[attr]
+                  end
+                  component.update!(updates) if updates.any?
+                  component.as_canvas_json
+                end
+
+                r.delete do
+                  turbo = "<turbo-stream action=\"remove\" target=\"canvas-component-#{component.id}\"></turbo-stream>"
+                  TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
+                  component.destroy!
+                  { success: true }
+                end
               end
             end
+          end
+        end
+
+        # Canvas URL: /:canvas_slug or /:canvas_slug/:chat_slug
+        # This MUST be last — it's a catch-all for slug-based routes
+        r.on String do |canvas_slug|
+          @page = AiPage.find_by(slug: canvas_slug)
+          next unless @page
+
+          r.on String do |chat_slug|
+            @conversation = @page.conversations.find_by(slug: chat_slug)
+            render_canvas_or_layout(:canvas_view)
+          end
+
+          r.is do
+            render_canvas_or_layout(:canvas_view)
           end
         end
       end

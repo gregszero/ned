@@ -1,0 +1,7 @@
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.chatFooter) {
+      window.chatFooter.openCanvas(<%= @page.id %>, '<%= @page.title.gsub("'", "\\\\'") %>', '<%= @page.slug %>'<% if @conversation %>, <%= @conversation.id %>, '<%= @conversation.title.gsub("'", "\\\\'") %>', '<%= @conversation.slug %>'<% end %>)
+    }
+  })
+</script>

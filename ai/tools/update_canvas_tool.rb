@@ -51,9 +51,7 @@ module Ai
         target = "canvas-page-#{page.id}"
         stream_html = "<turbo-stream action=\"#{action}\" target=\"#{target}\"><template>#{html}</template></turbo-stream>"
 
-        page.conversations.each do |conv|
-          Ai::Web::TurboBroadcast.broadcast("conversation:#{conv.id}", stream_html)
-        end
+        Ai::Web::TurboBroadcast.broadcast("canvas:#{page.id}", stream_html)
 
         { success: true, mode: mode, conversation_id: conversation.id, ai_page_id: page.id, slug: page.slug }
       rescue => e

@@ -109,7 +109,7 @@ module Ai
           return {
             adapter: 'sqlite3',
             database: "#{Ai.root}/storage/data.db",
-            pool: 5,
+            pool: 16,
             timeout: 5000
           }
         end

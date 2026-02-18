@@ -62,7 +62,7 @@ module Ai
           HTML
         end
 
-        Web::TurboBroadcast.broadcast("conversation:#{conversation.id}", html)
+        Web::TurboBroadcast.broadcast(conversation.broadcast_channel, html)
       end
 
       def deliver_to_whatsapp(conversation, message)
@@ -80,7 +80,7 @@ module Ai
         html = turbo_stream('remove', "thinking-indicator-#{conversation.id}") {} +
                turbo_stream('append', "messages-#{conversation.id}") { render_message_html(message) }
 
-        Web::TurboBroadcast.broadcast("conversation:#{conversation.id}", html)
+        Web::TurboBroadcast.broadcast(conversation.broadcast_channel, html)
       end
     end
   end

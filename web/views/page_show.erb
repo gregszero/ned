@@ -1,5 +1,5 @@
 <div class="max-w-3xl mx-auto">
-  <a href="/conversations" class="text-sm">&larr; Back</a>
+  <a href="/" class="text-sm">&larr; Back</a>
 
   <article class="mt-6">
     <h1><%= @page.title %></h1>
@@ -9,19 +9,19 @@
       <div class="flex flex-wrap gap-2 mt-3">
         <% @page.conversations.recent.limit(5).each do |conv| %>
           <button class="xs outline"
-                  onclick="window.chatFooter?.openTab(<%= conv.id %>, '<%= (conv.title || "Conversation ##{conv.id}").gsub("'", "\\\\'") %>', true, <%= @page.id %>)">
+                  onclick="window.chatFooter?.openCanvas(<%= @page.id %>, '<%= @page.title.gsub("'", "\\\\'") %>', '<%= @page.slug %>', <%= conv.id %>, '<%= (conv.title || "Chat ##{conv.id}").gsub("'", "\\\\'") %>', '<%= conv.slug %>')">
             <%= conv.title || "Chat ##{conv.id}" %>
           </button>
         <% end %>
         <button class="xs ghost"
-                onclick="window.chatFooter?.openCanvasTab(<%= @page.id %>, '<%= @page.title.gsub("'", "\\\\'") %>')">
+                onclick="window.chatFooter?.openCanvas(<%= @page.id %>, '<%= @page.title.gsub("'", "\\\\'") %>', '<%= @page.slug %>')">
           + New conversation
         </button>
       </div>
     <% else %>
       <div class="mt-3">
         <button class="xs ghost"
-                onclick="window.chatFooter?.openCanvasTab(<%= @page.id %>, '<%= @page.title.gsub("'", "\\\\'") %>')">
+                onclick="window.chatFooter?.openCanvas(<%= @page.id %>, '<%= @page.title.gsub("'", "\\\\'") %>', '<%= @page.slug %>')">
           + New conversation
         </button>
       </div>

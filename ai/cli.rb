@@ -21,7 +21,7 @@ module Ai
       Ai.logger.info "Starting web server on #{options[:host]}:#{options[:port]}"
 
       # Use rackup with Puma
-      exec "bundle exec puma config.ru -b tcp://#{options[:host]}:#{options[:port]}"
+      exec "bundle exec puma config.ru -b tcp://#{options[:host]}:#{options[:port]} -w 0 -t 4:16"
     end
 
     desc "mcp", "Start MCP server"

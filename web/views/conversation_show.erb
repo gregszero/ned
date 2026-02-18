@@ -1,8 +1,9 @@
 <div class="flex flex-col h-full"
      data-controller="conversation"
-     data-conversation-id-value="<%= @conversation.id %>">
+     data-conversation-id-value="<%= @conversation.id %>"
+     data-conversation-page-id-value="<%= @conversation.ai_page&.id %>">
   <div class="mb-4">
-    <a href="/conversations" class="text-sm">&larr; Back to conversations</a>
+    <a href="/" class="text-sm">&larr; Back</a>
     <h2 class="text-2xl font-semibold tracking-tight mt-1"><%= @conversation.title || "Conversation ##{@conversation.id}" %></h2>
     <div class="flex gap-3 mt-2">
       <span class="badge"><%= @conversation.source %></span>

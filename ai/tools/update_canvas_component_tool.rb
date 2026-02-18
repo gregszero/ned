@@ -48,9 +48,7 @@ module Ai
       def broadcast_component_replace(component)
         html = component_html(component)
         turbo = "<turbo-stream action=\"replace\" target=\"canvas-component-#{component.id}\"><template>#{html}</template></turbo-stream>"
-        component.ai_page.conversations.each do |conv|
-          Ai::Web::TurboBroadcast.broadcast("conversation:#{conv.id}", turbo)
-        end
+        Ai::Web::TurboBroadcast.broadcast("canvas:#{component.ai_page.id}", turbo)
       end
 
       def component_html(c)

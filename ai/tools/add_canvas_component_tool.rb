@@ -69,9 +69,7 @@ module Ai
       end
 
       def broadcast_to_page(page, turbo)
-        page.conversations.each do |conv|
-          Ai::Web::TurboBroadcast.broadcast("conversation:#{conv.id}", turbo)
-        end
+        Ai::Web::TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
       end
     end
   end

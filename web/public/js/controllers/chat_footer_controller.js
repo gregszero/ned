@@ -1,34 +1,45 @@
 import { Controller } from "https://cdn.jsdelivr.net/npm/@hotwired/stimulus@3.2.2/dist/stimulus.js"
 
 export default class extends Controller {
-  static targets = ["tabBar", "tabs", "panels"]
+  static targets = ["tabBar", "canvasTabs", "conversationTabs", "conversationTabBar", "panels"]
 
   connect() {
-    this.openTabs = [] // [{ id, title, pageId }]
-    this.activeTabId = null
-    this.eventSources = {} // id -> EventSource
+    // State: array of canvas objects, each with nested conversations
+    // { pageId, title, slug, conversations: [{ id, title, slug }], activeConvId }
+    this.canvases = []
+    this.activeCanvasPageId = null
+    this.eventSources = {} // pageId → EventSource (one per canvas)
     this.footerHeight = parseInt(sessionStorage.getItem("chatFooterHeight")) || 350
 
     // Expose for cross-component access
     window.chatFooter = this
 
-    // Restore tabs from sessionStorage
-    const saved = sessionStorage.getItem("chatOpenTabs")
+    // Restore from sessionStorage
+    const saved = sessionStorage.getItem("chatState")
     if (saved) {
       try {
-        const tabs = JSON.parse(saved)
-        if (tabs.length > 0) {
+        const state = JSON.parse(saved)
+        if (state.canvases && state.canvases.length > 0) {
           this.element.style.height = this.footerHeight + "px"
-          tabs.forEach((tab, i) => {
-            this.openTab(tab.id, tab.title, i === tabs.length - 1, tab.pageId)
-          })
+          for (const canvas of state.canvases) {
+            this._restoreCanvas(canvas)
+          }
+          if (state.activeCanvasPageId) {
+            this.switchCanvas(state.activeCanvasPageId)
+          }
           return
         }
       } catch (e) { /* ignore bad data */ }
     }
 
-    // Start collapsed (just tab bar visible)
+    // Discard old format
+    sessionStorage.removeItem("chatOpenTabs")
+
+    // Start collapsed
     this.element.style.height = "auto"
+
+    // Handle browser back/forward
+    window.addEventListener("popstate", () => this._handlePopState())
   }
 
   disconnect() {
@@ -37,7 +48,7 @@ export default class extends Controller {
     window.chatFooter = null
   }
 
-  // --- Tab Management ---
+  // --- Canvas Tab Management ---
 
   async newTab() {
     try {
@@ -46,236 +57,240 @@ export default class extends Controller {
         headers: { "Content-Type": "application/json" }
       })
       const data = await resp.json()
-      this.openTab(data.id, data.title, true, data.ai_page_id)
+      this.openCanvas(data.ai_page_id, data.title, data.page_slug, data.id, data.title, data.conv_slug)
     } catch (e) {
       console.error("[ChatFooter] Failed to create canvas:", e)
     }
   }
 
-  openTab(id, title, activate = true, pageId = null) {
-    // Don't duplicate
-    if (this.openTabs.find(t => t.id === id)) {
-      if (activate) this.switchTab(id)
-      return
+  openCanvas(pageId, title, slug, convId, convTitle, convSlug) {
+    let canvas = this.canvases.find(c => c.pageId === pageId)
+
+    if (!canvas) {
+      canvas = { pageId, title, slug, conversations: [], activeConvId: null }
+      this.canvases.push(canvas)
+
+      // Create canvas tab button
+      this._createCanvasTabButton(canvas)
+
+      // Create canvas overlay div
+      this._createCanvasOverlay(pageId)
+
+      // Connect SSE for this canvas
+      this.connectSSE(pageId)
     }
 
-    this.openTabs.push({ id, title, pageId })
-    this.saveTabs()
-
-    // Create tab button
-    const tab = document.createElement("button")
-    tab.type = "button"
-    tab.className = "chat-tab"
-    tab.dataset.tabId = id
-    tab.innerHTML = `
-      <span class="chat-tab-title">${this.escapeHtml(title || `Chat ${id}`)}</span>
-      <span class="chat-tab-close">&times;</span>
-    `
-    tab.querySelector(".chat-tab-close").addEventListener("click", (e) => {
-      e.stopPropagation()
-      this.closeTabById(id)
-    })
-    tab.addEventListener("click", () => {
-      this.switchTab(id)
-    })
-    this.tabsTarget.appendChild(tab)
-
-    // Create panel
-    const panel = document.createElement("div")
-    panel.className = "chat-panel"
-    panel.dataset.panelId = id
-    panel.innerHTML = `<div class="chat-panel-loading">Loading...</div>`
-    this.panelsTarget.appendChild(panel)
-
-    // Create canvas div keyed by pageId
-    if (pageId) {
-      const canvases = document.getElementById("conversation-canvases")
-      const canvasId = `canvas-page-${pageId}`
-      if (canvases && !document.getElementById(canvasId)) {
-        const canvas = document.createElement("div")
-        canvas.id = canvasId
-        canvas.className = "conversation-canvas"
-        canvases.appendChild(canvas)
-        // Load initial canvas content by page ID
-        this.loadCanvasByPage(pageId, canvas)
-      }
+    // Expand footer if collapsed
+    if (!this.element.style.height || this.element.style.height === "auto") {
+      this.element.style.height = this.footerHeight + "px"
     }
 
-    // Load panel content
-    this.loadPanel(id, panel)
+    // Switch to this canvas
+    this.switchCanvas(pageId)
 
-    // Connect SSE
-    this.connectSSE(id)
+    // Open conversation if provided, otherwise create one if canvas has none
+    if (convId) {
+      this.openConversation(convId, convTitle, convSlug, pageId)
+    } else if (canvas.conversations.length === 0) {
+      this.newConversation()
+    }
+  }
 
-    if (activate) {
-      this.switchTab(id)
-      // Expand footer if collapsed
-      if (!this.element.style.height || this.element.style.height === "auto") {
-        this.element.style.height = this.footerHeight + "px"
+  switchCanvas(pageId) {
+    this.activeCanvasPageId = pageId
+    const canvas = this.canvases.find(c => c.pageId === pageId)
+
+    // Update canvas tab buttons
+    this.canvasTabsTarget.querySelectorAll(".chat-tab").forEach(tab => {
+      tab.classList.toggle("active", parseInt(tab.dataset.pageId) === pageId)
+    })
+
+    // Update canvas overlays
+    const canvasesEl = document.getElementById("conversation-canvases")
+    if (canvasesEl) {
+      canvasesEl.querySelectorAll(".conversation-canvas").forEach(c => {
+        c.classList.toggle("active", c.id === `canvas-page-${pageId}`)
+      })
+    }
+
+    // Render conversation tabs for active canvas
+    this._renderConversationTabs()
+
+    // Show/hide conversation tab bar
+    if (canvas) {
+      this.conversationTabBarTarget.style.display = ""
+    }
+
+    // Switch to active conversation in this canvas
+    if (canvas && canvas.activeConvId) {
+      this._activateConversation(canvas.activeConvId)
+    }
+
+    this._saveState()
+    this._updateURL()
+  }
+
+  closeCanvas(pageId) {
+    const canvas = this.canvases.find(c => c.pageId === pageId)
+    if (!canvas) return
+
+    // Close SSE
+    if (this.eventSources[pageId]) {
+      this.eventSources[pageId].close()
+      delete this.eventSources[pageId]
+    }
+
+    // Remove all conversation panels
+    for (const conv of canvas.conversations) {
+      const panel = this.panelsTarget.querySelector(`[data-panel-id="${conv.id}"]`)
+      if (panel) panel.remove()
+    }
+
+    // Remove canvas tab button
+    const tab = this.canvasTabsTarget.querySelector(`[data-page-id="${pageId}"]`)
+    if (tab) tab.remove()
+
+    // Remove canvas overlay
+    const overlay = document.getElementById(`canvas-page-${pageId}`)
+    if (overlay) overlay.remove()
+
+    // Update state
+    this.canvases = this.canvases.filter(c => c.pageId !== pageId)
+    this._saveState()
+
+    // Switch to another canvas or collapse
+    if (this.activeCanvasPageId === pageId) {
+      if (this.canvases.length > 0) {
+        this.switchCanvas(this.canvases[this.canvases.length - 1].pageId)
+      } else {
+        this.activeCanvasPageId = null
+        this.element.style.height = "auto"
+        this.conversationTabBarTarget.style.display = "none"
+        this._clearConversationTabs()
+        const canvasesEl = document.getElementById("conversation-canvases")
+        if (canvasesEl) {
+          canvasesEl.querySelectorAll(".conversation-canvas").forEach(c => c.classList.remove("active"))
+        }
+        this._updateURL()
       }
     }
   }
 
-  // Open a new conversation tab for an existing canvas page
-  async openCanvasTab(pageId, title) {
+  // --- Conversation Tab Management ---
+
+  async newConversation() {
+    const canvas = this.canvases.find(c => c.pageId === this.activeCanvasPageId)
+    if (!canvas) return
+
     try {
       const resp = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `ai_page_id=${pageId}`
+        body: `ai_page_id=${canvas.pageId}`
       })
       const data = await resp.json()
-      this.openTab(data.id, title || data.title, true, pageId)
+      this.openConversation(data.id, data.title, data.slug, canvas.pageId)
     } catch (e) {
-      console.error("[ChatFooter] Failed to create conversation for canvas:", e)
+      console.error("[ChatFooter] Failed to create conversation:", e)
     }
   }
 
-  switchTab(id) {
-    this.activeTabId = id
+  openConversation(convId, title, slug, pageId) {
+    const canvas = this.canvases.find(c => c.pageId === pageId)
+    if (!canvas) return
 
-    // Update tab buttons
-    this.tabsTarget.querySelectorAll(".chat-tab").forEach(tab => {
-      tab.classList.toggle("active", tab.dataset.tabId == id)
-    })
-
-    // Update panels
-    this.panelsTarget.querySelectorAll(".chat-panel").forEach(panel => {
-      panel.classList.toggle("active", panel.dataset.panelId == id)
-    })
-
-    // Update canvases - show this conversation's canvas by pageId
-    const canvases = document.getElementById("conversation-canvases")
-    const activeTab = this.openTabs.find(t => t.id === id)
-    const activePageId = activeTab?.pageId
-
-    if (canvases) {
-      canvases.querySelectorAll(".conversation-canvas").forEach(c => {
-        c.classList.toggle("active", activePageId && c.id === `canvas-page-${activePageId}`)
-      })
+    // Don't duplicate
+    if (canvas.conversations.find(c => c.id === convId)) {
+      this.switchConversation(convId)
+      return
     }
 
-    // Scroll messages to bottom
-    const msgs = document.getElementById(`messages-${id}`)
-    if (msgs) {
-      requestAnimationFrame(() => {
-        msgs.scrollTop = msgs.scrollHeight
-      })
+    canvas.conversations.push({ id: convId, title, slug })
+
+    // Create panel
+    const panel = document.createElement("div")
+    panel.className = "chat-panel"
+    panel.dataset.panelId = convId
+    panel.innerHTML = `<div class="chat-panel-loading">Loading...</div>`
+    this.panelsTarget.appendChild(panel)
+
+    // Load panel content
+    this._loadPanel(convId, panel)
+
+    // If this canvas is active, re-render conversation tabs and switch
+    if (this.activeCanvasPageId === pageId) {
+      this._renderConversationTabs()
+      this.switchConversation(convId)
     }
+
+    this._saveState()
   }
 
-  closeTabById(id) {
-    const tab = this.tabsTarget.querySelector(`[data-tab-id="${id}"]`)
-    const closingTab = this.openTabs.find(t => t.id === id)
-    const pageId = closingTab?.pageId
+  switchConversation(convId) {
+    const canvas = this.canvases.find(c => c.pageId === this.activeCanvasPageId)
+    if (!canvas) return
 
-    // Remove SSE
-    if (this.eventSources[id]) {
-      this.eventSources[id].close()
-      delete this.eventSources[id]
-    }
+    canvas.activeConvId = convId
+    this._activateConversation(convId)
+    this._saveState()
+    this._updateURL()
+  }
 
-    // Remove tab button and panel
-    if (tab) tab.remove()
-    const panel = this.panelsTarget.querySelector(`[data-panel-id="${id}"]`)
+  closeConversation(convId) {
+    const canvas = this.canvases.find(c => c.conversations.some(cv => cv.id === convId))
+    if (!canvas) return
+
+    // Remove panel
+    const panel = this.panelsTarget.querySelector(`[data-panel-id="${convId}"]`)
     if (panel) panel.remove()
 
-    // Only remove canvas div if no other tab shares this pageId
-    if (pageId) {
-      const otherTabsWithPage = this.openTabs.filter(t => t.id !== id && t.pageId === pageId)
-      if (otherTabsWithPage.length === 0) {
-        const canvas = document.getElementById(`canvas-page-${pageId}`)
-        if (canvas) canvas.remove()
-      }
-    }
+    // Remove from state
+    canvas.conversations = canvas.conversations.filter(c => c.id !== convId)
 
-    // Update state
-    this.openTabs = this.openTabs.filter(t => t.id !== id)
-    this.saveTabs()
-
-    // Switch to another tab or collapse
-    if (this.activeTabId === id) {
-      if (this.openTabs.length > 0) {
-        this.switchTab(this.openTabs[this.openTabs.length - 1].id)
+    // If it was the active conversation, switch to another or close canvas
+    if (canvas.activeConvId === convId) {
+      if (canvas.conversations.length > 0) {
+        canvas.activeConvId = canvas.conversations[canvas.conversations.length - 1].id
       } else {
-        this.activeTabId = null
-        this.element.style.height = "auto"
-        // Show page content again
-        const canvases = document.getElementById("conversation-canvases")
-        if (canvases) {
-          canvases.querySelectorAll(".conversation-canvas").forEach(c => c.classList.remove("active"))
-        }
+        canvas.activeConvId = null
+        // Close the canvas if no conversations left
+        this.closeCanvas(canvas.pageId)
+        return
       }
     }
-  }
 
-  // --- Panel Loading ---
-
-  async loadPanel(id, panel) {
-    try {
-      const resp = await fetch(`/conversations/${id}/panel`)
-      panel.innerHTML = await resp.text()
-      // Scroll to bottom
-      const msgs = panel.querySelector(`#messages-${id}`)
-      if (msgs) {
-        requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight })
+    if (this.activeCanvasPageId === canvas.pageId) {
+      this._renderConversationTabs()
+      if (canvas.activeConvId) {
+        this._activateConversation(canvas.activeConvId)
       }
-    } catch (e) {
-      panel.innerHTML = `<div class="p-4 text-ned-muted-fg text-sm">Failed to load conversation.</div>`
     }
-  }
 
-  async loadCanvasByPage(pageId, container) {
-    try {
-      const resp = await fetch(`/api/pages/${pageId}/canvas`)
-      if (!resp.ok) return
-
-      const data = await resp.json()
-
-      // Build canvas structure
-      container.innerHTML = `
-        <div class="canvas-dot-grid"></div>
-        <div class="canvas-world" id="canvas-components-${pageId}"></div>
-        <div class="canvas-zoom-indicator">100%</div>
-      `
-      container.setAttribute("data-controller", "canvas")
-      container.setAttribute("data-canvas-page-id-value", pageId)
-
-      const world = container.querySelector(".canvas-world")
-      for (const comp of data.components) {
-        world.insertAdjacentHTML("beforeend", this.renderCanvasComponent(comp))
-      }
-    } catch (e) {
-      console.error("[ChatFooter] Failed to load canvas:", e)
-    }
-  }
-
-  renderCanvasComponent(comp) {
-    let style = `left:${comp.x}px;top:${comp.y}px;width:${comp.width}px;`
-    if (comp.height) style += `height:${comp.height}px;`
-    return `<div class="canvas-component" id="canvas-component-${comp.id}" data-component-id="${comp.id}" style="${style}" data-z="${comp.z_index}">
-      <div class="canvas-component-content">${comp.content || ''}</div>
-    </div>`
+    this._saveState()
+    this._updateURL()
   }
 
   // --- SSE ---
 
-  connectSSE(id) {
-    if (this.eventSources[id]) return
+  connectSSE(pageId) {
+    if (this.eventSources[pageId]) return
 
-    const source = new EventSource(`/conversations/${id}/stream`)
+    const source = new EventSource(`/api/pages/${pageId}/stream`)
     source.onmessage = (event) => {
       window.Turbo.renderStreamMessage(event.data)
-      // Scroll the specific panel's messages
-      const msgs = document.getElementById(`messages-${id}`)
-      if (msgs) {
-        requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight })
+      // Auto-scroll any visible message panel for this canvas
+      const canvas = this.canvases.find(c => c.pageId === pageId)
+      if (canvas && canvas.activeConvId) {
+        const msgs = document.getElementById(`messages-${canvas.activeConvId}`)
+        if (msgs) {
+          requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight })
+        }
       }
     }
     source.onerror = () => {
-      console.warn(`[ChatFooter] SSE error for conversation ${id}, reconnecting...`)
+      console.warn(`[ChatFooter] SSE error for canvas ${pageId}, reconnecting...`)
     }
-    this.eventSources[id] = source
+    this.eventSources[pageId] = source
   }
 
   // --- Message Sending ---
@@ -292,7 +307,6 @@ export default class extends Controller {
     // Append user message immediately
     const messagesEl = document.getElementById(`messages-${conversationId}`)
     if (messagesEl) {
-      // Remove empty state if present
       const emptyState = messagesEl.querySelector(".py-8.text-center")
       if (emptyState) emptyState.remove()
 
@@ -309,11 +323,9 @@ export default class extends Controller {
       requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight })
     }
 
-    // Clear input
     textarea.value = ""
     textarea.style.height = "auto"
 
-    // Send to server
     try {
       await fetch(`/conversations/${conversationId}/messages`, {
         method: "POST",
@@ -366,10 +378,220 @@ export default class extends Controller {
     document.addEventListener("touchend", onUp)
   }
 
+  // --- Internal Helpers ---
+
+  _createCanvasTabButton(canvas) {
+    const tab = document.createElement("button")
+    tab.type = "button"
+    tab.className = "chat-tab"
+    tab.dataset.pageId = canvas.pageId
+    tab.innerHTML = `
+      <span class="chat-tab-title">${this.escapeHtml(canvas.title || `Canvas ${canvas.pageId}`)}</span>
+      <span class="chat-tab-close">&times;</span>
+    `
+    tab.querySelector(".chat-tab-close").addEventListener("click", (e) => {
+      e.stopPropagation()
+      this.closeCanvas(canvas.pageId)
+    })
+    tab.addEventListener("click", () => {
+      this.switchCanvas(canvas.pageId)
+    })
+    this.canvasTabsTarget.appendChild(tab)
+  }
+
+  _createCanvasOverlay(pageId) {
+    const canvasesEl = document.getElementById("conversation-canvases")
+    const canvasId = `canvas-page-${pageId}`
+    if (canvasesEl && !document.getElementById(canvasId)) {
+      const overlay = document.createElement("div")
+      overlay.id = canvasId
+      overlay.className = "conversation-canvas"
+      canvasesEl.appendChild(overlay)
+      this._loadCanvasByPage(pageId, overlay)
+    }
+  }
+
+  _renderConversationTabs() {
+    this._clearConversationTabs()
+    const canvas = this.canvases.find(c => c.pageId === this.activeCanvasPageId)
+    if (!canvas) return
+
+    for (const conv of canvas.conversations) {
+      const tab = document.createElement("button")
+      tab.type = "button"
+      tab.className = "chat-tab"
+      tab.dataset.convId = conv.id
+      if (canvas.activeConvId === conv.id) tab.classList.add("active")
+      tab.innerHTML = `
+        <span class="chat-tab-title">${this.escapeHtml(conv.title || `Chat ${conv.id}`)}</span>
+        <span class="chat-tab-close">&times;</span>
+      `
+      tab.querySelector(".chat-tab-close").addEventListener("click", (e) => {
+        e.stopPropagation()
+        this.closeConversation(conv.id)
+      })
+      tab.addEventListener("click", () => {
+        this.switchConversation(conv.id)
+      })
+      this.conversationTabsTarget.appendChild(tab)
+    }
+  }
+
+  _clearConversationTabs() {
+    this.conversationTabsTarget.innerHTML = ""
+  }
+
+  _activateConversation(convId) {
+    // Update conversation tab highlights
+    this.conversationTabsTarget.querySelectorAll(".chat-tab").forEach(tab => {
+      tab.classList.toggle("active", parseInt(tab.dataset.convId) === convId)
+    })
+
+    // Update panels
+    this.panelsTarget.querySelectorAll(".chat-panel").forEach(panel => {
+      // Show only panels belonging to the active canvas's conversations
+      const canvas = this.canvases.find(c => c.pageId === this.activeCanvasPageId)
+      const belongsToCanvas = canvas && canvas.conversations.some(cv => cv.id === parseInt(panel.dataset.panelId))
+      panel.classList.toggle("active", belongsToCanvas && parseInt(panel.dataset.panelId) === convId)
+    })
+
+    // Scroll messages to bottom
+    const msgs = document.getElementById(`messages-${convId}`)
+    if (msgs) {
+      requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight })
+    }
+  }
+
+  async _loadPanel(id, panel) {
+    try {
+      const resp = await fetch(`/conversations/${id}/panel`)
+      panel.innerHTML = await resp.text()
+      const msgs = panel.querySelector(`#messages-${id}`)
+      if (msgs) {
+        requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight })
+      }
+    } catch (e) {
+      panel.innerHTML = `<div class="p-4 text-ned-muted-fg text-sm">Failed to load conversation.</div>`
+    }
+  }
+
+  async _loadCanvasByPage(pageId, container) {
+    try {
+      const resp = await fetch(`/api/pages/${pageId}/canvas`)
+      if (!resp.ok) return
+
+      const data = await resp.json()
+
+      container.innerHTML = `
+        <div class="canvas-dot-grid"></div>
+        <div class="canvas-world" id="canvas-components-${pageId}"></div>
+        <div class="canvas-zoom-indicator">100%</div>
+      `
+      container.setAttribute("data-controller", "canvas")
+      container.setAttribute("data-canvas-page-id-value", pageId)
+
+      const world = container.querySelector(".canvas-world")
+      for (const comp of data.components) {
+        world.insertAdjacentHTML("beforeend", this._renderCanvasComponent(comp))
+      }
+    } catch (e) {
+      console.error("[ChatFooter] Failed to load canvas:", e)
+    }
+  }
+
+  _renderCanvasComponent(comp) {
+    let style = `left:${comp.x}px;top:${comp.y}px;width:${comp.width}px;`
+    if (comp.height) style += `height:${comp.height}px;`
+    return `<div class="canvas-component" id="canvas-component-${comp.id}" data-component-id="${comp.id}" style="${style}" data-z="${comp.z_index}">
+      <div class="canvas-component-content">${comp.content || ''}</div>
+    </div>`
+  }
+
+  // --- Restore canvas from saved state ---
+
+  _restoreCanvas(savedCanvas) {
+    const canvas = {
+      pageId: savedCanvas.pageId,
+      title: savedCanvas.title,
+      slug: savedCanvas.slug,
+      conversations: [],
+      activeConvId: savedCanvas.activeConvId
+    }
+    this.canvases.push(canvas)
+
+    this._createCanvasTabButton(canvas)
+    this._createCanvasOverlay(canvas.pageId)
+    this.connectSSE(canvas.pageId)
+
+    // Restore conversations
+    for (const conv of (savedCanvas.conversations || [])) {
+      canvas.conversations.push({ id: conv.id, title: conv.title, slug: conv.slug })
+
+      const panel = document.createElement("div")
+      panel.className = "chat-panel"
+      panel.dataset.panelId = conv.id
+      panel.innerHTML = `<div class="chat-panel-loading">Loading...</div>`
+      this.panelsTarget.appendChild(panel)
+      this._loadPanel(conv.id, panel)
+    }
+  }
+
+  // --- URL Management ---
+
+  _updateURL() {
+    const canvas = this.canvases.find(c => c.pageId === this.activeCanvasPageId)
+    if (!canvas) {
+      if (location.pathname !== "/") history.pushState(null, "", "/")
+      return
+    }
+    const conv = canvas.conversations.find(c => c.id === canvas.activeConvId)
+    const path = conv ? `/${canvas.slug}/${conv.slug}` : `/${canvas.slug}`
+    if (location.pathname !== path) history.pushState(null, "", path)
+  }
+
+  _handlePopState() {
+    const parts = location.pathname.split("/").filter(Boolean)
+    if (parts.length === 0) {
+      // At root — deselect
+      if (this.activeCanvasPageId) {
+        this.activeCanvasPageId = null
+        this.canvasTabsTarget.querySelectorAll(".chat-tab").forEach(t => t.classList.remove("active"))
+        this.conversationTabBarTarget.style.display = "none"
+        this._clearConversationTabs()
+        this.panelsTarget.querySelectorAll(".chat-panel").forEach(p => p.classList.remove("active"))
+        const canvasesEl = document.getElementById("conversation-canvases")
+        if (canvasesEl) canvasesEl.querySelectorAll(".conversation-canvas").forEach(c => c.classList.remove("active"))
+      }
+      return
+    }
+
+    const canvasSlug = parts[0]
+    const chatSlug = parts[1]
+
+    const canvas = this.canvases.find(c => c.slug === canvasSlug)
+    if (canvas) {
+      this.switchCanvas(canvas.pageId)
+      if (chatSlug) {
+        const conv = canvas.conversations.find(c => c.slug === chatSlug)
+        if (conv) this.switchConversation(conv.id)
+      }
+    }
+  }
+
   // --- Persistence ---
 
-  saveTabs() {
-    sessionStorage.setItem("chatOpenTabs", JSON.stringify(this.openTabs))
+  _saveState() {
+    const state = {
+      canvases: this.canvases.map(c => ({
+        pageId: c.pageId,
+        title: c.title,
+        slug: c.slug,
+        conversations: c.conversations.map(cv => ({ id: cv.id, title: cv.title, slug: cv.slug })),
+        activeConvId: c.activeConvId
+      })),
+      activeCanvasPageId: this.activeCanvasPageId
+    }
+    sessionStorage.setItem("chatState", JSON.stringify(state))
   }
 
   // --- Utilities ---

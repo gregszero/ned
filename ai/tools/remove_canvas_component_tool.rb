@@ -18,9 +18,7 @@ module Ai
         component.destroy!
 
         turbo = "<turbo-stream action=\"remove\" target=\"canvas-component-#{component_id}\"><template></template></turbo-stream>"
-        page.conversations.each do |conv|
-          Ai::Web::TurboBroadcast.broadcast("conversation:#{conv.id}", turbo)
-        end
+        Ai::Web::TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
 
         {
           success: true,

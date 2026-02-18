@@ -55,7 +55,7 @@
       <div class="text-ned-primary font-semibold text-lg tracking-tight mb-6">Ned</div>
       <nav class="flex flex-col gap-0.5">
         <% Ai::AiPage.published.recent.each do |page| %>
-          <a href="#" onclick="chatFooter.openCanvasTab(<%= page.id %>, '<%= page.title.gsub("'", "\\\\'") %>'); return false"><%= page.title %></a>
+          <a href="/<%= page.slug %>" onclick="if(window.chatFooter){chatFooter.openCanvas(<%= page.id %>, '<%= page.title.gsub("'", "\\\\'") %>', '<%= page.slug %>');return false}"><%= page.title %></a>
         <% end %>
         <a href="/notifications" data-turbo-frame="canvas-content" class="flex items-center justify-between">
           Notifications
@@ -109,10 +109,15 @@
     <!-- Resize handle -->
     <div class="chat-footer-handle" data-action="mousedown->chat-footer#startResize touchstart->chat-footer#startResize"></div>
 
-    <!-- Tab bar -->
-    <div class="chat-tab-bar" data-chat-footer-target="tabBar">
-      <div class="chat-tabs" data-chat-footer-target="tabs"></div>
-      <button class="chat-tab-new ghost xs" data-action="click->chat-footer#newTab" type="button" title="New conversation">+</button>
+    <!-- Canvas tabs (top level) -->
+    <div class="chat-tab-bar canvas-level" data-chat-footer-target="tabBar">
+      <div class="chat-tabs" data-chat-footer-target="canvasTabs"></div>
+      <button class="chat-tab-new ghost xs" data-action="click->chat-footer#newTab" type="button" title="New canvas">+</button>
+    </div>
+    <!-- Conversation tabs (bottom level, scoped to active canvas) -->
+    <div class="chat-tab-bar conversation-level" data-chat-footer-target="conversationTabBar" style="display:none">
+      <div class="chat-tabs" data-chat-footer-target="conversationTabs"></div>
+      <button class="chat-tab-new ghost xs" data-action="click->chat-footer#newConversation" type="button" title="New conversation">+</button>
     </div>
 
     <!-- Panels container -->
@@ -132,5 +137,10 @@
       }
     });
   </script>
+
+  <!-- Canvas context menu (singleton) -->
+  <div id="canvas-context-menu" class="canvas-context-menu" style="display:none">
+    <div id="canvas-context-menu-items"></div>
+  </div>
 </body>
 </html>

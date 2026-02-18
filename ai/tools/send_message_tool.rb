@@ -68,7 +68,7 @@ module Ai
 
         turbo_html = "<turbo-stream action=\"remove\" target=\"thinking-indicator-#{conversation.id}\"><template></template></turbo-stream>" \
                      "<turbo-stream action=\"append\" target=\"messages-#{conversation.id}\"><template>#{message_html}</template></turbo-stream>"
-        Ai::Web::TurboBroadcast.broadcast("conversation:#{conversation.id}", turbo_html)
+        Ai::Web::TurboBroadcast.broadcast(conversation.broadcast_channel, turbo_html)
       rescue => e
         Ai.logger.error "Failed to broadcast message: #{e.message}"
       end
