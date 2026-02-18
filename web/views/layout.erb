@@ -123,10 +123,11 @@
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js');
     }
-    // Close sidebar when clicking overlay
+    // Close sidebar when clicking overlay or a nav link
     document.addEventListener('click', function(e) {
       var toggle = document.getElementById('sidebar-toggle');
-      if (toggle && toggle.checked && e.target.matches('.sidebar-container > label')) {
+      if (!toggle || !toggle.checked) return;
+      if (e.target.matches('.sidebar-container > label') || e.target.closest('.sidebar nav a')) {
         toggle.checked = false;
       }
     });
