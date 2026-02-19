@@ -1,0 +1,46 @@
+Implement the following plan:
+
+# Add GitHub Actions CI
+
+## Context
+OpenFang now has a test suite (169 Ruby tests + 24 Python tests) but no CI pipeline. Adding a GitHub Actions workflow ensures tests run on every push and PR.
+
+## Plan
+
+### Create `.github/workflows/ci.yml`
+
+Single workflow file with two parallel jobs:
+
+**Ruby tests job:**
+- Ubuntu latest
+- Ruby 3.3 (matches Gemfile `~> 3.3` — use stable 3.3 rather than bleeding-edge 3.4 which has bundled gem issues)
+- `ruby/setup-ruby` with `bundler-cache: true` for dependency caching
+- `rake test`
+
+**Python tests job:**
+- Ubuntu latest
+- Python 3.12 (stable)
+- `pip install pytest`
+- `python3 -m pytest test/python/ -v`
+
+**Triggers:** push to `master`, PRs targeting `master`
+
+### Why this is simple
+- SQLite is pre-installed on GitHub runners — no services needed
+- No `.env` or API keys required (WebMock blocks real HTTP, jobs are stubbed)
+- No Redis, Postgres, or Docker needed
+- Both jobs are fully independent
+
+### File created
+- `.github/workflows/ci.yml`
+
+## Verification
+- Push to GitHub and check Actions tab
+- Both jobs should show green
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this

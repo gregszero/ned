@@ -1,14 +1,14 @@
 {
   "cli_version": "0.4.4",
   "checkpoint_id": "53498bf7c391",
+  "session_id": "f89896c1-0bab-41a7-93be-a30cee2fa5c6",
   "strategy": "manual-commit",
+  "created_at": "2026-02-19T15:13:55.214925128Z",
   "branch": "master",
-  "checkpoints_count": 4,
+  "checkpoints_count": 2,
   "files_touched": [
     ".claude/settings.local.json",
     ".github/workflows/ci.yml",
-    "Gemfile",
-    "Rakefile",
     "storage/test.db",
     "test/concerns/has_json_defaults_test.rb",
     "test/concerns/has_status_test.rb",
@@ -42,27 +42,22 @@
     "test_jobs.rb",
     "test_web_ui.rb"
   ],
-  "sessions": [
-    {
-      "metadata": "/53/498bf7c391/0/metadata.json",
-      "transcript": "/53/498bf7c391/0/full.jsonl",
-      "context": "/53/498bf7c391/0/context.md",
-      "content_hash": "/53/498bf7c391/0/content_hash.txt",
-      "prompt": "/53/498bf7c391/0/prompt.txt"
-    },
-    {
-      "metadata": "/53/498bf7c391/1/metadata.json",
-      "transcript": "/53/498bf7c391/1/full.jsonl",
-      "context": "/53/498bf7c391/1/context.md",
-      "content_hash": "/53/498bf7c391/1/content_hash.txt",
-      "prompt": "/53/498bf7c391/1/prompt.txt"
-    }
-  ],
+  "agent": "Claude Code",
   "token_usage": {
-    "input_tokens": 111,
-    "cache_creation_tokens": 141265,
-    "cache_read_tokens": 9712445,
-    "output_tokens": 15699,
-    "api_call_count": 99
-  }
+    "input_tokens": 11,
+    "cache_creation_tokens": 8575,
+    "cache_read_tokens": 170843,
+    "output_tokens": 373,
+    "api_call_count": 7
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-19T15:13:55.189247488Z",
+    "agent_lines": 0,
+    "human_added": 0,
+    "human_modified": 218,
+    "human_removed": 1703,
+    "total_committed": 177,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/f89896c1-0bab-41a7-93be-a30cee2fa5c6.jsonl"
 }
