@@ -1,0 +1,74 @@
+Implement the following plan:
+
+# Fix Canvas Scroll Lock to Preserve Position and Zoom
+
+## Context
+Scroll lock currently resets the canvas to 0,0 at 1.0x zoom and switches to native browser scrolling. The user wants scroll lock to instead **freeze the current view** (keeping zoom and pan position) and simply allow vertical scrolling via the mouse wheel — like a "lock in place and scroll down" mode.
+
+## Approach
+Instead of switching to native browser overflow scrolling, keep the transform-based rendering and simply make the mouse wheel adjust `panY` (vertical pan) instead of zooming. This preserves the zoom level and horizontal position exactly as-is.
+
+## Files to Modify
+
+### `web/public/js/controllers/canvas_controller.js`
+
+**`toggleScrollLock()` (line 429)** — Simplify to just toggle the flag. No need to save/restore pan/scale or reset anything:
+```js
+toggleScrollLock() {
+  this.scrollLock = !this.scrollLock
+  this.element.classList.toggle("scroll-locked", this.scrollLock)
+  this.updateZoomIndicator()
+}
+```
+
+**`onWheel()` (line 586)** — When scroll-locked, translate `deltaY` into vertical panning instead of zooming:
+```js
+onWheel(e) {
+  e.preventDefault()
+
+  if (this.scrollLock) {
+    // Scroll lock: wheel scrolls vertically (pans Y only)
+    this.panY -= e.deltaY
+    this.updateTransform()
+    return
+  }
+  // ... existing zoom logic
+}
+```
+
+**`updateTransform()` (line 611)** — Remove the scroll-lock special case; always apply the transform:
+```js
+updateTransform() {
+  if (this.world) {
+    this.world.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.scale})`
+    this.world.style.width = ""
+    this.world.style.height = ""
+  }
+}
+```
+
+**`_updateWorldSize()`** — Remove the scroll-lock sizing logic (no longer needed since we don't use native scroll).
+
+### `web/public/css/style.css`
+
+**`.conversation-canvas.scroll-locked` (line 1101)** — Remove `overflow-y: auto` (no longer using native scroll):
+```css
+.conversation-canvas.scroll-locked {
+  /* No overflow change needed — scrolling is handled via panY */
+}
+```
+Or just remove the rule entirely, keeping only the dot-grid hide rule.
+
+## Verification
+1. Start the server, open a canvas page
+2. Pan and zoom to a specific position
+3. Toggle scroll lock — view should not jump
+4. Mouse wheel should scroll vertically while keeping zoom and horizontal position
+5. Toggle scroll lock off — zoom wheel behavior should return
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
