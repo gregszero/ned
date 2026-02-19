@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "ef12603bfbc4",
+  "session_id": "f89896c1-0bab-41a7-93be-a30cee2fa5c6",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-19T16:05:48.228348217Z",
+  "branch": "master",
+  "checkpoints_count": 0,
+  "files_touched": [
+    ".github/workflows/ci.yml",
+    ".gitignore"
+  ],
+  "agent": "Claude Code",
+  "transcript_identifier_at_start": "4aea71fc-19ac-4153-bb87-23c5a61c36a2",
+  "checkpoint_transcript_start": 98,
+  "transcript_lines_at_start": 98,
+  "token_usage": {
+    "input_tokens": 14,
+    "cache_creation_tokens": 35820,
+    "cache_read_tokens": 499208,
+    "output_tokens": 2116,
+    "api_call_count": 12
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-19T16:05:48.09250728Z",
+    "agent_lines": 0,
+    "human_added": 1038,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 1038,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/f89896c1-0bab-41a7-93be-a30cee2fa5c6.jsonl"
+}
