@@ -1,0 +1,106 @@
+Implement the following plan:
+
+# Fix Agent Subprocess Error Handling
+
+## Context
+
+The Claude CLI subprocess (`fang/agent.rb`) produces garbled error messages like:
+```
+Agent error: Agent exited with code : {"level":"warn","message":"[BashTool] Pre-flight check is taking longer than expected..."}
+```
+
+Two bugs combine to produce this:
+
+1. **Blank exit code**: `status.exitstatus` returns `nil` when the process is killed by a signal (e.g. timeout/SIGTERM). The code interpolates this nil directly, producing "code :".
+2. **Raw JSON in error message**: The `claude` CLI emits structured NDJSON to stderr (including warn-level log lines). The code dumps this raw JSON into the user-facing error instead of extracting the human-readable message.
+
+## File to Modify
+
+`fang/agent.rb` — two locations: `run_claude` (line ~122) and `run_claude_streaming` (line ~174-176)
+
+## Changes
+
+### 1. Add `exit_code_label` helper (private method)
+
+```ruby
+def exit_code_label(status)
+  if status.exitstatus
+    status.exitstatus.to_s
+  elsif status.termsig
+    "signal #{status.termsig}"
+  else
+    "unknown"
+  end
+end
+```
+
+### 2. Add `extract_stderr_message` helper (private method)
+
+Parse NDJSON stderr lines and extract human-readable messages. Fall back to raw text if not JSON.
+
+```ruby
+def extract_stderr_message(stderr_output)
+  return "(no output)" if stderr_output.to_s.strip.empty?
+
+  lines = stderr_output.strip.split("\n")
+  messages = lines.filter_map do |line|
+    parsed = JSON.parse(line)
+    parsed["message"]
+  rescue JSON::ParserError
+    line.strip.empty? ? nil : line.strip
+  end
+
+  messages.empty? ? "(no output)" : messages.join("; ")
+end
+```
+
+### 3. Update `run_claude` error path (~line 122)
+
+Replace:
+```ruby
+detail = stderr.to_s.strip
+detail = stdout.to_s.strip if detail.empty?
+detail = "(no output)" if detail.empty?
+Fang.logger.error "Claude exited with code #{status.exitstatus}:\nstderr: #{stderr}\nstdout: #{stdout}"
+{ failed: true, error: "Agent exited with code #{status.exitstatus}:\n#{detail}" }
+```
+
+With:
+```ruby
+code = exit_code_label(status)
+detail = extract_stderr_message(stderr)
+detail = stdout.to_s.strip if detail == "(no output)"
+detail = "(no output)" if detail.to_s.strip.empty?
+Fang.logger.error "Claude exited with #{code}:\nstderr: #{stderr}\nstdout: #{stdout}"
+{ failed: true, error: "Agent exited with #{code}: #{detail}" }
+```
+
+### 4. Update `run_claude_streaming` error path (~line 174-176)
+
+Replace:
+```ruby
+err = stderr_output.to_s.strip
+Fang.logger.error "Claude streaming exited #{status.exitstatus}: #{err}"
+yield({ 'type' => 'error', 'message' => "Agent exited with code #{status.exitstatus}: #{err}" }) if block
+```
+
+With:
+```ruby
+code = exit_code_label(status)
+err = extract_stderr_message(stderr_output)
+Fang.logger.error "Claude streaming exited #{code}: #{stderr_output}"
+yield({ 'type' => 'error', 'message' => "Agent exited with #{code}: #{err}" }) if block
+```
+
+## Verification
+
+1. `rake test` — all existing tests pass
+2. Start server, send a message in a conversation — agent should work normally
+3. If the pre-flight timeout recurs, error message should now read something like: `Agent exited with signal 15: [BashTool] Pre-flight check is taking longer than expected...`
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
