@@ -1,15 +1,16 @@
 # frozen_string_literal: true
 
-require 'httparty'
 require 'openssl'
 
 module Fang
   module WhatsApp
-    GOWA_BASE_URL = ENV.fetch('GOWA_URL', 'http://whatsapp:3000')
-
     class << self
       def enabled?
         ENV['WHATSAPP_ENABLED'] == 'true'
+      end
+
+      def client
+        @client ||= Clients::WhatsAppClient.new
       end
 
       def handle_inbound(payload)
@@ -44,21 +45,18 @@ module Fang
       end
 
       def send_message(phone:, content:)
-        response = HTTParty.post(
-          "#{GOWA_BASE_URL}/send/message",
-          headers: { 'Content-Type' => 'application/json' },
-          body: {
-            phone: phone,
-            message: content
-          }.to_json,
-          timeout: 30
-        )
-
-        unless response.success?
-          Fang.logger.error "WhatsApp send failed (#{response.code}): #{response.body}"
-        end
-
+        response = client.send_message(phone: phone, message: content)
         response
+      rescue Clients::WhatsAppClient::Error => e
+        Fang.logger.error "WhatsApp send failed: #{e.message}"
+        nil
+      end
+
+      def status
+        client.status
+      rescue Clients::WhatsAppClient::Error => e
+        Fang.logger.error "WhatsApp status check failed: #{e.message}"
+        nil
       end
 
       def verify_signature(raw_body, signature_header)

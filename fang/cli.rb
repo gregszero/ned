@@ -102,6 +102,23 @@ module Fang
       server.close
     end
 
+    desc "whatsapp", "Start WhatsApp bridge"
+    def whatsapp
+      unless system("which node > /dev/null 2>&1")
+        puts "Node.js is required. Install it first: https://nodejs.org"
+        exit 1
+      end
+
+      whatsapp_dir = File.join(Fang.root, "whatsapp")
+
+      unless File.exist?(File.join(whatsapp_dir, "node_modules"))
+        puts "Installing dependencies..."
+        system("npm install --prefix #{whatsapp_dir}") || exit(1)
+      end
+
+      exec "node #{File.join(whatsapp_dir, 'index.js')}"
+    end
+
     desc "version", "Show version information"
     def version
       puts "openfang version 0.1.0"

@@ -1,0 +1,13 @@
+{
+  "name": "openfang-whatsapp-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WhatsApp bridge for OpenFang using Baileys",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6"
+  }
+}

@@ -183,6 +183,49 @@ After setup:
 4. **View settings**: Check skills, MCP connections, config
 5. **Read docs**: Check FINAL_STATUS.md for full documentation
 
+## WhatsApp Integration (Optional)
+
+Connect OpenFang to WhatsApp using the Baileys bridge (like WhatsApp Web).
+
+### Prerequisites
+
+- Node.js 18+ installed (`node --version`)
+
+### Setup Steps
+
+1. Install bridge dependencies:
+   ```bash
+   cd whatsapp && npm install
+   ```
+
+2. Add to `.env`:
+   ```
+   WHATSAPP_ENABLED=true
+   WHATSAPP_WEBHOOK_SECRET=your-random-secret-here
+   ```
+   Generate a secret: `ruby -e "require 'securerandom'; puts SecureRandom.hex(32)"`
+
+3. Start the bridge:
+   ```bash
+   ./openfang.rb whatsapp
+   ```
+
+4. Scan the QR code with WhatsApp > Linked Devices > Link a Device
+
+5. **Alternative: Pairing code** (no QR needed):
+   ```
+   WHATSAPP_PAIRING_CODE=true
+   WHATSAPP_PHONE_NUMBER=1234567890
+   ```
+
+6. Verify connection:
+   ```ruby
+   ./openfang.rb console
+   > Fang::WhatsApp.status
+   ```
+
+Session persists in `whatsapp/auth/` — you only need to scan once.
+
 ## Advanced Setup
 
 ### PostgreSQL (Production)
