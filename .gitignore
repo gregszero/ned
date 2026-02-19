@@ -6,6 +6,8 @@
 # Database
 storage/data.db
 storage/data.db-*
+storage/test.db
+storage/test.db-*
 *.sqlite3
 
 # Session data
@@ -30,6 +32,10 @@ tmp/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
 
 # Ruby/Bundler
 .bundle/
