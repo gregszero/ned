@@ -291,6 +291,10 @@ export default class extends Controller {
       // Auto-scroll any visible message panel for this canvas
       const canvas = this.canvases.find(c => c.pageId === pageId)
       if (canvas && canvas.activeConvId) {
+        // Remove thinking indicator
+        const thinking = document.getElementById(`thinking-${canvas.activeConvId}`)
+        if (thinking) thinking.remove()
+
         const msgs = document.getElementById(`messages-${canvas.activeConvId}`)
         if (msgs) {
           requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight })
@@ -317,7 +321,7 @@ export default class extends Controller {
     // Append user message immediately
     const messagesEl = document.getElementById(`messages-${conversationId}`)
     if (messagesEl) {
-      const emptyState = messagesEl.querySelector(".py-8.text-center")
+      const emptyState = messagesEl.querySelector(".py-12.text-center")
       if (emptyState) emptyState.remove()
 
       const msgDiv = document.createElement("div")
@@ -335,6 +339,22 @@ export default class extends Controller {
 
     textarea.value = ""
     textarea.style.height = "auto"
+
+    // Show AI thinking indicator
+    if (messagesEl) {
+      const thinkingDiv = document.createElement("div")
+      thinkingDiv.className = "ai-thinking"
+      thinkingDiv.id = `thinking-${conversationId}`
+      thinkingDiv.innerHTML = `
+        <div class="ai-thinking-dots">
+          <div class="ai-thinking-dot"></div>
+          <div class="ai-thinking-dot"></div>
+          <div class="ai-thinking-dot"></div>
+        </div>
+      `
+      messagesEl.appendChild(thinkingDiv)
+      requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight })
+    }
 
     try {
       await fetch(`/conversations/${conversationId}/messages`, {

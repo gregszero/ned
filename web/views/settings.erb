@@ -75,9 +75,7 @@
         <%= Fang::WhatsApp.enabled? ? 'Enabled' : 'Disabled' %>
       </span>
       <% if Fang::WhatsApp.enabled? %>
-        <a href="http://localhost:3001" target="_blank">
-          <button class="outline sm" type="button">Open GOWA Dashboard</button>
-        </a>
+        <a href="http://localhost:3001" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center h-9 px-3 text-sm font-medium border border-fang-border rounded bg-transparent text-fang-fg hover:bg-fang-muted no-underline">Open GOWA Dashboard</a>
       <% else %>
         <p class="text-sm text-fang-muted-fg">Set <code>WHATSAPP_ENABLED=true</code> to activate.</p>
       <% end %>

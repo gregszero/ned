@@ -28,6 +28,6 @@
     <% end %>
 
     <hr>
-    <div class="prose-bubble"><%= @page.content %></div>
+    <div class="prose-bubble"><%= render_markdown(@page.content || '') %></div>
   </article>
 </div>

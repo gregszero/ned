@@ -50,6 +50,9 @@ export default class extends Controller {
   _open() {
     this.open = true
     this.dropdownTarget.style.display = ""
+    this.dropdownTarget.classList.add("open")
+    const btn = this.element.querySelector("[data-action*='notifications#toggle']")
+    if (btn) btn.setAttribute("aria-expanded", "true")
     if (!this.loaded) {
       this.page = 1
       this._fetchNotifications(false)
@@ -58,7 +61,13 @@ export default class extends Controller {
 
   _close() {
     this.open = false
-    this.dropdownTarget.style.display = "none"
+    this.dropdownTarget.classList.remove("open")
+    const btn = this.element.querySelector("[data-action*='notifications#toggle']")
+    if (btn) btn.setAttribute("aria-expanded", "false")
+    // Delay hiding to allow fade-out animation
+    setTimeout(() => {
+      if (!this.open) this.dropdownTarget.style.display = "none"
+    }, 120)
   }
 
   async _fetchNotifications(append) {

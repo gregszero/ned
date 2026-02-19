@@ -15,7 +15,7 @@
   <div class="flex-1 overflow-hidden border border-fang-border rounded-lg bg-fang-card">
     <div id="messages-<%= @conversation.id %>" data-conversation-target="messages" class="messages h-full overflow-y-auto p-4 flex flex-col gap-3">
       <% if @messages.empty? %>
-        <div class="py-16 text-center">
+        <div class="py-12 text-center">
           <p class="text-fang-muted-fg">No messages yet. Start the conversation below!</p>
         </div>
       <% else %>
