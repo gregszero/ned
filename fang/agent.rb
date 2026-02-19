@@ -116,11 +116,12 @@ module Fang
         if status.success?
           { failed: false, stdout: stdout }
         else
-          detail = stderr.to_s.strip
-          detail = stdout.to_s.strip if detail.empty?
-          detail = "(no output)" if detail.empty?
-          Fang.logger.error "Claude exited with code #{status.exitstatus}:\nstderr: #{stderr}\nstdout: #{stdout}"
-          { failed: true, error: "Agent exited with code #{status.exitstatus}:\n#{detail}" }
+          code = exit_code_label(status)
+          detail = extract_stderr_message(stderr)
+          detail = stdout.to_s.strip if detail == "(no output)"
+          detail = "(no output)" if detail.to_s.strip.empty?
+          Fang.logger.error "Claude exited with #{code}:\nstderr: #{stderr}\nstdout: #{stdout}"
+          { failed: true, error: "Agent exited with #{code}: #{detail}" }
         end
       end
 
@@ -131,6 +132,7 @@ module Fang
           'claude',
           '-p', prompt,
           '--output-format', 'stream-json',
+          '--verbose',
           '--max-turns', '25',
           '--permission-mode', 'bypassPermissions',
           '--mcp-config', mcp_config
@@ -170,9 +172,10 @@ module Fang
           stderr_output = stderr_thread.value
           status = wait_thr.value
           unless status.success?
-            err = stderr_output.to_s.strip
-            Fang.logger.error "Claude streaming exited #{status.exitstatus}: #{err}"
-            yield({ 'type' => 'error', 'message' => "Agent exited with code #{status.exitstatus}: #{err}" }) if block
+            code = exit_code_label(status)
+            err = extract_stderr_message(stderr_output)
+            Fang.logger.error "Claude streaming exited #{code}: #{stderr_output}"
+            yield({ 'type' => 'error', 'message' => "Agent exited with #{code}: #{err}" }) if block
           end
           success = status.success? if !success
         end
@@ -192,6 +195,30 @@ module Fang
       def to_uuid(value)
         hash = Digest::SHA1.hexdigest("ai.rb:#{value}")
         [hash[0..7], hash[8..11], "5#{hash[13..15]}", "#{(hash[16].to_i(16) & 0x3 | 0x8).to_s(16)}#{hash[17..19]}", hash[20..31]].join('-')
+      end
+
+      def exit_code_label(status)
+        if status.exitstatus
+          status.exitstatus.to_s
+        elsif status.termsig
+          "signal #{status.termsig}"
+        else
+          "unknown"
+        end
+      end
+
+      def extract_stderr_message(stderr_output)
+        return "(no output)" if stderr_output.to_s.strip.empty?
+
+        lines = stderr_output.strip.split("\n")
+        messages = lines.filter_map do |line|
+          parsed = JSON.parse(line)
+          parsed["message"]
+        rescue JSON::ParserError
+          line.strip.empty? ? nil : line.strip
+        end
+
+        messages.empty? ? "(no output)" : messages.join("; ")
       end
 
       def build_env(conversation)
