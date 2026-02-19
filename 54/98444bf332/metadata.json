@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "5498444bf332",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "fang/bootstrap.rb",
+    "fang/models/skill_record.rb",
+    "fang/python/bridge.py",
+    "fang/python/skill_runner.py",
+    "fang/python_runner.rb",
+    "fang/skill_loader.rb",
+    "fang/tools/manage_python_tool.rb",
+    "fang/tools/run_code_tool.rb",
+    "fang/tools/run_skill_tool.rb",
+    "workspace/CLAUDE.md",
+    "workspace/migrations/20260219000007_add_language_to_skills.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/54/98444bf332/0/metadata.json",
+      "transcript": "/54/98444bf332/0/full.jsonl",
+      "context": "/54/98444bf332/0/context.md",
+      "content_hash": "/54/98444bf332/0/content_hash.txt",
+      "prompt": "/54/98444bf332/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 37,
+    "cache_creation_tokens": 38586,
+    "cache_read_tokens": 1477693,
+    "output_tokens": 5179,
+    "api_call_count": 33
+  }
+}

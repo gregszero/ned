@@ -1,0 +1,117 @@
+Implement the following plan:
+
+# Add Python Code Execution to OpenFang
+
+## Context
+
+OpenFang currently only executes Ruby code (`run_code` tool + Ruby skill classes). Many powerful libraries (data science, ML, web scraping, etc.) live in the Python ecosystem. Adding Python execution lets the AI agent use Python packages alongside Ruby while keeping the core framework (DB, models, event bus) in Ruby. Python runs as a subprocess — clean isolation, no in-process complexity.
+
+## Architecture
+
+```
+run_code(language: "python", code: "...")
+  → Fang::PythonRunner.run_code(code)
+    → Open3.capture3(venv/bin/python, bridge.py, stdin: JSON)
+    → Parse JSON result + process any "actions" (send_message, etc.)
+
+run_skill(skill_name: "my_python_skill")
+  → SkillRecord(language: "python")
+    → Fang::PythonRunner.run_skill(file_path, params)
+      → Open3.capture3(venv/bin/python, skill_runner.py, skill.py, stdin: JSON)
+      → Parse JSON result + process actions
+```
+
+Python communicates via JSON on stdin/stdout. Framework side-effects (send_message, create_notification) are returned as "actions" in the JSON response — Ruby processes them after Python exits. Single shared virtualenv at `workspace/python/venv/`.
+
+## Implementation Steps
+
+### 1. Create `fang/python_runner.rb` — Ruby-side Python manager
+- `run_code(code, context:)` — runs ad-hoc Python via bridge.py
+- `run_skill(skill_path, params:, context:)` — runs a Python skill file via skill_runner.py
+- `pip_install(*packages)` / `pip_list` — manage virtualenv packages
+- `ensure_venv!` — auto-creates venv on first use
+- `process_actions(actions)` — handles send_message/create_notification actions from Python
+- Uses `Open3.capture3` with timeout (matches existing subprocess patterns in `fang/agent.rb`)
+
+### 2. Create `fang/python/bridge.py` — ad-hoc Python code executor
+- Reads JSON from stdin: `{ "code": "...", "context": {...} }`
+- Executes code via `exec()`, captures stdout
+- Injects helper functions: `send_message()`, `create_notification()` — these append to an `actions` list
+- Returns JSON: `{ "success": true, "result": "...", "output": "...", "actions": [...] }`
+
+### 3. Create `fang/python/skill_runner.py` — Python skill file executor
+- Takes skill file path as argv, reads JSON params from stdin
+- Loads skill module via `importlib`, calls `call(**params)`
+- Same action/helper pattern as bridge.py
+- Python skill convention: module-level `call(**params)` function (no class needed)
+
+### 4. Modify `fang/tools/run_code_tool.rb` — add language parameter
+- Rename `ruby_code` param → `code`, add `optional(:language)` defaulting to `"ruby"`
+- Dispatch to existing Ruby eval or `PythonRunner.run_code` based on language
+- Keep existing Ruby execution logic in a private `execute_ruby` method
+
+### 5. Create `fang/tools/manage_python_tool.rb` — pip/venv management MCP tool
+- Actions: `install` (packages), `list`, `setup` (ensure venv)
+- Auto-discovered via ObjectSpace like all other tools
+
+### 6. Add `language` column to skills table
+- Migration: `add_column :skills, :language, :string, default: 'ruby', null: false`
+
+### 7. Modify `fang/models/skill_record.rb` — branch on language
+- `load_and_execute`: if `language == "python"`, delegate to `PythonRunner.run_skill`
+- Skip `class_name` derivation for Python skills (`derive_class_name` callback)
+
+### 8. Modify `fang/skill_loader.rb` — discover `.py` skill files
+- Add scan for `skills/**/*.py` alongside existing `skills/**/*.rb`
+- Register Python skills as `SkillRecord` with `language: "python"`
+
+### 9. Require `python_runner` in `fang/bootstrap.rb`
+- Add `require_relative 'python_runner'` after `skill_loader` (line 38)
+
+### 10. Update `workspace/CLAUDE.md` — document for inner agent
+- Document `language` param on `run_code`, `manage_python` tool, Python skill convention
+
+## Files to Create
+| File | Purpose |
+|---|---|
+| `fang/python_runner.rb` | Ruby module: subprocess mgmt, venv, action processing |
+| `fang/python/bridge.py` | Ad-hoc Python code executor |
+| `fang/python/skill_runner.py` | Python skill file runner |
+| `fang/tools/manage_python_tool.rb` | MCP tool for pip/venv management |
+| `workspace/migrations/*_add_language_to_skills.rb` | DB migration |
+
+## Files to Modify
+| File | Change |
+|---|---|
+| `fang/tools/run_code_tool.rb` | Add `language` param, dispatch to Python |
+| `fang/models/skill_record.rb` | Branch `load_and_execute` on language |
+| `fang/skill_loader.rb` | Discover `.py` skill files |
+| `fang/bootstrap.rb` | Require `python_runner` |
+| `workspace/CLAUDE.md` | Document Python support |
+
+## Python Skill Convention
+
+```python
+# skills/analyze_data.py
+import pandas as pd
+
+def call(csv_path=None, **kwargs):
+    df = pd.read_csv(csv_path)
+    send_message(f"Found {len(df)} rows")  # helper injected by runner
+    return {"rows": len(df), "columns": list(df.columns)}
+```
+
+## Verification
+1. `./openfang.rb db:migrate` — run migration
+2. `./openfang.rb server` — start server, confirm no boot errors
+3. Test via inner agent: `run_code` with `language: "python"`, `code: "import sys; result = sys.version"`
+4. Test `manage_python` tool: `action: "install", packages: ["requests"]`
+5. Create a test Python skill file, verify it's discovered and executable via `run_skill`
+6. Test action processing: Python code calls `send_message()`, verify message appears in conversation
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.claude/projects/-home-greg-Developer-openfang/d52f042e-8e23-4336-a96a-3ae3a26feb60.jsonl
+
+---
+
+commit this
