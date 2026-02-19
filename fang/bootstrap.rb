@@ -38,6 +38,7 @@ module Fang
       require_relative 'skill_loader'
       require_relative 'message_router'
       require_relative 'whatsapp'
+      require_relative 'gmail'
       require_relative 'mcp_server'
       require_relative 'event_bus'
 

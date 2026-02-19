@@ -66,6 +66,42 @@ module Fang
       Fang::Setup.run
     end
 
+    desc "gmail:auth", "Authenticate with Gmail via OAuth"
+    def gmail_auth
+      unless Fang::Gmail.enabled?
+        puts "Gmail not configured. Add GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET to .env"
+        exit 1
+      end
+
+      require 'socket'
+
+      url = Fang::Gmail.authorization_url
+      puts "Opening browser for Gmail authorization..."
+      puts url
+      system("xdg-open '#{url}' 2>/dev/null || open '#{url}' 2>/dev/null &")
+
+      server = TCPServer.new('127.0.0.1', 8484)
+      puts "Waiting for OAuth callback on http://127.0.0.1:8484 ..."
+
+      client = server.accept
+      request_line = client.gets
+      code = request_line[/code=([^&\s]+)/, 1]
+
+      if code
+        Fang::Gmail.exchange_code!(code)
+        client.print "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n" \
+                     "<h1>Gmail authenticated!</h1><p>You can close this tab.</p>"
+        puts "Gmail authenticated successfully!"
+      else
+        client.print "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html\r\n\r\n" \
+                     "<h1>Authentication failed</h1><p>No authorization code received.</p>"
+        puts "Authentication failed — no authorization code received."
+      end
+
+      client.close
+      server.close
+    end
+
     desc "version", "Show version information"
     def version
       puts "openfang version 0.1.0"

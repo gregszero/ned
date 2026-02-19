@@ -66,6 +66,27 @@ These are the tools available to you. **Only use these — do not invent or hall
 | `list_heartbeats` | List all heartbeats with status, stats, and due_now flag |
 | `create_trigger` | Create an event trigger that fires a skill or prompt when a matching event occurs |
 | `create_workflow` | Create a multi-step workflow pipeline that executes steps in sequence |
+| `gmail_search` | Search emails with Gmail query syntax (returns summaries) |
+| `gmail_read` | Read full email content by message ID |
+| `gmail_send` | Send an email (plain text or HTML) |
+| `gmail_draft` | Create a draft email without sending |
+| `gmail_modify` | Add/remove labels (mark read, archive, star, etc) |
+| `gmail_labels` | List all Gmail labels and their IDs |
+
+## Gmail
+
+Use the `gmail_*` tools to manage the user's email. Common patterns:
+
+- **Check unread**: `gmail_search` with query `is:unread` or `is:unread newer_than:1d`
+- **Search by sender**: `gmail_search` with query `from:alice@example.com`
+- **Read an email**: Get message IDs from `gmail_search`, then `gmail_read` for full content
+- **Send email**: `gmail_send` with `to`, `subject`, `body` (set `html: true` for HTML emails)
+- **Mark as read**: `gmail_modify` with `remove_labels: ["UNREAD"]`
+- **Archive**: `gmail_modify` with `remove_labels: ["INBOX"]`
+- **Star**: `gmail_modify` with `add_labels: ["STARRED"]`
+- **Get label IDs**: Use `gmail_labels` to look up custom label IDs before modifying
+
+Always use `gmail_search` first to find message IDs, then operate on them with other tools.
 
 ## Creating Pages
 
