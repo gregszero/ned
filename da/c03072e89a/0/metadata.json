@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "dac03072e89a",
+  "session_id": "963fe007-16cc-4634-8684-52792c62c627",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-19T14:43:22.21962763Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "web/public/css/style.css",
+    "web/public/js/controllers/canvas_controller.js"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 21,
+    "cache_creation_tokens": 37021,
+    "cache_read_tokens": 816230,
+    "output_tokens": 3795,
+    "api_call_count": 17
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-19T14:43:22.039945452Z",
+    "agent_lines": 64,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 64,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/963fe007-16cc-4634-8684-52792c62c627.jsonl"
+}

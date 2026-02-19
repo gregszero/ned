@@ -1,0 +1,71 @@
+Implement the following plan:
+
+# Canvas: Edit Lock + SVG Icon Toolbar
+
+## Context
+The canvas toolbar currently uses emoji icons (🔒🔓) and only has zoom percentage + scroll lock. We need to:
+1. Add an "edit lock" toggle that disables drag and makes components behave like normal HTML
+2. Replace all emoji icons in the toolbar with clean, minimal SVG icons (Figma-style)
+
+## Changes
+
+### 1. `web/public/js/controllers/canvas_controller.js`
+
+**Add `editLocked` state** (similar to `scrollLock`):
+- New boolean `this.editLock = false` in `connect()`
+- New `toggleEditLock()` method that toggles `this.editLock` and adds/removes `.edit-locked` class on the canvas element
+
+**Guard drag behavior on `editLock`**:
+- `onMouseDown`: When `editLock` is true and target is a component, do NOT start dragging — let the event pass through naturally (normal HTML behavior: text selection, link clicks, etc.)
+- `onTouchStart`: Same guard
+- Components get `cursor: default` and `user-select: text` when edit-locked
+
+**Rebuild `updateZoomIndicator()` with SVG icons**:
+- Replace emoji lock with inline SVG icons for: scroll lock (on/off), edit lock (on/off)
+- Zoom percentage stays as text
+- Layout: `[zoom%] [scroll-lock-icon] [edit-lock-icon]`
+- SVG icons: 14px, stroke-based, 1.5px stroke weight, `currentColor`
+  - Scroll lock off: arrow-up-down (vertical scroll arrows)
+  - Scroll lock on: same icon but highlighted (primary color)
+  - Edit lock off: cursor/move icon (indicates draggable)
+  - Edit lock on: lock icon (indicates locked)
+
+**Update context menu items** — replace emoji icons with small SVGs or remove icons from menu items entirely (they're text-labeled already).
+
+### 2. `web/public/css/style.css`
+
+**Add `.edit-locked` styles**:
+```css
+.conversation-canvas.edit-locked .canvas-component {
+  cursor: default;
+  user-select: text;
+}
+.conversation-canvas.edit-locked .canvas-component-content {
+  pointer-events: auto;
+  user-select: text;
+}
+```
+
+**Update toolbar button styles**:
+- `.canvas-toolbar-btn` — shared style for toolbar icon buttons (replaces `.canvas-scroll-lock-btn`)
+- `.canvas-toolbar-btn.active` — highlighted state (primary color) when a lock is engaged
+- Slight padding/size adjustments for SVG icon buttons
+
+### 3. Files Modified
+- `web/public/js/controllers/canvas_controller.js` — edit lock logic + SVG icons
+- `web/public/css/style.css` — edit-locked styles + toolbar button styles
+
+## Verification
+- Open a canvas with components
+- Toggle edit lock: components should not be draggable, text should be selectable, links clickable
+- Toggle scroll lock: should still work as before
+- Toolbar should show clean SVG icons, no emojis
+- Icons should visually indicate active/inactive state
+- Right-click context menu should also reflect edit lock state
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
