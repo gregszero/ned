@@ -44,3 +44,23 @@ If you need specific details from before exiting plan mode (like exact code snip
 ---
 
 commit this
+
+---
+
+commit the tests too
+
+---
+
+why, arent these tests needed? make sure we have all the OpenFang now has a test suite (169 Ruby tests + 24 Python tests)  tests and its. no dead test code
+
+---
+
+commit
+
+---
+
+storage/test.db to gitignore?
+
+---
+
+commit

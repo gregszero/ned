@@ -26,3 +26,23 @@ Single workflow file with two parallel jobs:
 
 commit this
 
+### Prompt 3
+
+commit the tests too
+
+### Prompt 4
+
+why, arent these tests needed? make sure we have all the OpenFang now has a test suite (169 Ruby tests + 24 Python tests)  tests and its. no dead test code
+
+### Prompt 5
+
+commit
+
+### Prompt 6
+
+storage/test.db to gitignore?
+
+### Prompt 7
+
+commit
+
