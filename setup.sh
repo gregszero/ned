@@ -7,7 +7,7 @@ echo ""
 # 1. Check dependencies
 echo "Checking dependencies..."
 command -v ruby >/dev/null || { echo "❌ Ruby not found. Please install Ruby 3.3+"; exit 1; }
-command -v docker >/dev/null || { echo "❌ Docker not found. Please install Docker"; exit 1; }
+command -v claude >/dev/null || echo "⚠️  Claude CLI not found. Install it for agent execution."
 command -v git >/dev/null || { echo "❌ Git not found. Please install Git"; exit 1; }
 echo "✅ All dependencies found"
 echo ""
@@ -43,15 +43,20 @@ bundle exec rake db:migrate
 echo "✅ Database setup complete"
 echo ""
 
-# 7. Build agent container
-echo "Building agent container..."
-if [ -f container/Dockerfile ]; then
-  docker build -f container/Dockerfile -t openfang-agent .
-  echo "✅ Container image built"
-else
-  echo "⚠️  container/Dockerfile not found - skipping container build"
-  echo "   Run 'docker build -f container/Dockerfile -t openfang-agent .' later"
-fi
+# 7. Detect system capabilities
+echo "Detecting system capabilities..."
+bundle exec ruby -e "
+  require_relative 'fang/bootstrap'
+  profile = Fang::SystemProfile.profile
+  puts \"  OS: #{profile.dig(:os, :distribution) || 'unknown'}\"
+  puts \"  CPU: #{profile.dig(:hardware, :cpu, :model)} (#{profile.dig(:hardware, :cpu, :cores)} cores)\"
+  puts \"  RAM: #{profile.dig(:hardware, :memory, :total_mb)}MB\"
+  tool_names = profile[:cli_tools]&.keys || []
+  puts \"  Tools (#{tool_names.size}): #{tool_names.first(15).join(', ')}#{'...' if tool_names.size > 15}\"
+  missing = %w[git ruby curl claude].reject { |t| tool_names.include?(t) }
+  puts \"  Missing recommended: #{missing.join(', ')}\" if missing.any?
+"
+echo "✅ System profile cached"
 echo ""
 
 # 8. Initialize git if not already

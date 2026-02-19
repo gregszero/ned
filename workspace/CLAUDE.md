@@ -219,6 +219,24 @@ Tailwind CSS is available via CDN with custom colors: `fang-bg`, `fang-fg`, `fan
 - Solid Queue for background jobs
 - Rufus-scheduler for recurring tasks
 
+## System Awareness
+
+OpenFang detects and caches the host system's capabilities on startup. The `system://profile` MCP resource provides structured data about:
+
+- **OS**: distribution, kernel, architecture, uptime
+- **Hardware**: CPU model + cores, RAM total/available
+- **Disk**: mount points, sizes, usage percentages
+- **Network**: interfaces + IPs, public IP
+- **CLI tools**: installed tools with versions (~40 checked)
+- **Services**: running systemd units
+- **User**: username, groups, sudo access, shell
+- **Environment**: PATH, locale, display server, SSH session
+
+**How to use it:**
+- Read `system://profile` before running system commands — check the right package manager, tool availability, disk space, etc.
+- After installing packages or making system changes, refresh the cache: `Fang::SystemProfile.refresh!` via `run_code`
+- The profile is cached in memory — reading it is instant, no re-detection on each access
+
 ## Working Directory Structure
 
 ```

@@ -31,6 +31,7 @@ module Fang
     def load_core_components
       # Core framework files (order matters)
       require_relative 'database'
+      require_relative 'system_profile'
       require_relative 'agent'
       require_relative 'scheduler'
       require_relative 'skill_loader'
@@ -56,6 +57,9 @@ module Fang
 
       # Connect to database if configured
       Fang::Database.connect! if Fang::Database.configured?
+
+      # Detect host system capabilities
+      Fang::SystemProfile.detect!
     end
   end
 end
