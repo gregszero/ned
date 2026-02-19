@@ -1,0 +1,150 @@
+Implement the following plan:
+
+# Data Table Widget — Implementation Plan
+
+## Context
+
+The existing `TableWidget` renders static columns/rows arrays with no pagination, filtering, or column configuration. The `ScheduledJobsWidget` hardcodes table HTML. Both patterns don't scale for larger datasets. This plan introduces a reusable `DataTableWidget` that auto-generates tables from any ActiveRecord model with server-side pagination (Pagy + Turbo Frame infinite scroll), sortable/resizable columns, configurable filters, and a max-height scroll container.
+
+## Files to Create
+
+| File | Purpose |
+|---|---|
+| `ai/widgets/data_table_widget.rb` | New widget class — model-backed table with pagination |
+| `web/public/js/widgets/data_table.js` | Sort headers, column resize, scroll-reset JS |
+
+## Files to Modify
+
+| File | Change |
+|---|---|
+| `web/app.rb` | Add `GET /api/tables/:component_id/rows` endpoint; extend PATCH handler to accept `metadata` |
+| `web/public/css/style.css` | Add `.data-table-*` styles, sort indicators, resize handle, scroll container |
+| `web/public/js/application.js` | Add `import "/js/widgets/data_table.js"` |
+
+## Step 1 — `data_table_widget.rb`
+
+New widget type `data_table` with this metadata schema:
+
+```ruby
+{
+  'title'        => 'Table',
+  'model'        => nil,              # e.g. "ScheduledTask"
+  'columns'      => [],               # [{ key, label, width, formatter, sortable }]
+  'default_sort' => { 'column' => 'created_at', 'direction' => 'desc' },
+  'filters'      => [],               # [{ column, operator, value }]
+  'per_page'     => 25,
+  'max_height'   => '400px',
+  'data_source'  => nil               # fallback: Ruby expr for non-model tables
+}
+```
+
+**Column formatters** (applied server-side): `badge`, `code`, `date`, `truncate`, or `nil` (plain text).
+
+**`render_content`** renders page 1 inline with:
+- Title bar with filter chips
+- `<div class="data-table-scroll" style="max-height:...">` scroll container
+- `<table class="data-table">` with `table-layout: fixed` + `<colgroup>` for resizable widths
+- Sortable `<th>` headers with resize handles
+- Page 1 rows in `<tbody>` wrapped in `<turbo-frame id="data-table-body-{id}">`
+- Lazy `<turbo-frame>` sentinel for page 2 inside a hidden `<tr>` at the end
+
+**`render_page(page:, sort_col:, sort_dir:, filters:)`** — used by the API endpoint:
+- Resolves model safely via `Ai.const_get` (only `Ai::*` AR subclasses)
+- Applies filters (`.where`), sorting (`.order`), pagination (`Pagy.new` + `limit`/`offset`)
+- Returns `[rows_html, has_more]`
+
+**`refresh_data!`** — re-renders page 1 and broadcasts Turbo Stream replace if data changed.
+
+**Fallback mode**: When `model` is nil but `data_source` is set, behaves like the old `TableWidget` (eval + static rows, no pagination).
+
+## Step 2 — API endpoint in `app.rb`
+
+```
+GET /api/tables/:component_id/rows?page=N&sort=col&dir=asc|desc&filter[col]=val
+```
+
+Inside `r.on 'api'` block, before the catch-all. Returns HTML:
+
+```html
+<turbo-frame id="data-table-page-{id}-{N}">
+  <tr>...</tr>
+  ...
+  <!-- if has_more: lazy sentinel for page N+1 -->
+  <tr class="data-table-next-page">
+    <td colspan="999">
+      <turbo-frame id="data-table-page-{id}-{N+1}" loading="lazy" src="..."></turbo-frame>
+    </td>
+  </tr>
+</turbo-frame>
+```
+
+The sentinel's `loading="lazy"` triggers the next fetch when scrolled into view — infinite scroll with zero custom JS.
+
+Also extend the existing PATCH handler for components to accept `metadata` (deep merge with existing) so JS can persist resized column widths.
+
+## Step 3 — `data_table.js`
+
+Register via `registerWidget('data_table', { init, destroy })`.
+
+**Sort**: Click `<th>` → update sort arrow classes → set `src` on the `<turbo-frame id="data-table-body-{id}">` to page 1 with new sort params. Turbo replaces the frame content, resetting infinite scroll.
+
+**Resize**: Mousedown on `.col-resize-handle` → track mousemove → update `<col>` width in `<colgroup>`. On mouseup, PATCH updated widths to `/api/pages/{pid}/components/{cid}` metadata.
+
+**Scroll reset**: Listen for `turbo:frame-load` on the body frame → reset `scrollTop` to 0.
+
+## Step 4 — CSS in `style.css`
+
+Add after existing table styles (~line 151):
+
+- `.data-table-widget` — flex column, full height
+- `.data-table-scroll` — overflow-y auto, overflow-x auto
+- `table.data-table` — `table-layout: fixed`, `min-width: max-content`
+- `th.sort-asc::after` / `th.sort-desc::after` — arrow indicators using `var(--primary)`
+- `.col-resize-handle` — absolute positioned, 4px wide, `cursor: col-resize`, highlights on hover
+- `.data-table-truncate` — `text-overflow: ellipsis`
+- `tr.data-table-next-page` — hidden sentinel row (no padding/border)
+
+## Step 5 — Wire up JS
+
+Add `import "/js/widgets/data_table.js"` to `web/public/js/application.js` after the existing widget imports (line 11).
+
+## Verification
+
+1. Start server: `./ai.rb server`
+2. In console (`./ai.rb console`), create a test data table component on an existing page:
+   ```ruby
+   page = Ai::AiPage.find_by(slug: 'jobs')
+   page.canvas_components.create!(
+     component_type: 'data_table',
+     x: 0, y: 0, width: 800, height: 500,
+     metadata: {
+       'title' => 'Scheduled Tasks',
+       'model' => 'ScheduledTask',
+       'columns' => [
+         { 'key' => 'title', 'label' => 'Title', 'width' => 200, 'sortable' => true },
+         { 'key' => 'status', 'label' => 'Status', 'width' => 100, 'formatter' => 'badge', 'sortable' => true },
+         { 'key' => 'scheduled_for', 'label' => 'Scheduled', 'width' => 180, 'formatter' => 'date', 'sortable' => true },
+         { 'key' => 'skill_name', 'label' => 'Skill', 'width' => 150, 'formatter' => 'code' }
+       ],
+       'default_sort' => { 'column' => 'scheduled_for', 'direction' => 'desc' },
+       'per_page' => 10,
+       'max_height' => '400px'
+     }
+   )
+   ```
+3. Visit the jobs canvas page — verify table renders with page 1 data
+4. Scroll down — verify page 2 loads automatically via Turbo Frame
+5. Click column headers — verify sort reloads data
+6. Drag column borders — verify resize works and persists on reload
+7. Test with `?filter[status]=pending` in the API URL directly
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+should update .claude files?
+
+---
+
+commit this
