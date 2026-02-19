@@ -99,7 +99,6 @@ export default class extends Controller {
     this.world.querySelectorAll(".canvas-component").forEach(c => this.initComponent(c))
 
     this.updateTransform()
-    this._updateWorldSize()
     this.updateZoomIndicator()
   }
 
@@ -427,25 +426,8 @@ export default class extends Controller {
   }
 
   toggleScrollLock() {
-    if (!this.scrollLock) {
-      // Entering scroll lock — save current transform state
-      this._savedPanX = this.panX
-      this._savedPanY = this.panY
-      this._savedScale = this.scale
-      // Reset transform so canvas-world is at origin; scrolling replaces panning
-      this.scale = 1.0
-      this.panX = 0
-      this.panY = 0
-    } else {
-      // Leaving scroll lock — restore previous transform state
-      this.panX = this._savedPanX ?? 0
-      this.panY = this._savedPanY ?? 0
-      this.scale = this._savedScale ?? 1.0
-    }
     this.scrollLock = !this.scrollLock
     this.element.classList.toggle("scroll-locked", this.scrollLock)
-    this.updateTransform()
-    this._updateWorldSize()
     this.updateZoomIndicator()
   }
 
@@ -572,12 +554,14 @@ export default class extends Controller {
   // --- Zoom ---
 
   onWheel(e) {
+    e.preventDefault()
+
     if (this.scrollLock) {
-      // Let browser handle scrolling naturally in scroll-lock mode
+      // Scroll lock: wheel scrolls vertically (pans Y only)
+      this.panY -= e.deltaY
+      this.updateTransform()
       return
     }
-
-    e.preventDefault()
 
     const delta = e.deltaY > 0 ? -0.08 : 0.08
     const newScale = Math.min(Math.max(this.scale + delta, 0.1), 3.0)
@@ -598,15 +582,9 @@ export default class extends Controller {
 
   updateTransform() {
     if (this.world) {
-      if (this.scrollLock) {
-        // In scroll-lock mode, no transform — components stay absolute, container scrolls
-        this.world.style.transform = "none"
-      } else {
-        this.world.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.scale})`
-        // Clear explicit size when not scroll-locked
-        this.world.style.width = ""
-        this.world.style.height = ""
-      }
+      this.world.style.transform = `translate(${this.panX}px, ${this.panY}px) scale(${this.scale})`
+      this.world.style.width = ""
+      this.world.style.height = ""
     }
   }
 
@@ -629,32 +607,6 @@ export default class extends Controller {
     }
   }
 
-  // --- Dynamic world sizing for scroll lock ---
-
-  _updateWorldSize() {
-    if (!this.world) return
-    if (!this.scrollLock) {
-      this.world.style.width = ""
-      this.world.style.height = ""
-      return
-    }
-    // Calculate bounding box of all components
-    let maxX = 0
-    let maxY = 0
-    this.world.querySelectorAll(".canvas-component").forEach(comp => {
-      const x = parseFloat(comp.style.left) || 0
-      const y = parseFloat(comp.style.top) || 0
-      const w = comp.offsetWidth || parseFloat(comp.style.width) || 320
-      const h = comp.offsetHeight || 200
-      maxX = Math.max(maxX, x + w)
-      maxY = Math.max(maxY, y + h)
-    })
-    // Add padding so there's room to scroll past the last component
-    const padding = 100
-    this.world.style.width = (maxX + padding) + "px"
-    this.world.style.height = (maxY + padding) + "px"
-  }
-
   // --- Persist position ---
 
   async saveComponentPosition(el) {
@@ -675,7 +627,5 @@ export default class extends Controller {
       console.error("[Canvas] Failed to save position:", e)
     }
 
-    // Refresh world size after component moved (matters for scroll-lock)
-    this._updateWorldSize()
   }
 }

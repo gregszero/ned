@@ -1,5 +1,5 @@
 /* ============================================
-   NED — shadcn/ui Design System
+   OpenFang — shadcn/ui Design System
    Clean · Minimal · Terminal Green Accent · Light/Dark
    ============================================ */
 
@@ -19,14 +19,14 @@
   --ring: #15803d;
 
   /* Backward-compat aliases */
-  --ned-bg: var(--background);
-  --ned-fg: var(--foreground);
-  --ned-muted: var(--muted);
-  --ned-muted-fg: var(--muted-foreground);
-  --ned-accent: var(--primary);
-  --ned-accent-fg: var(--primary-foreground);
-  --ned-border: var(--border);
-  --ned-card: var(--card);
+  --fang-bg: var(--background);
+  --fang-fg: var(--foreground);
+  --fang-muted: var(--muted);
+  --fang-muted-fg: var(--muted-foreground);
+  --fang-accent: var(--primary);
+  --fang-accent-fg: var(--primary-foreground);
+  --fang-border: var(--border);
+  --fang-card: var(--card);
 }
 
 /* --- Dark Mode --- */
@@ -1098,9 +1098,6 @@ button.icon.sm {
 }
 
 /* --- Scroll Lock Mode --- */
-.conversation-canvas.scroll-locked {
-  overflow-y: auto;
-}
 .conversation-canvas.scroll-locked .canvas-dot-grid {
   display: none;
 }
