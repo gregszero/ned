@@ -1,7 +1,9 @@
 {
   "cli_version": "0.4.4",
   "checkpoint_id": "ec86157f52cf",
+  "session_id": "3f5497c6-ea3e-404c-93bb-64f19e6853fe",
   "strategy": "manual-commit",
+  "created_at": "2026-02-19T15:56:21.119674597Z",
   "branch": "master",
   "checkpoints_count": 5,
   "files_touched": [
@@ -16,8 +18,6 @@
     "fang/widgets/note_widget.rb",
     "fang/widgets/weather_widget.rb",
     "fang/widgets/website_widget.rb",
-    "test_jobs.rb",
-    "test_web_ui.rb",
     "web/public/css/style.css",
     "web/public/js/application.js",
     "web/public/js/controllers/canvas_controller.js",
@@ -25,27 +25,22 @@
     "web/public/js/widgets/website.js",
     "web/views/layout.erb"
   ],
-  "sessions": [
-    {
-      "metadata": "/ec/86157f52cf/0/metadata.json",
-      "transcript": "/ec/86157f52cf/0/full.jsonl",
-      "context": "/ec/86157f52cf/0/context.md",
-      "content_hash": "/ec/86157f52cf/0/content_hash.txt",
-      "prompt": "/ec/86157f52cf/0/prompt.txt"
-    },
-    {
-      "metadata": "/ec/86157f52cf/1/metadata.json",
-      "transcript": "/ec/86157f52cf/1/full.jsonl",
-      "context": "/ec/86157f52cf/1/context.md",
-      "content_hash": "/ec/86157f52cf/1/content_hash.txt",
-      "prompt": "/ec/86157f52cf/1/prompt.txt"
-    }
-  ],
+  "agent": "Claude Code",
   "token_usage": {
-    "input_tokens": 161,
-    "cache_creation_tokens": 158132,
-    "cache_read_tokens": 11910448,
-    "output_tokens": 24058,
-    "api_call_count": 145
-  }
+    "input_tokens": 130,
+    "cache_creation_tokens": 117687,
+    "cache_read_tokens": 10635388,
+    "output_tokens": 21829,
+    "api_call_count": 118
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-19T15:56:20.501398636Z",
+    "agent_lines": 364,
+    "human_added": 316,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 680,
+    "agent_percentage": 53.529411764705884
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/3f5497c6-ea3e-404c-93bb-64f19e6853fe.jsonl"
 }

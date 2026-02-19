@@ -1,0 +1,265 @@
+Implement the following plan:
+
+# Nova-Style Canvas Redesign
+
+## Context
+
+Transform OpenFang's canvas UI to match Nova's (nova.lightmode.io) aesthetic and interaction patterns — warm dark theme, colored card headers, floating component toolbar, website snippet cards — while keeping OpenFang's terminal chat footer and existing widget system.
+
+## 1. Warm Dark Theme
+
+**File:** `web/public/css/style.css` (lines 46-68, dark mode tokens)
+
+Update dark mode CSS custom properties:
+```
+--background: #1a1a1e  (warm dark, was #09090b)
+--card: #242428         (slightly lighter, was #18181b)
+--muted: #2e2e33        (was #27272a)
+--border: #3a3a40       (warmer, was #27272a)
+--muted-foreground: #9a9aaa
+```
+
+Also update canvas dot grid color to match warmer palette.
+
+## 2. Card Header System
+
+**Files:** `fang/widgets/base_widget.rb`, all widget files
+
+Add a card header bar to `render_component_html` in `BaseWidget`:
+- Renders a `.canvas-component-header` div above `.canvas-component-content`
+- Shows colored title text + optional icon from metadata (`title`, `title_color`, `icon`)
+- Each widget provides default `header_title`, `header_color`, `header_icon` class methods
+- Small grip/drag handle icon on the right side of header (for dragging)
+
+Widget defaults:
+| Widget | Color | Icon (SVG) | Title |
+|--------|-------|------------|-------|
+| card/note | `#a1a1aa` | doc | (from metadata or "Note") |
+| weather | `#38bdf8` | sun | "Weather" |
+| clock | `#c084fc` | clock | "Clock" |
+| chart | `#f97316` | chart | "Chart" |
+| metric | `#22d3ee` | trending | (from metadata) |
+| list | `#a78bfa` | list | (from metadata) |
+| hacker_news | `#f97316` | newspaper | "News" |
+| website | `#60a5fa` | globe | (from metadata) |
+
+**CSS additions** in `style.css`:
+```css
+.canvas-component-header {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  cursor: grab;
+}
+.canvas-component-header .header-icon { width: 14px; height: 14px; }
+.canvas-component-header .header-grip {
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.canvas-component:hover .header-grip { opacity: 0.5; }
+```
+
+Reduce `.canvas-component-content` padding slightly to `0.75rem`.
+
+## 3. Floating Component Toolbar
+
+**Files:** `web/public/js/controllers/canvas_controller.js`, `web/public/css/style.css`
+
+Replace the right-click component context menu with a floating toolbar that appears when a component is clicked/selected.
+
+**Selection behavior:**
+- Click a component → add `.selected` class, show toolbar below it
+- Click canvas background or another component → deselect previous
+- Toolbar positioned absolutely relative to canvas world, centered below the selected component
+
+**Toolbar HTML** (created dynamically in JS):
+```html
+<div class="canvas-component-toolbar" id="canvas-component-toolbar">
+  <button data-action="move" title="Move"><svg>crosshair</svg></button>
+  <button data-action="style" title="Color"><svg>palette</svg></button>
+  <div class="toolbar-separator"></div>
+  <button data-action="font-sm" title="Small text">A</button>
+  <button data-action="font-md" title="Medium text">A</button>
+  <button data-action="font-lg" title="Large text">A</button>
+  <div class="toolbar-separator"></div>
+  <button data-action="chat" title="Chat about this"><svg>message-circle</svg></button>
+  <button data-action="duplicate" title="Duplicate"><svg>copy</svg></button>
+  <button data-action="delete" title="Delete"><svg>trash</svg></button>
+</div>
+```
+
+**Toolbar actions:**
+- **Move** — visual indicator that drag is active (already works via header/component drag)
+- **Style** — opens a small color picker popover with 8 curated presets (red `#ef4444`, orange `#f97316`, amber `#f59e0b`, green `#22c55e`, teal `#14b8a6`, blue `#60a5fa`, purple `#a78bfa`, gray `#a1a1aa`) for `title_color`
+- **A A A** — cycles component font size (small/medium/large, stored in metadata `font_size`)
+- **Chat about this** — same as current context menu "Chat about this" (creates conversation, prefills with component content)
+- **Duplicate** — same as current context menu duplicate logic
+- **Delete** — same as current context menu delete logic
+
+**CSS:**
+```css
+.canvas-component-toolbar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #1a1a1e;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.25rem;
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+}
+.canvas-component.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+```
+
+Keep the right-click context menu for the canvas background (adding widgets, scroll/edit lock, reset view).
+
+## 4. Website Card Widget (new)
+
+**New files:**
+- `fang/widgets/website_widget.rb`
+- `web/public/js/widgets/website.js`
+
+**Widget behavior — Dual mode (iframe + server-side fallback):**
+- `widget_type 'website'`, `menu_label 'Add Website'`, `menu_icon` globe SVG
+- `refreshable? = true`, `refresh_interval = 3600` (1 hour)
+- Metadata: `{ url:, title:, mode: 'snippet'|'iframe', extraction_code: '...', description: '...' }`
+- **snippet mode** (default, AI-powered): User enters a URL + natural language description of what they want (e.g., "Show the top 5 headlines"). This is sent to the AI agent, which analyzes the page and generates a Ruby extraction snippet stored in `metadata.extraction_code`. On each refresh, the code is evaluated (same pattern as `BaseWidget#evaluate_data_source` at line 56) to fetch + transform the content. Uses **Nokogiri** (`gem 'nokogiri'`) for HTML parsing within the generated code.
+- **iframe mode** (opt-in): renders `<iframe src="url">` — preserves user's browser auth/cookies. For dashboards, email, etc. No AI involvement.
+- User selects mode in the setup form when adding the widget
+- Renders: header with globe icon, iframe or fetched content below, small footer with source URL
+
+**Route addition** in `web/app.rb`:
+- No new route needed — uses existing `POST /api/pages/:id/components` and `PATCH` for metadata updates
+- Widget refresh handled by existing widget refresh system (snippet mode only)
+
+**Client-side** (`website.js`) — uses the existing widget registry pattern (NOT Stimulus):
+```js
+registerWidget('website', {
+  init(el) { /* empty-state URL form, mode toggle, iframe/snippet render */ },
+  destroy(el) { /* cleanup */ }
+})
+```
+- Shows a URL input + mode toggle (snippet/iframe) + description field when first created (empty state)
+- In snippet mode: description field visible (e.g., "Show top 5 headlines"). On submit, PATCHes metadata and sends the description to the AI agent to generate `extraction_code`
+- In iframe mode: just URL. On submit, renders iframe immediately
+- Follows same pattern as `clock.js`, `chart.js`, `data_table.js`
+
+## 5. Sidebar Enhancement
+
+**File:** `web/views/layout.erb` (lines 57-68)
+
+Redesign sidebar to match Nova's grid listing:
+- Add "CANVASES" heading with `+` button (creates new canvas via existing `POST /api/canvases`)
+- Show component count badge next to each page name: `Page.title` + `page.canvas_components.count`
+- Active canvas gets highlighted background
+- Slightly larger font, more padding between items
+
+```erb
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-heading">CANVASES</span>
+    <button class="sidebar-add-btn" onclick="chatFooter.newTab()">+</button>
+  </div>
+  <nav>
+    <% Fang::Page.published.recent.each do |page| %>
+      <a href="..." class="sidebar-link">
+        <span><%= page.title %></span>
+        <span class="sidebar-count"><%= page.canvas_components.count %></span>
+      </a>
+    <% end %>
+  </nav>
+</aside>
+```
+
+**CSS additions:**
+```css
+.sidebar-heading { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted-foreground); }
+.sidebar-count { font-size: 0.75rem; color: var(--muted-foreground); min-width: 1.5rem; text-align: right; }
+.sidebar-link { display: flex; justify-content: space-between; align-items: center; }
+```
+
+## 6. Minor Canvas Interaction Polish
+
+**File:** `web/public/js/controllers/canvas_controller.js`
+
+- Double-click on empty canvas → opens context menu (add widget) at that position
+- Smoother pan with `will-change: transform` on `.canvas-world`
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `web/public/css/style.css` | Warm theme tokens, card header, toolbar, selection, sidebar styles |
+| `fang/widgets/base_widget.rb` | Add header rendering to `render_component_html`, header class methods |
+| `fang/widgets/note_widget.rb` | Add `header_color`, `header_icon`, `header_title` defaults |
+| `fang/widgets/weather_widget.rb` | Same header defaults |
+| `fang/widgets/clock_widget.rb` | Same |
+| `fang/widgets/chart_widget.rb` | Same |
+| `fang/widgets/metric_widget.rb` | Same |
+| `fang/widgets/list_widget.rb` | Same |
+| `fang/widgets/hacker_news_widget.rb` | Same |
+| `web/public/js/controllers/canvas_controller.js` | Selection state, floating toolbar, color picker, font size, double-click |
+| `web/views/layout.erb` | Sidebar redesign with headings + counts |
+| **NEW** `fang/widgets/website_widget.rb` | Website snippet widget |
+| **NEW** `web/public/js/widgets/website.js` | Client-side behavior for website widget |
+
+## Implementation Order
+
+1. Warm dark theme (CSS tokens only — zero risk)
+2. Card header system (BaseWidget + widget defaults + CSS)
+3. Component selection state + floating toolbar (JS + CSS)
+4. Sidebar enhancement (ERB + CSS)
+5. Website card widget (new Ruby + JS files)
+6. Polish & interaction tweaks
+
+## Verification
+
+1. Start server with `./openfang.rb server`
+2. Open browser to localhost:3000
+3. Create a new canvas via "+" button
+4. Right-click canvas → add Note, Weather, Clock widgets
+5. Verify: warm dark theme, colored card headers, dot grid background
+6. Click a component → floating toolbar appears below it
+7. Test toolbar: change color, cycle font size, duplicate, delete
+8. Right-click canvas background → context menu still works for adding widgets
+9. Add a Website widget → enter a URL → verify it fetches and displays snippet
+10. Check sidebar shows canvas names with component counts
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+the drag of widgets should happens when we click and drag the toolbox. the font size is not really working
+
+---
+
+before this change we had some small dots on top right corner of the widget to drag them, lets remove the drag from the toolbar and keep on the top right drag dots.  also the font size is working but the font is growing out of the widget
+
+---
+
+the drag handle, color etc just appears when i create a new card, after refresh it stays weird. also the drag dots should be on the top right not just after the text
+
+---
+
+now just need to fix the dots to drag the widgets
+
+---
+
+when we change size the widget moves, instead of staing in the same place, and the drag dots should be on the RIGHT of the card, and allow me to drag the card if the drag isnt locked in the canvas
+
+---
+
+[Request interrupted by user for tool use]
