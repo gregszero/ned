@@ -445,6 +445,27 @@ export default class extends Controller {
     }
   }
 
+  async refreshComponent(comp) {
+    const compId = comp.dataset.componentId
+    if (!compId) return
+
+    // Visual feedback: spin the refresh button
+    const refreshBtn = this.toolbar?.querySelector('[data-action="refresh"]')
+    if (refreshBtn) refreshBtn.classList.add("spinning")
+
+    try {
+      await fetch('/api/actions', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action_type: 'refresh_component', component_id: compId })
+      })
+    } catch (e) {
+      console.error("[Canvas] Failed to refresh component:", e)
+    } finally {
+      if (refreshBtn) refreshBtn.classList.remove("spinning")
+    }
+  }
+
   // --- Selection & Floating Toolbar ---
 
   selectComponent(comp) {
@@ -470,6 +491,7 @@ export default class extends Controller {
     tb.id = "canvas-component-toolbar"
 
     const paletteIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="0.5" fill="currentColor"/><circle cx="17.5" cy="10.5" r="0.5" fill="currentColor"/><circle cx="8.5" cy="7.5" r="0.5" fill="currentColor"/><circle cx="6.5" cy="12" r="0.5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2Z"/></svg>`
+    const refreshIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`
     const chatIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
     const copyIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`
     const trashIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`
@@ -496,6 +518,12 @@ export default class extends Controller {
     tb.appendChild(btn("font-md", "Medium text", "A"))
     tb.appendChild(btn("font-lg", "Large text", "A"))
     tb.appendChild(sep())
+    // Refresh button for refreshable widgets
+    const widgetType = comp.dataset.widgetType
+    const widgetInfo = this._widgetTypes?.find(w => w.type === widgetType)
+    if (widgetInfo?.refreshable) {
+      tb.appendChild(btn("refresh", "Refresh", refreshIcon))
+    }
     tb.appendChild(btn("chat", "Chat about this", chatIcon))
     tb.appendChild(btn("duplicate", "Duplicate", copyIcon))
     tb.appendChild(btn("delete", "Delete", trashIcon, "destructive"))
@@ -520,6 +548,7 @@ export default class extends Controller {
         case "font-sm": this.setFontSize(comp, "sm"); break
         case "font-md": this.setFontSize(comp, "md"); break
         case "font-lg": this.setFontSize(comp, "lg"); break
+        case "refresh": this.refreshComponent(comp); break
         case "chat": this.chatAboutComponent(comp); this.deselectComponent(); break
         case "duplicate": this.duplicateComponent(comp); this.deselectComponent(); break
         case "delete": this.deleteComponent(comp); this.deselectComponent(); break

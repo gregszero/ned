@@ -42,6 +42,14 @@ module Fang
           component.update_column(:content, rendered) if rendered.present?
         end
 
+        # Fetch live data immediately for refreshable widgets (e.g. weather)
+        if widget_class&.refreshable?
+          widget = widget_class.new(component)
+          if widget.refresh_data!
+            component.reload
+          end
+        end
+
         broadcast_component_add(page, component)
 
         {
