@@ -1,0 +1,17 @@
+when i add the weather widget, why it stays at "Loading weather data..." and does not update? how this widget works?
+
+---
+
+1
+
+---
+
+so now every widget will always refresh data?
+
+---
+
+can we add on widget toolbar the refresh button if refreshable?
+
+---
+
+commit
