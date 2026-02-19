@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   class WorkflowStep < ActiveRecord::Base
     self.table_name = 'workflow_steps'
 

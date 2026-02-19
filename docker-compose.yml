@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ai_rb_development
+      POSTGRES_DB: openfang_development
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     volumes:
@@ -26,7 +26,7 @@ services:
       - bundle_cache:/usr/local/bundle
       - /var/run/docker.sock:/var/run/docker.sock  # For spawning agent containers
     environment:
-      DATABASE_URL: postgresql://postgres:password@db/ai_rb_development
+      DATABASE_URL: postgresql://postgres:password@db/openfang_development
       RAILS_ENV: development
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
@@ -59,12 +59,12 @@ services:
       - .:/app
       - bundle_cache:/usr/local/bundle
     environment:
-      DATABASE_URL: postgresql://postgres:password@db/ai_rb_development
+      DATABASE_URL: postgresql://postgres:password@db/openfang_development
       RAILS_ENV: development
     depends_on:
       db:
         condition: service_healthy
-    command: ./ai.rb mcp --port 9292
+    command: ./openfang.rb mcp --port 9292
 
 volumes:
   postgres_data:

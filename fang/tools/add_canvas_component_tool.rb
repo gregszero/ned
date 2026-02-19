@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class AddCanvasComponentTool < FastMcp::Tool
       tool_name 'add_canvas_component'
@@ -22,7 +22,7 @@ module Ai
         return { success: false, error: 'No canvas page found for this conversation' } unless page
 
         # Merge widget default metadata
-        widget_class = Ai::Widgets::BaseWidget.for_type(component_type)
+        widget_class = Fang::Widgets::BaseWidget.for_type(component_type)
         if widget_class
           metadata = widget_class.default_metadata.merge(metadata || {})
         end
@@ -50,24 +50,24 @@ module Ai
           page_id: page.id
         }
       rescue => e
-        Ai.logger.error "Failed to add canvas component: #{e.message}"
+        Fang.logger.error "Failed to add canvas component: #{e.message}"
         { success: false, error: e.message }
       end
 
       private
 
       def find_page
-        if ENV['AI_PAGE_ID']
-          AiPage.find_by(id: ENV['AI_PAGE_ID'])
+        if ENV['PAGE_ID']
+          Page.find_by(id: ENV['PAGE_ID'])
         elsif ENV['CONVERSATION_ID']
-          Conversation.find_by(id: ENV['CONVERSATION_ID'])&.ai_page
+          Conversation.find_by(id: ENV['CONVERSATION_ID'])&.page
         end
       end
 
       def broadcast_component_add(page, component)
         html = component.render_html
         turbo = "<turbo-stream action=\"append\" target=\"canvas-components-#{page.id}\"><template>#{html}</template></turbo-stream>"
-        Ai::Web::TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
+        Fang::Web::TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
       end
     end
   end

@@ -5,12 +5,12 @@ require 'pathname'
 require 'active_record'
 require 'logger'
 
-module Ai
+module Fang
   class << self
     attr_accessor :root, :logger
 
     def env
-      ENV['AI_ENV'] || ENV['RACK_ENV'] || 'development'
+      ENV['FANG_ENV'] || ENV['RACK_ENV'] || 'development'
     end
 
     def load!
@@ -40,25 +40,25 @@ module Ai
       require_relative 'event_bus'
 
       # Load concerns and models
-      Dir[root.join('ai/concerns/**/*.rb')].sort.each { |f| require f }
-      Dir[root.join('ai/models/**/*.rb')].sort.each { |f| require f }
+      Dir[root.join('fang/concerns/**/*.rb')].sort.each { |f| require f }
+      Dir[root.join('fang/models/**/*.rb')].sort.each { |f| require f }
 
       # Load widgets
       require_relative 'widgets/base_widget'
-      Dir[root.join('ai/widgets/**/*.rb')].sort.each { |f| require f unless f.include?('base_widget') }
+      Dir[root.join('fang/widgets/**/*.rb')].sort.each { |f| require f unless f.include?('base_widget') }
 
       # Load jobs
       require_relative 'jobs/application_job'
-      Dir[root.join('ai/jobs/**/*.rb')].sort.each { |f| require f unless f.include?('application_job') }
+      Dir[root.join('fang/jobs/**/*.rb')].sort.each { |f| require f unless f.include?('application_job') }
 
       # Configure ActiveJob queue adapter
       require_relative 'queue'
 
       # Connect to database if configured
-      Ai::Database.connect! if Ai::Database.configured?
+      Fang::Database.connect! if Fang::Database.configured?
     end
   end
 end
 
 # Auto-load the framework
-Ai.load!
+Fang.load!

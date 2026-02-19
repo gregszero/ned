@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Widgets
     class SettingsWidget < BaseWidget
       widget_type 'settings'
@@ -11,9 +11,9 @@ module Ai
       def self.refresh_interval  = 60
 
       def render_content
-        skills = Ai::SkillRecord.all.order(usage_count: :desc)
-        mcp_connections = Ai::McpConnection.all
-        config = Ai::Config.all_config
+        skills = Fang::SkillRecord.all.order(usage_count: :desc)
+        mcp_connections = Fang::McpConnection.all
+        config = Fang::Config.all_config
 
         html = +%(<div class="max-w-5xl mx-auto space-y-6">)
         html << %(<h2 class="text-2xl font-semibold tracking-tight">Settings</h2>)
@@ -61,7 +61,7 @@ module Ai
         html << %(</div>)
 
         # WhatsApp Integration
-        wa_enabled = Ai::WhatsApp.enabled?
+        wa_enabled = Fang::WhatsApp.enabled?
         html << %(<div class="card"><h3 class="section-heading">WhatsApp Integration</h3>)
         html << %(<div class="flex items-center gap-4">)
         html << %(<span class="badge #{wa_enabled ? 'success' : ''}">#{wa_enabled ? 'Enabled' : 'Disabled'}</span>)
@@ -77,7 +77,7 @@ module Ai
         html << %(<div class="overflow-x-auto"><table><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>)
         html << %(<tr><td>Framework Version</td><td>#{h(config['framework_version'] || '0.1.0')}</td></tr>)
         html << %(<tr><td>Ruby Version</td><td>#{RUBY_VERSION}</td></tr>)
-        html << %(<tr><td>Environment</td><td>#{h Ai.env}</td></tr>)
+        html << %(<tr><td>Environment</td><td>#{h Fang.env}</td></tr>)
         html << %(<tr><td>Database</td><td>#{ActiveRecord::Base.connection.adapter_name}</td></tr>)
         html << %(<tr><td>Queue Adapter</td><td>#{ActiveJob::Base.queue_adapter.class.name}</td></tr>)
         html << %(</tbody></table></div></div>)

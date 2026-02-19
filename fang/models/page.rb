@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-module Ai
-  class AiPage < ActiveRecord::Base
-    self.table_name = 'ai_pages'
+module Fang
+  class Page < ActiveRecord::Base
+    self.table_name = 'pages'
 
     include HasStatus
 
@@ -12,7 +12,7 @@ module Ai
     validates :content, length: { maximum: 1_000_000 }, allow_blank: true
     validates :status, presence: true, inclusion: { in: %w[draft published archived] }
 
-    has_many :conversations, foreign_key: :ai_page_id, dependent: :nullify
+    has_many :conversations, foreign_key: :page_id, dependent: :nullify
     has_many :canvas_components, dependent: :destroy
 
     # Statuses
@@ -40,7 +40,7 @@ module Ai
       self.slug = base_slug
 
       counter = 1
-      while AiPage.exists?(slug: slug)
+      while Page.exists?(slug: slug)
         self.slug = "#{base_slug}-#{counter}"
         counter += 1
       end

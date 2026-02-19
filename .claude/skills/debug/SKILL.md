@@ -1,4 +1,4 @@
-# Debug ai.rb
+# Debug OpenFang
 
 Troubleshooting guide for common issues.
 
@@ -9,7 +9,7 @@ Troubleshooting guide for common issues.
 curl -s http://localhost:3000/health | ruby -rjson -e 'puts JSON.pretty_generate(JSON.parse(STDIN.read))'
 
 # Check the process
-pgrep -f "ai.rb server"
+pgrep -f "OpenFang server"
 ```
 
 ## Read Logs
@@ -25,7 +25,7 @@ Common log patterns to look for:
 ## Console Debugging
 
 ```bash
-./ai.rb console
+./openfang.rb console
 ```
 
 Useful checks:
@@ -34,19 +34,19 @@ Useful checks:
 ObjectSpace.each_object(Class).select { |c| c < FastMcp::Tool }.map(&:name)
 
 # Check database
-Ai::Conversation.count
-Ai::Message.last
-Ai::AiPage.published.pluck(:title, :slug)
-Ai::Notification.unread.count
-Ai::ScheduledTask.where('scheduled_for > ?', Time.current).count
+Fang::Conversation.count
+Fang::Message.last
+Fang::Page.published.pluck(:title, :slug)
+Fang::Notification.unread.count
+Fang::ScheduledTask.where('scheduled_for > ?', Time.current).count
 
 # Test a tool manually
-tool = Ai::Tools::CreatePageTool.new
+tool = Fang::Tools::CreatePageTool.new
 tool.call(title: "Test Page", content: "<p>Hello</p>")
 
 # Check if agent can find conversation
 ENV['CONVERSATION_ID'] = '1'
-Ai::Conversation.find_by(id: ENV['CONVERSATION_ID'])
+Fang::Conversation.find_by(id: ENV['CONVERSATION_ID'])
 ```
 
 ## Common Errors
@@ -55,7 +55,7 @@ Ai::Conversation.find_by(id: ENV['CONVERSATION_ID'])
 The claude subprocess has a stale session lock. The agent auto-retries with `--resume`. If it persists:
 ```ruby
 # In console
-Ai::Session.where(status: 'running').update_all(status: 'stopped')
+Fang::Session.where(status: 'running').update_all(status: 'stopped')
 ```
 
 ### "MCP connection failed"
@@ -65,7 +65,7 @@ The MCP server isn't running or the tool isn't registered.
 cat workspace/.mcp.json
 
 # Restart to re-register tools
-./ai.rb server
+./openfang.rb server
 ```
 
 ### "Tool not found" (agent hallucinating tools)
@@ -80,7 +80,7 @@ SSE stream may be disconnected. Check:
 ### Database migration fails
 ```bash
 # Check current schema version
-./ai.rb console
+./openfang.rb console
 ActiveRecord::Base.connection.migration_context.current_version
 
 # Check pending migrations
@@ -103,8 +103,8 @@ You should see `: heartbeat` every 30 seconds if the connection is working.
 
 | Symptom | Check |
 |---|---|
-| Tools not loading | `ai/mcp_server.rb` — auto-discovery logic |
-| Agent not responding | `ai/agent.rb` — subprocess execution |
+| Tools not loading | `fang/mcp_server.rb` — auto-discovery logic |
+| Agent not responding | `fang/agent.rb` — subprocess execution |
 | UI not updating | `web/turbo_broadcast.rb` — pub/sub |
 | Routes broken | `web/app.rb` — Roda route tree |
-| Models missing | `ai/bootstrap.rb` — auto-loading from `ai/models/` |
+| Models missing | `fang/bootstrap.rb` — auto-loading from `fang/models/` |

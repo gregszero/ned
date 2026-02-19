@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class ScheduleTaskTool < FastMcp::Tool
       tool_name 'schedule_task'
@@ -42,7 +42,7 @@ module Ai
           recurring: recurring
         )
 
-        Ai.logger.info "Scheduled task ##{task.id}: #{title} for #{scheduled_time}"
+        Fang.logger.info "Scheduled task ##{task.id}: #{title} for #{scheduled_time}"
 
         {
           success: true,
@@ -53,7 +53,7 @@ module Ai
           cron_expression: task.cron_expression
         }.compact
       rescue => e
-        Ai.logger.error "Failed to schedule task: #{e.message}"
+        Fang.logger.error "Failed to schedule task: #{e.message}"
         { success: false, error: e.message }
       end
 

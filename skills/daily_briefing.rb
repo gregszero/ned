@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-class DailyBriefing < Ai::Skill
+class DailyBriefing < Fang::Skill
   description "Creates a daily briefing canvas with weather and news widgets"
   param :city, :string, required: false, description: "City for weather (default: Zurich)"
 
   def call(city: nil)
-    city ||= Ai::Config.get("briefing_city") || "Zurich"
+    city ||= Fang::Config.get("briefing_city") || "Zurich"
 
     page = find_or_create_page
     ensure_weather_widget(page, city)
@@ -20,9 +20,9 @@ class DailyBriefing < Ai::Skill
   private
 
   def find_or_create_page
-    page = Ai::AiPage.find_by(slug: "daily-briefing")
+    page = Fang::Page.find_by(slug: "daily-briefing")
     unless page
-      page = Ai::AiPage.create!(
+      page = Fang::Page.create!(
         title: "Daily Briefing",
         slug: "daily-briefing",
         content: '',
@@ -63,22 +63,22 @@ class DailyBriefing < Ai::Skill
 
   def refresh_widgets(page)
     page.canvas_components.where(component_type: %w[weather hacker_news]).find_each do |component|
-      widget_class = Ai::Widgets::BaseWidget.for_type(component.component_type)
+      widget_class = Fang::Widgets::BaseWidget.for_type(component.component_type)
       next unless widget_class
 
       widget = widget_class.new(component)
       if widget.refresh_data!
         turbo = "<turbo-stream action=\"replace\" target=\"canvas-component-#{component.id}\">" \
                 "<template>#{widget.render_component_html}</template></turbo-stream>"
-        Ai::Web::TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
+        Fang::Web::TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
       end
     rescue => e
-      Ai.logger.error "Daily briefing widget refresh failed: #{e.message}"
+      Fang.logger.error "Daily briefing widget refresh failed: #{e.message}"
     end
   end
 
   def create_notification(page)
-    Ai::Notification.create!(
+    Fang::Notification.create!(
       title: "Your morning briefing is ready",
       body: "Weather and top stories for today.",
       kind: "info",
@@ -87,11 +87,11 @@ class DailyBriefing < Ai::Skill
   end
 
   def reschedule_for_tomorrow
-    hour = (Ai::Config.get("briefing_hour") || "7").to_i
+    hour = (Fang::Config.get("briefing_hour") || "7").to_i
     tomorrow = Time.now + 86400
     scheduled_time = Time.new(tomorrow.year, tomorrow.month, tomorrow.day, hour, 0, 0)
 
-    Ai::ScheduledTask.create!(
+    Fang::ScheduledTask.create!(
       title: "Daily Briefing",
       description: "Run the daily briefing skill",
       scheduled_for: scheduled_time,

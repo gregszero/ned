@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative 'ai/bootstrap'
-require_relative 'ai/cli'
+require_relative 'fang/bootstrap'
+require_relative 'fang/cli'
 
-Ai::CLI.start(ARGV)
+Fang::CLI.start(ARGV)

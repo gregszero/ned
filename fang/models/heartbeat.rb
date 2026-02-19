@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   class Heartbeat < ActiveRecord::Base
     self.table_name = 'heartbeats'
 
@@ -8,7 +8,7 @@ module Ai
     statuses :active, :paused, :error
 
     has_many :heartbeat_runs, dependent: :destroy
-    belongs_to :ai_page, optional: true
+    belongs_to :page, optional: true
 
     validates :name, presence: true, uniqueness: true
     validates :skill_name, presence: true

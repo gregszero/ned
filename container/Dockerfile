@@ -1,8 +1,8 @@
 # AI Agent Container - Claude Code SDK
 FROM ruby:3.3-alpine
 
-LABEL maintainer="ned"
-LABEL description="Ruby AI agent container with Claude Code SDK"
+LABEL maintainer="openfang"
+LABEL description="OpenFang agent container with Claude Code SDK"
 
 # Install system dependencies
 RUN apk add --no-cache \

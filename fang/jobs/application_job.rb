@@ -2,7 +2,7 @@
 
 require 'active_job'
 
-module Ai
+module Fang
   module Jobs
     class ApplicationJob < ActiveJob::Base
       # Base class for all jobs
@@ -14,18 +14,18 @@ module Ai
       discard_on ActiveJob::DeserializationError
 
       before_perform do |job|
-        Ai.logger.info "Starting job: #{job.class.name} with args: #{job.arguments.inspect}"
+        Fang.logger.info "Starting job: #{job.class.name} with args: #{job.arguments.inspect}"
       end
 
       after_perform do |job|
-        Ai.logger.info "Completed job: #{job.class.name}"
+        Fang.logger.info "Completed job: #{job.class.name}"
       end
 
       around_perform do |job, block|
         start_time = Time.current
         block.call
         duration = Time.current - start_time
-        Ai.logger.info "Job #{job.class.name} took #{duration.round(2)}s"
+        Fang.logger.info "Job #{job.class.name} took #{duration.round(2)}s"
       end
     end
   end

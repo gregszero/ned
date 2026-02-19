@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Widgets
     class HeartbeatMonitorWidget < BaseWidget
       widget_type 'heartbeat_monitor'
@@ -11,7 +11,7 @@ module Ai
       def self.refresh_interval  = 30
 
       def render_content
-        heartbeats = Ai::Heartbeat.order(:name).to_a
+        heartbeats = Fang::Heartbeat.order(:name).to_a
 
         html = +%(<div class="max-w-5xl mx-auto space-y-6">)
         html << %(<h2 class="text-2xl font-semibold tracking-tight">Heartbeats</h2>)
@@ -104,7 +104,7 @@ module Ai
       end
 
       def render_summary(heartbeats)
-        today_runs = Ai::HeartbeatRun.where('ran_at >= ?', Time.current.beginning_of_day)
+        today_runs = Fang::HeartbeatRun.where('ran_at >= ?', Time.current.beginning_of_day)
         total_today = today_runs.count
         errors_today = today_runs.where(status: 'error').count
         skipped_today = today_runs.where(status: 'skipped').count

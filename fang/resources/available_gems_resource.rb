@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Resources
     class AvailableGemsResource < FastMcp::Resource
       uri 'gems://available'
@@ -20,7 +20,7 @@ module Ai
         end
 
         # Get Gemfile content
-        gemfile_path = File.join(Ai.root, 'Gemfile')
+        gemfile_path = File.join(Fang.root, 'Gemfile')
         gemfile_content = File.exist?(gemfile_path) ? File.read(gemfile_path) : nil
 
         {

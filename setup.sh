@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🧙 Setting up Ned..."
+echo "Setting up OpenFang..."
 echo ""
 
 # 1. Check dependencies
@@ -46,11 +46,11 @@ echo ""
 # 7. Build agent container
 echo "Building agent container..."
 if [ -f container/Dockerfile ]; then
-  docker build -f container/Dockerfile -t ai-rb-agent .
+  docker build -f container/Dockerfile -t openfang-agent .
   echo "✅ Container image built"
 else
   echo "⚠️  container/Dockerfile not found - skipping container build"
-  echo "   Run 'docker build -f container/Dockerfile -t ai-rb-agent .' later"
+  echo "   Run 'docker build -f container/Dockerfile -t openfang-agent .' later"
 fi
 echo ""
 
@@ -59,7 +59,7 @@ if [ ! -d .git ]; then
   echo "Initializing git repository..."
   git init
   git add .
-  git commit -m "Initial commit: ai.rb framework"
+  git commit -m "Initial commit: OpenFang framework"
   echo "✅ Git repository initialized"
 else
   echo "Git repository already initialized"
@@ -72,8 +72,8 @@ echo "  Primary: GitHub (git push origin)"
 echo "  Mirror: entire.io (git push entire)"
 echo ""
 echo "To configure remotes, run:"
-echo "  git remote add origin https://github.com/yourusername/ai.rb.git"
-echo "  git remote add entire https://entire.io/yourusername/ai.rb.git"
+echo "  git remote add origin https://github.com/yourusername/openfang.git"
+echo "  git remote add entire https://entire.io/yourusername/openfang.git"
 echo ""
 
 # 10. Success message
@@ -81,11 +81,11 @@ echo "✅ Setup complete!"
 echo ""
 echo "Next steps:"
 echo "  1. Edit .env and add your API credentials"
-echo "  2. Start the web server: ./ai.rb server"
+echo "  2. Start the web server: ./openfang.rb server"
 echo "  3. Open http://localhost:3000 in your browser"
 echo "  4. Create a conversation and start chatting!"
 echo ""
-echo "For help: ./ai.rb help"
+echo "For help: ./openfang.rb help"
 echo ""
 echo "📚 Documentation:"
 echo "  - README.md - Quick start guide"

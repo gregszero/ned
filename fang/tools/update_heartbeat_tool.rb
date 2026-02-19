@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class UpdateHeartbeatTool < FastMcp::Tool
       tool_name 'update_heartbeat'
@@ -57,7 +57,7 @@ module Ai
       rescue ActiveRecord::RecordInvalid => e
         { success: false, error: e.message }
       rescue => e
-        Ai.logger.error "Failed to update heartbeat: #{e.message}"
+        Fang.logger.error "Failed to update heartbeat: #{e.message}"
         { success: false, error: e.message }
       end
     end

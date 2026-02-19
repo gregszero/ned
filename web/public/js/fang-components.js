@@ -1,13 +1,13 @@
-// ned-components.js — Client-side component library for rich widgets
+// fang-components.js — Client-side component library for rich widgets
 // Provides: chart rendering, sortable tables, action buttons, auto-init via MutationObserver
 
-window.Ned = window.Ned || {}
+window.Fang = window.Fang || {}
 
 // --- Chart Rendering (wraps Chart.js) ---
 
-Ned.renderChart = function(el, config) {
+Fang.renderChart = function(el, config) {
   if (typeof Chart === 'undefined') {
-    console.warn('[Ned] Chart.js not loaded, skipping chart render')
+    console.warn('[Fang] Chart.js not loaded, skipping chart render')
     return null
   }
 
@@ -55,8 +55,8 @@ Ned.renderChart = function(el, config) {
 // --- Sortable Tables ---
 
 function initSortableTable(table) {
-  if (table._nedSortable) return
-  table._nedSortable = true
+  if (table._fangSortable) return
+  table._fangSortable = true
 
   const headers = table.querySelectorAll('th')
   headers.forEach((th, colIndex) => {
@@ -99,8 +99,8 @@ function sortTable(table, colIndex, th) {
 // --- Action Buttons ---
 
 function initActionButton(btn) {
-  if (btn._nedAction) return
-  btn._nedAction = true
+  if (btn._fangAction) return
+  btn._fangAction = true
 
   btn.addEventListener('click', async (e) => {
     e.preventDefault()
@@ -108,17 +108,17 @@ function initActionButton(btn) {
 
     let actionConfig
     try {
-      actionConfig = JSON.parse(btn.dataset.nedAction)
+      actionConfig = JSON.parse(btn.dataset.fangAction)
     } catch (err) {
-      console.error('[Ned] Invalid action config:', err)
+      console.error('[Fang] Invalid action config:', err)
       return
     }
 
     // Loading state
     const originalText = btn.innerHTML
     btn.disabled = true
-    btn.classList.add('ned-action-loading')
-    btn.innerHTML = '<span class="ned-spinner"></span> ' + (btn.dataset.loadingText || 'Working...')
+    btn.classList.add('fang-action-loading')
+    btn.innerHTML = '<span class="fang-spinner"></span> ' + (btn.dataset.loadingText || 'Working...')
 
     try {
       const resp = await fetch('/api/actions', {
@@ -129,70 +129,70 @@ function initActionButton(btn) {
       const data = await resp.json()
 
       if (data.success) {
-        btn.classList.add('ned-action-success')
+        btn.classList.add('fang-action-success')
         btn.innerHTML = btn.dataset.successText || 'Done'
         setTimeout(() => {
-          btn.classList.remove('ned-action-success')
+          btn.classList.remove('fang-action-success')
           btn.innerHTML = originalText
           btn.disabled = false
         }, 2000)
       } else {
-        btn.classList.add('ned-action-error')
+        btn.classList.add('fang-action-error')
         btn.innerHTML = data.error || 'Failed'
         setTimeout(() => {
-          btn.classList.remove('ned-action-error')
+          btn.classList.remove('fang-action-error')
           btn.innerHTML = originalText
           btn.disabled = false
         }, 3000)
       }
     } catch (err) {
-      console.error('[Ned] Action failed:', err)
+      console.error('[Fang] Action failed:', err)
       btn.innerHTML = 'Error'
       setTimeout(() => {
         btn.innerHTML = originalText
         btn.disabled = false
       }, 3000)
     } finally {
-      btn.classList.remove('ned-action-loading')
+      btn.classList.remove('fang-action-loading')
     }
   })
 }
 
 // --- Auto-initialization ---
 
-function initNedElements(root) {
+function initFangElements(root) {
   // Sortable tables
-  root.querySelectorAll('[data-ned-table]').forEach(initSortableTable)
+  root.querySelectorAll('[data-fang-table]').forEach(initSortableTable)
 
   // Action buttons
-  root.querySelectorAll('[data-ned-action]').forEach(initActionButton)
+  root.querySelectorAll('[data-fang-action]').forEach(initActionButton)
 
-  // Charts (initialized by widget JS, but handle standalone data-ned-chart too)
-  root.querySelectorAll('[data-ned-chart]').forEach(el => {
-    if (el._nedChart) return
+  // Charts (initialized by widget JS, but handle standalone data-fang-chart too)
+  root.querySelectorAll('[data-fang-chart]').forEach(el => {
+    if (el._fangChart) return
     try {
-      const config = JSON.parse(el.dataset.nedChart)
+      const config = JSON.parse(el.dataset.fangChart)
       const canvas = el.querySelector('canvas') || el
       if (canvas.tagName === 'CANVAS') {
-        el._nedChart = Ned.renderChart(canvas, config)
+        el._fangChart = Fang.renderChart(canvas, config)
       }
     } catch (err) {
-      console.error('[Ned] Chart auto-init failed:', err)
+      console.error('[Fang] Chart auto-init failed:', err)
     }
   })
 }
 
 // Init on page load
-document.addEventListener('DOMContentLoaded', () => initNedElements(document))
+document.addEventListener('DOMContentLoaded', () => initFangElements(document))
 
 // MutationObserver for Turbo Stream inserts
-const nedObserver = new MutationObserver((mutations) => {
+const fangObserver = new MutationObserver((mutations) => {
   for (const mutation of mutations) {
     for (const node of mutation.addedNodes) {
       if (node.nodeType === Node.ELEMENT_NODE) {
-        initNedElements(node)
+        initFangElements(node)
       }
     }
   }
 })
-nedObserver.observe(document.body, { childList: true, subtree: true })
+fangObserver.observe(document.body, { childList: true, subtree: true })

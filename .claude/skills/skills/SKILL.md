@@ -1,6 +1,6 @@
 # Create Skills
 
-Guide for creating Ruby skills that extend ai.rb functionality.
+Guide for creating Ruby skills that extend OpenFang functionality.
 
 ## What this does
 
@@ -13,14 +13,14 @@ Explains how to create Ruby skill classes that:
 ## When to use
 
 Use this skill when you want to:
-- Add new functionality to ai.rb
+- Add new functionality to OpenFang
 - Create reusable Ruby code
 - Build skills AI can execute
 - Extend framework capabilities
 
 ## What are Skills?
 
-Skills are Ruby classes that inherit from `Ai::Skill` and provide specific functionality:
+Skills are Ruby classes that inherit from `Fang::Skill` and provide specific functionality:
 
 - **Email sender** - Send emails via SMTP
 - **Data processor** - Process CSV/JSON data
@@ -35,7 +35,7 @@ Basic skill template:
 ```ruby
 # skills/my_skill.rb
 
-class MySkill < Ai::Skill
+class MySkill < Fang::Skill
   description "Brief description of what this skill does"
 
   # Define parameters
@@ -71,7 +71,7 @@ touch skills/send_email.rb
 ```ruby
 # skills/send_email.rb
 
-class SendEmail < Ai::Skill
+class SendEmail < Fang::Skill
   description "Send email via SMTP"
 
   param :to, :string, required: true, description: "Recipient email"
@@ -109,9 +109,9 @@ end
 
 ```ruby
 # Via console
-./ai.rb console
+./openfang.rb console
 
-> Ai::SkillRecord.create!(
+> Fang::SkillRecord.create!(
   name: 'send_email',
   description: 'Send email via SMTP',
   file_path: 'skills/send_email.rb',
@@ -123,7 +123,7 @@ end
 
 ```ruby
 # Via console
-> Ai::SkillLoader.run('send_email',
+> Fang::SkillLoader.run('send_email',
     to: 'user@example.com',
     subject: 'Test',
     body: 'Hello!'
@@ -249,20 +249,20 @@ end
 Override hooks for custom behavior:
 
 ```ruby
-class MySkill < Ai::Skill
+class MySkill < Fang::Skill
   # Run before call
   def before_call
-    Ai.logger.info "Starting #{self.class.name}"
+    Fang.logger.info "Starting #{self.class.name}"
   end
 
   # Run after call
   def after_call
-    Ai.logger.info "Completed #{self.class.name}"
+    Fang.logger.info "Completed #{self.class.name}"
   end
 
   # Handle errors
   def on_error(error)
-    Ai.logger.error "Skill failed: #{error.message}"
+    Fang.logger.error "Skill failed: #{error.message}"
     send_message("Error: #{error.message}")
   end
 
@@ -277,7 +277,7 @@ end
 ### Blog Post Creator
 
 ```ruby
-class CreateBlogPost < Ai::Skill
+class CreateBlogPost < Fang::Skill
   description "Create a new blog post with title and content"
 
   param :title, :string, required: true
@@ -285,7 +285,7 @@ class CreateBlogPost < Ai::Skill
   param :tags, :array, required: false
 
   def call(title:, content:, tags: [])
-    post = AiPage.create!(
+    post = Page.create!(
       title: title,
       content: content,
       status: 'published',
@@ -307,7 +307,7 @@ end
 ### Weather Fetcher
 
 ```ruby
-class FetchWeather < Ai::Skill
+class FetchWeather < Fang::Skill
   description "Fetch weather for a city using OpenWeather API"
 
   param :city, :string, required: true
@@ -348,7 +348,7 @@ end
 ### Database Backup
 
 ```ruby
-class BackupDatabase < Ai::Skill
+class BackupDatabase < Fang::Skill
   description "Create a backup of the database"
 
   param :format, :string, required: false, description: "sql or json"
@@ -385,14 +385,14 @@ Each skill should do one thing well:
 
 ```ruby
 # Good: Focused on one task
-class SendEmail < Ai::Skill
+class SendEmail < Fang::Skill
   def call(to:, subject:, body:)
     # Send email
   end
 end
 
 # Bad: Does too many things
-class EmailAndNotify < Ai::Skill
+class EmailAndNotify < Fang::Skill
   def call(...)
     send_email
     send_sms
@@ -411,7 +411,7 @@ def call(**params)
   result = risky_operation
   { success: true, result: result }
 rescue SpecificError => e
-  Ai.logger.error "Operation failed: #{e.message}"
+  Fang.logger.error "Operation failed: #{e.message}"
   { success: false, error: e.message }
 rescue => e
   { success: false, error: "Unexpected error: #{e.message}" }
@@ -438,11 +438,11 @@ Log important events:
 
 ```ruby
 def call(**params)
-  Ai.logger.info "#{self.class.name} started with: #{params.inspect}"
+  Fang.logger.info "#{self.class.name} started with: #{params.inspect}"
 
   result = do_work
 
-  Ai.logger.info "#{self.class.name} completed successfully"
+  Fang.logger.info "#{self.class.name} completed successfully"
 
   { success: true, result: result }
 end
@@ -453,7 +453,7 @@ end
 Test skills in console:
 
 ```ruby
-./ai.rb console
+./openfang.rb console
 
 # Load skill manually
 load 'skills/my_skill.rb'
@@ -463,7 +463,7 @@ result = MySkill.new.call(param: 'value')
 puts result.inspect
 
 # Test via loader
-result = Ai::SkillLoader.run('my_skill', param: 'value')
+result = Fang::SkillLoader.run('my_skill', param: 'value')
 ```
 
 ## Loading Skills
@@ -471,15 +471,15 @@ result = Ai::SkillLoader.run('my_skill', param: 'value')
 Skills are loaded automatically at framework startup:
 
 ```ruby
-# In ai/bootstrap.rb
-Ai::SkillLoader.load_all
+# In fang/bootstrap.rb
+Fang::SkillLoader.load_all
 ```
 
 To reload during development:
 
 ```ruby
-./ai.rb console
-> Ai::SkillLoader.reload!
+./openfang.rb console
+> Fang::SkillLoader.reload!
 ```
 
 ## Registering Skills
@@ -487,7 +487,7 @@ To reload during development:
 Register in database for tracking:
 
 ```ruby
-Ai::SkillRecord.create!(
+Fang::SkillRecord.create!(
   name: 'skill_name',
   description: 'What it does',
   file_path: 'skills/skill_name.rb',
@@ -499,7 +499,7 @@ Or let AI do it via `run_code` tool:
 
 ```ruby
 # AI executes this
-Ai::SkillRecord.create!(
+Fang::SkillRecord.create!(
   name: 'send_email',
   description: 'Send email via SMTP',
   file_path: 'skills/send_email.rb',
@@ -512,8 +512,8 @@ Ai::SkillRecord.create!(
 ### Via Console
 
 ```ruby
-./ai.rb console
-> Ai::SkillLoader.run('skill_name', param: 'value')
+./openfang.rb console
+> Fang::SkillLoader.run('skill_name', param: 'value')
 ```
 
 ### Via MCP Tool
@@ -537,7 +537,7 @@ AI uses `run_skill` tool:
 ### Via Scheduled Task
 
 ```ruby
-Ai::ScheduledTask.create!(
+Fang::ScheduledTask.create!(
   title: "Send reminder",
   scheduled_for: 1.hour.from_now,
   skill_name: "send_email",
@@ -547,9 +547,9 @@ Ai::ScheduledTask.create!(
 
 ## Documentation
 
-- Base class: `ai/skill_loader.rb`
+- Base class: `fang/skill_loader.rb`
 - Examples: `skills/base.rb`
-- Database model: `ai/models/skill_record.rb`
-- MCP tool: `ai/tools/run_skill_tool.rb`
+- Database model: `fang/models/skill_record.rb`
+- MCP tool: `fang/tools/run_skill_tool.rb`
 
 **Skills ready!** Create Ruby classes in `skills/` directory. 🛠️

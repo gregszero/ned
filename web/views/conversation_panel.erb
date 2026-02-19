@@ -2,7 +2,7 @@
   <div id="messages-<%= @conversation.id %>" class="chat-panel-messages">
     <% if @messages.empty? %>
       <div class="py-8 text-center">
-        <p class="text-ned-muted-fg text-sm">Start a conversation...</p>
+        <p class="text-fang-muted-fg text-sm">Start a conversation...</p>
       </div>
     <% else %>
       <% @messages.each do |message| %>
@@ -15,7 +15,7 @@
     <input type="hidden" name="conversation_id" value="<%= @conversation.id %>">
     <textarea
       name="content"
-      placeholder="Message Ned..."
+      placeholder="Message OpenFang..."
       rows="1"
       required
       class="chat-panel-input"

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class CreateTriggerTool < FastMcp::Tool
       tool_name 'create_trigger'

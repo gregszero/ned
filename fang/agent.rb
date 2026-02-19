@@ -4,7 +4,7 @@ require 'open3'
 require 'json'
 require 'digest'
 
-module Ai
+module Fang
   module Agent
     class << self
       # Execute a prompt via claude subprocess and return parsed response
@@ -19,13 +19,13 @@ module Ai
 
         # If resume failed, retry as a new session
         if result[:failed] && resumable
-          Ai.logger.warn "Resume failed, starting fresh session"
+          Fang.logger.warn "Resume failed, starting fresh session"
           result = run_claude(prompt: prompt, uuid: uuid, resuming: false, env: build_env(conversation))
         end
 
         # If session ID is "already in use", retry with --resume
         if result[:failed] && result[:error]&.include?('already in use')
-          Ai.logger.warn "Session in use, retrying with --resume"
+          Fang.logger.warn "Session in use, retrying with --resume"
           result = run_claude(prompt: prompt, uuid: uuid, resuming: true, env: build_env(conversation))
         end
 
@@ -38,11 +38,11 @@ module Ai
         parse_response(result[:stdout])
       rescue Errno::ENOENT
         session&.error!
-        Ai.logger.error "claude command not found. Ensure Claude Code CLI is installed and in PATH."
+        Fang.logger.error "claude command not found. Ensure Claude Code CLI is installed and in PATH."
         { 'type' => 'error', 'message' => 'claude command not found' }
       rescue => e
         session&.error!
-        Ai.logger.error "Agent execution failed: #{e.message}"
+        Fang.logger.error "Agent execution failed: #{e.message}"
         { 'type' => 'error', 'message' => e.message }
       end
 
@@ -62,7 +62,7 @@ module Ai
         # If resume failed, retry as new session
         unless success
           if resumable
-            Ai.logger.warn "Resume failed (streaming), starting fresh session"
+            Fang.logger.warn "Resume failed (streaming), starting fresh session"
             success = run_claude_streaming(
               prompt: prompt, uuid: uuid, resuming: false,
               env: build_env(conversation), &block
@@ -79,12 +79,12 @@ module Ai
         success
       rescue Errno::ENOENT
         session&.error!
-        Ai.logger.error "claude command not found."
+        Fang.logger.error "claude command not found."
         yield({ 'type' => 'error', 'message' => 'claude command not found' }) if block
         false
       rescue => e
         session&.error!
-        Ai.logger.error "Streaming agent execution failed: #{e.message}"
+        Fang.logger.error "Streaming agent execution failed: #{e.message}"
         yield({ 'type' => 'error', 'message' => e.message }) if block
         false
       end
@@ -92,7 +92,7 @@ module Ai
       private
 
       def run_claude(prompt:, uuid:, resuming:, env:)
-        mcp_config = File.join(Ai.root, 'workspace', '.mcp.json')
+        mcp_config = File.join(Fang.root, 'workspace', '.mcp.json')
 
         cmd = [
           'claude',
@@ -109,7 +109,7 @@ module Ai
           cmd += ['--session-id', uuid]
         end
 
-        Ai.logger.info "#{resuming ? 'Resuming' : 'Starting'} claude subprocess (session: #{uuid})"
+        Fang.logger.info "#{resuming ? 'Resuming' : 'Starting'} claude subprocess (session: #{uuid})"
 
         stdout, stderr, status = Open3.capture3(env, *cmd)
 
@@ -119,13 +119,13 @@ module Ai
           detail = stderr.to_s.strip
           detail = stdout.to_s.strip if detail.empty?
           detail = "(no output)" if detail.empty?
-          Ai.logger.error "Claude exited with code #{status.exitstatus}:\nstderr: #{stderr}\nstdout: #{stdout}"
+          Fang.logger.error "Claude exited with code #{status.exitstatus}:\nstderr: #{stderr}\nstdout: #{stdout}"
           { failed: true, error: "Agent exited with code #{status.exitstatus}:\n#{detail}" }
         end
       end
 
       def run_claude_streaming(prompt:, uuid:, resuming:, env:, &block)
-        mcp_config = File.join(Ai.root, 'workspace', '.mcp.json')
+        mcp_config = File.join(Fang.root, 'workspace', '.mcp.json')
 
         cmd = [
           'claude',
@@ -142,7 +142,7 @@ module Ai
           cmd += ['--session-id', uuid]
         end
 
-        Ai.logger.info "#{resuming ? 'Resuming' : 'Starting'} claude streaming subprocess (session: #{uuid})"
+        Fang.logger.info "#{resuming ? 'Resuming' : 'Starting'} claude streaming subprocess (session: #{uuid})"
 
         success = false
         Open3.popen3(env, *cmd) do |stdin, stdout, stderr, wait_thr|
@@ -163,7 +163,7 @@ module Ai
                 success = event['subtype'] == 'success'
               end
             rescue JSON::ParserError
-              Ai.logger.warn "Non-JSON line from claude stream: #{line[0..200]}"
+              Fang.logger.warn "Non-JSON line from claude stream: #{line[0..200]}"
             end
           end
 
@@ -171,7 +171,7 @@ module Ai
           status = wait_thr.value
           unless status.success?
             err = stderr_output.to_s.strip
-            Ai.logger.error "Claude streaming exited #{status.exitstatus}: #{err}"
+            Fang.logger.error "Claude streaming exited #{status.exitstatus}: #{err}"
             yield({ 'type' => 'error', 'message' => "Agent exited with code #{status.exitstatus}: #{err}" }) if block
           end
           success = status.success? if !success
@@ -206,11 +206,11 @@ module Ai
         elsif ENV['ANTHROPIC_API_KEY']
           env['ANTHROPIC_API_KEY'] = ENV['ANTHROPIC_API_KEY']
         else
-          Ai.logger.warn "No CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY found"
+          Fang.logger.warn "No CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY found"
         end
 
         env['CONVERSATION_ID'] = conversation.id.to_s if conversation
-        env['AI_PAGE_ID'] = conversation.ai_page_id.to_s if conversation&.ai_page_id
+        env['PAGE_ID'] = conversation.page_id.to_s if conversation&.page_id
         env
       end
 

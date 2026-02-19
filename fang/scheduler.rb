@@ -2,7 +2,7 @@
 
 require 'rufus-scheduler'
 
-module Ai
+module Fang
   class Scheduler
     class << self
       attr_reader :instance
@@ -27,7 +27,7 @@ module Ai
           run_due_heartbeats
         end
 
-        Ai.logger.info "Scheduler started (polling every 60s, heartbeats every 30s, widget refresh every 5m)"
+        Fang.logger.info "Scheduler started (polling every 60s, heartbeats every 30s, widget refresh every 5m)"
       end
 
       def stop!
@@ -35,7 +35,7 @@ module Ai
 
         @instance.shutdown(:wait)
         @instance = nil
-        Ai.logger.info "Scheduler stopped"
+        Fang.logger.info "Scheduler stopped"
       end
 
       def running?
@@ -48,32 +48,32 @@ module Ai
         tasks = ScheduledTask.due
         return if tasks.empty?
 
-        Ai.logger.info "Found #{tasks.count} due task(s)"
+        Fang.logger.info "Found #{tasks.count} due task(s)"
 
         tasks.each do |task|
           Jobs::ScheduledTaskRunnerJob.perform_later(task.id)
         end
       rescue => e
-        Ai.logger.error "Scheduler error: #{e.message}"
+        Fang.logger.error "Scheduler error: #{e.message}"
       end
 
       def run_due_heartbeats
         heartbeats = Heartbeat.due.select(&:due_now?)
         return if heartbeats.empty?
 
-        Ai.logger.info "Found #{heartbeats.count} due heartbeat(s)"
+        Fang.logger.info "Found #{heartbeats.count} due heartbeat(s)"
 
         heartbeats.each do |hb|
           Jobs::HeartbeatRunnerJob.perform_later(hb.id)
         end
       rescue => e
-        Ai.logger.error "Heartbeat scheduler error: #{e.message}"
+        Fang.logger.error "Heartbeat scheduler error: #{e.message}"
       end
 
       def refresh_widgets
         Jobs::WidgetRefreshJob.perform_later
       rescue => e
-        Ai.logger.error "Widget refresh scheduling error: #{e.message}"
+        Fang.logger.error "Widget refresh scheduling error: #{e.message}"
       end
     end
   end

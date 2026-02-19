@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   class SkillRecord < ActiveRecord::Base
     self.table_name = 'skills'
 
@@ -29,7 +29,7 @@ module Ai
       klass = class_name.constantize
       klass.new.execute(**params)
     rescue => e
-      Ai.logger.error "Failed to execute skill #{name}: #{e.message}"
+      Fang.logger.error "Failed to execute skill #{name}: #{e.message}"
       raise
     end
 
@@ -38,7 +38,7 @@ module Ai
     end
 
     def full_file_path
-      File.join(Ai.root, file_path)
+      File.join(Fang.root, file_path)
     end
 
     private

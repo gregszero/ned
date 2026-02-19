@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class CreateWorkflowTool < FastMcp::Tool
       tool_name 'create_workflow'

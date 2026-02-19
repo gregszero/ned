@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Jobs
     class HeartbeatRunnerJob < ApplicationJob
       queue_as :scheduled_tasks
@@ -10,11 +10,11 @@ module Ai
 
         # Guard: re-check due_now? to prevent double execution
         unless heartbeat.due_now?
-          Ai.logger.info "Heartbeat '#{heartbeat.name}' not due, skipping"
+          Fang.logger.info "Heartbeat '#{heartbeat.name}' not due, skipping"
           return
         end
 
-        Ai.logger.info "Running heartbeat: #{heartbeat.name} (skill: #{heartbeat.skill_name})"
+        Fang.logger.info "Running heartbeat: #{heartbeat.name} (skill: #{heartbeat.skill_name})"
 
         # Phase 1: Execute skill (pure Ruby, zero tokens)
         skill = SkillRecord.find_by(name: heartbeat.skill_name)
@@ -46,9 +46,9 @@ module Ai
         heartbeat.update!(status: 'active') if heartbeat.error?
 
       rescue ActiveRecord::RecordNotFound => e
-        Ai.logger.error "Heartbeat not found: #{e.message}"
+        Fang.logger.error "Heartbeat not found: #{e.message}"
       rescue => e
-        Ai.logger.error "Heartbeat '#{heartbeat&.name}' failed: #{e.message}"
+        Fang.logger.error "Heartbeat '#{heartbeat&.name}' failed: #{e.message}"
         if heartbeat
           heartbeat.record_run!(status: 'error', error: e.message, duration_ms: nil)
           heartbeat.update!(status: 'error') if heartbeat.error_count >= 3
@@ -71,7 +71,7 @@ module Ai
         )
 
         AgentExecutorJob.perform_later(message.id)
-        Ai.logger.info "Heartbeat '#{heartbeat.name}' escalated to AI (conversation #{conversation.id})"
+        Fang.logger.info "Heartbeat '#{heartbeat.name}' escalated to AI (conversation #{conversation.id})"
       end
 
       def find_or_create_conversation(heartbeat)
@@ -86,7 +86,7 @@ module Ai
         conversation = Conversation.create!(
           title: "Heartbeat: #{heartbeat.name}",
           source: 'heartbeat',
-          ai_page_id: heartbeat.ai_page_id
+          page_id: heartbeat.page_id
         )
 
         heartbeat.update!(metadata: meta.merge('conversation_id' => conversation.id))
@@ -94,7 +94,7 @@ module Ai
       end
 
       def broadcast_refresh(heartbeat)
-        page = heartbeat.ai_page || AiPage.find_by(slug: 'heartbeats')
+        page = heartbeat.page || Page.find_by(slug: 'heartbeats')
         return unless page
 
         component = page.canvas_components.find_by(component_type: 'heartbeat_monitor')
@@ -110,7 +110,7 @@ module Ai
           Web::TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
         end
       rescue => e
-        Ai.logger.error "Heartbeat broadcast failed: #{e.message}"
+        Fang.logger.error "Heartbeat broadcast failed: #{e.message}"
       end
     end
   end

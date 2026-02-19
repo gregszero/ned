@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   class CanvasComponent < ActiveRecord::Base
     self.table_name = 'canvas_components'
 
-    belongs_to :ai_page
+    belongs_to :page
 
     scope :ordered, -> { order(:z_index, :created_at) }
 
@@ -26,12 +26,12 @@ module Ai
     end
 
     def render_html
-      widget_class = Ai::Widgets::BaseWidget.for_type(component_type)
+      widget_class = Fang::Widgets::BaseWidget.for_type(component_type)
       widget_class ? widget_class.new(self).render_component_html : fallback_html
     end
 
     def render_content_html
-      widget_class = Ai::Widgets::BaseWidget.for_type(component_type)
+      widget_class = Fang::Widgets::BaseWidget.for_type(component_type)
       widget_class ? widget_class.new(self).render_content : content
     end
 

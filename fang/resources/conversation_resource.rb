@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Resources
     class ConversationResource < FastMcp::Resource
       uri 'conversation://current'

@@ -2,14 +2,14 @@
 
 ## Philosophy
 
-The ai.rb MCP server provides **framework integration**, not file manipulation. Claude Code already has excellent built-in capabilities for:
+The OpenFang MCP server provides **framework integration**, not file manipulation. Claude Code already has excellent built-in capabilities for:
 
 - Reading, editing, and creating files
 - Running git commands
 - Executing shell commands
 - Managing the codebase
 
-The MCP server focuses on what Claude Code **can't** do on its own: interacting with the running ai.rb framework.
+The MCP server focuses on what Claude Code **can't** do on its own: interacting with the running OpenFang framework.
 
 ## MCP Tools (4 total)
 
@@ -132,9 +132,9 @@ Returns: All gems, Gemfile content, Ruby version.
 ## Starting the MCP Server
 
 ```bash
-./ai.rb mcp                    # Default: localhost:9292
-./ai.rb mcp --port 8080        # Custom port
-./ai.rb mcp --host 0.0.0.0     # Bind to all interfaces
+./openfang.rb mcp                    # Default: localhost:9292
+./openfang.rb mcp --port 8080        # Custom port
+./openfang.rb mcp --host 0.0.0.0     # Bind to all interfaces
 ```
 
 ## Container Integration

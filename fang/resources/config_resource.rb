@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Resources
     class ConfigResource < FastMcp::Resource
       uri 'config://user'
@@ -14,8 +14,8 @@ module Ai
         config_data.merge(
           framework_version: '0.1.0',
           ruby_version: RUBY_VERSION,
-          environment: Ai.env,
-          project_root: Ai.root.to_s
+          environment: Fang.env,
+          project_root: Fang.root.to_s
         ).to_json
       end
     end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Widgets
     class BaseWidget
       class << self
@@ -58,12 +58,12 @@ module Ai
         return nil unless source.is_a?(String) && !source.empty?
 
         ctx = Object.new
-        Ai.constants.map { |c| Ai.const_get(c) }
+        Fang.constants.map { |c| Fang.const_get(c) }
           .select { |c| c.is_a?(Class) && c < ActiveRecord::Base }
           .each { |model| ctx.define_singleton_method(model.name.demodulize.to_sym) { model } }
         ctx.instance_eval(source)
       rescue => e
-        Ai.logger.error "Data source evaluation failed: #{e.message}"
+        Fang.logger.error "Data source evaluation failed: #{e.message}"
         nil
       end
 

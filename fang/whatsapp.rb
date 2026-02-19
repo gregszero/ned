@@ -3,7 +3,7 @@
 require 'httparty'
 require 'openssl'
 
-module Ai
+module Fang
   module WhatsApp
     GOWA_BASE_URL = ENV.fetch('GOWA_URL', 'http://whatsapp:3000')
 
@@ -55,7 +55,7 @@ module Ai
         )
 
         unless response.success?
-          Ai.logger.error "WhatsApp send failed (#{response.code}): #{response.body}"
+          Fang.logger.error "WhatsApp send failed (#{response.code}): #{response.body}"
         end
 
         response

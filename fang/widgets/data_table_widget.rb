@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Widgets
     class DataTableWidget < BaseWidget
       widget_type 'data_table'
@@ -100,7 +100,7 @@ module Ai
         name = @metadata['model'].to_s.strip
         return nil if name.empty?
 
-        klass = Ai.const_get(name)
+        klass = Fang.const_get(name)
         klass < ActiveRecord::Base ? klass : nil
       rescue NameError
         nil

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   class HeartbeatRun < ActiveRecord::Base
     self.table_name = 'heartbeat_runs'
 

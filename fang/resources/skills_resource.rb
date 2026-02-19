@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Resources
     class SkillsResource < FastMcp::Resource
       uri 'skills://available'
@@ -26,12 +26,12 @@ module Ai
           total_skills: skills.count,
           skills: skills,
           skill_directory: 'skills/',
-          base_class: 'Ai::Skill',
+          base_class: 'Fang::Skill',
           example: {
             name: 'example_skill',
             file_path: 'skills/example_skill.rb',
             structure: <<~RUBY
-              class ExampleSkill < Ai::Skill
+              class ExampleSkill < Fang::Skill
                 description "What this skill does"
 
                 param :name, :string, required: true

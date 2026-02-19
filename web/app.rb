@@ -7,7 +7,7 @@ require 'pagy'
 require_relative 'turbo_broadcast'
 require_relative 'view_helpers'
 
-module Ai
+module Fang
   module Web
     class App < Roda
       plugin :render, views: File.expand_path('views', __dir__)
@@ -25,11 +25,11 @@ module Ai
 
       # Make models and helpers available in views
       plugin :render_locals, locals: {
-        Conversation: Ai::Conversation,
-        Message: Ai::Message,
-        SkillRecord: Ai::SkillRecord,
-        Config: Ai::Config,
-        Notification: Ai::Notification
+        Conversation: Fang::Conversation,
+        Message: Fang::Message,
+        SkillRecord: Fang::SkillRecord,
+        Config: Fang::Config,
+        Notification: Fang::Notification
       }
 
       include ViewHelpers
@@ -51,19 +51,19 @@ module Ai
         queue = Thread::Queue.new
         subscriber = TurboBroadcast.subscribe(channel) { |html| queue.push(html) }
 
-        Ai.logger.info "[SSE] Connection opened for #{channel}"
+        Fang.logger.info "[SSE] Connection opened for #{channel}"
 
         response['Content-Type'] = 'text/event-stream'
         response['Cache-Control'] = 'no-cache'
         response['X-Accel-Buffering'] = 'no'
 
         stream(loop: true, callback: proc {
-          Ai.logger.info "[SSE] Connection closed for #{channel}"
+          Fang.logger.info "[SSE] Connection closed for #{channel}"
           TurboBroadcast.unsubscribe(channel, subscriber)
         }) do |out|
           html = queue.pop(timeout: 30)
           if html
-            Ai.logger.info "[SSE] Sending event to #{channel} (#{html.length} bytes)"
+            Fang.logger.info "[SSE] Sending event to #{channel} (#{html.length} bytes)"
             out << "data: #{html.gsub("\n", "\ndata: ")}\n\n"
           else
             out << ": heartbeat\n\n"
@@ -76,7 +76,7 @@ module Ai
 
         # Root — redirect to most recent canvas or show home
         r.root do
-          recent = AiPage.published.recent.first
+          recent = Page.published.recent.first
           if recent
             r.redirect "/#{recent.slug}"
           else
@@ -109,10 +109,10 @@ module Ai
             r.on 'canvas' do
               r.get do
                 response['Content-Type'] = 'text/html'
-                if @conversation.ai_page
-                  @conversation.ai_page.content.presence || '<div class="p-6 text-center text-ned-muted-fg text-sm">Canvas is empty</div>'
+                if @conversation.page
+                  @conversation.page.content.presence || '<div class="p-6 text-center text-fang-muted-fg text-sm">Canvas is empty</div>'
                 else
-                  '<div class="p-6 text-center text-ned-muted-fg text-sm">Canvas is empty</div>'
+                  '<div class="p-6 text-center text-fang-muted-fg text-sm">Canvas is empty</div>'
                 end
               end
             end
@@ -131,7 +131,7 @@ module Ai
                   content: content
                 )
 
-                Ai::Jobs::AgentExecutorJob.perform_later(message.id)
+                Fang::Jobs::AgentExecutorJob.perform_later(message.id)
 
                 if r.params['turbo']
                   message_html = render_message_html(message)
@@ -167,7 +167,7 @@ module Ai
 
         # AI Pages (individual page by slug)
         r.on 'pages', String do |slug|
-          @page = AiPage.published.find_by!(slug: slug)
+          @page = Page.published.find_by!(slug: slug)
           render_canvas_or_layout(:page_show)
         end
 
@@ -183,7 +183,7 @@ module Ai
           # Mark read
           r.on Integer, 'read' do |id|
             r.post do
-              notification = Ai::Notification.find(id)
+              notification = Fang::Notification.find(id)
               notification.mark_read!
               { status: 'ok' }
             end
@@ -192,10 +192,10 @@ module Ai
           # Start chat from notification — returns JSON for JS-driven canvas opening
           r.on Integer, 'chat' do |id|
             r.post do
-              notification = Ai::Notification.find(id)
+              notification = Fang::Notification.find(id)
               conversation = notification.start_conversation!
               notification.mark_read!
-              page = notification.ai_page
+              page = notification.page
 
               {
                 conversation_id: conversation.id,
@@ -211,7 +211,7 @@ module Ai
 
         # Jobs & Skills — canvas page
         r.on 'jobs' do
-          @page = AiPage.find_by(slug: 'jobs')
+          @page = Page.find_by(slug: 'jobs')
           r.on String do |chat_slug|
             @conversation = @page&.conversations&.find_by(slug: chat_slug)
             render_canvas_or_layout(:canvas_view)
@@ -223,7 +223,7 @@ module Ai
 
         # Heartbeats — canvas page
         r.on 'heartbeats' do
-          @page = AiPage.find_by(slug: 'heartbeats')
+          @page = Page.find_by(slug: 'heartbeats')
           r.on String do |chat_slug|
             @conversation = @page&.conversations&.find_by(slug: chat_slug)
             render_canvas_or_layout(:canvas_view)
@@ -235,7 +235,7 @@ module Ai
 
         # Settings — canvas page
         r.on 'settings' do
-          @page = AiPage.find_by(slug: 'settings')
+          @page = Page.find_by(slug: 'settings')
           r.on String do |chat_slug|
             @conversation = @page&.conversations&.find_by(slug: chat_slug)
             render_canvas_or_layout(:canvas_view)
@@ -251,12 +251,12 @@ module Ai
             r.post do
               raw_body = r.body.read
 
-              unless Ai::WhatsApp.verify_signature(raw_body, r.env['HTTP_X_WEBHOOK_SIGNATURE'])
+              unless Fang::WhatsApp.verify_signature(raw_body, r.env['HTTP_X_WEBHOOK_SIGNATURE'])
                 r.halt 401, { error: 'Invalid signature' }
               end
 
               payload = JSON.parse(raw_body)
-              Ai::WhatsApp.handle_inbound(payload)
+              Fang::WhatsApp.handle_inbound(payload)
 
               { status: 'ok' }
             end
@@ -273,8 +273,8 @@ module Ai
           # Data table pagination endpoint
           r.on 'tables', Integer, 'rows' do |component_id|
             r.get do
-              component = Ai::CanvasComponent.find(component_id)
-              widget = Ai::Widgets::DataTableWidget.new(component)
+              component = Fang::CanvasComponent.find(component_id)
+              widget = Fang::Widgets::DataTableWidget.new(component)
 
               page     = (r.params['page'] || 1).to_i
               sort_col = r.params['sort']
@@ -320,7 +320,7 @@ module Ai
           r.on 'notifications' do
             r.is do
               r.get do
-                pagy, notifications = pagy(Ai::Notification.recent, limit: (r.params['limit'] || 5).to_i.clamp(1, 20), page: (r.params['page'] || 1).to_i)
+                pagy, notifications = pagy(Fang::Notification.recent, limit: (r.params['limit'] || 5).to_i.clamp(1, 20), page: (r.params['page'] || 1).to_i)
 
                 html = notifications.map { |n| render_notification_card_html(n) }.join
 
@@ -338,7 +338,7 @@ module Ai
                     title: c.title,
                     slug: c.slug,
                     source: c.source,
-                    ai_page_id: c.ai_page_id,
+                    page_id: c.page_id,
                     message_count: c.messages.count,
                     last_message_at: c.last_message_at
                   }
@@ -347,23 +347,23 @@ module Ai
               end
 
               r.post do
-                ai_page_id = r.params['ai_page_id']
+                page_id = r.params['page_id']
                 title = r.params['title'].to_s.strip
                 title = 'New Conversation' if title.empty?
                 conversation = Conversation.create!(
                   title: title,
                   source: 'web',
-                  ai_page_id: ai_page_id
+                  page_id: page_id
                 )
-                { id: conversation.id, title: conversation.title, slug: conversation.slug, ai_page_id: conversation.ai_page_id }
+                { id: conversation.id, title: conversation.title, slug: conversation.slug, page_id: conversation.page_id }
               end
             end
           end
 
-          # Create canvas (AiPage + Conversation together)
+          # Create canvas (Page + Conversation together)
           r.on 'canvases' do
             r.post do
-              page = AiPage.create!(
+              page = Page.create!(
                 title: r.params['title'] || 'New Canvas',
                 content: '',
                 status: 'published',
@@ -372,9 +372,9 @@ module Ai
               conversation = Conversation.create!(
                 title: page.title,
                 source: 'web',
-                ai_page: page
+                page: page
               )
-              { id: conversation.id, title: conversation.title, ai_page_id: page.id, page_slug: page.slug, conv_slug: conversation.slug }
+              { id: conversation.id, title: conversation.title, page_id: page.id, page_slug: page.slug, conv_slug: conversation.slug }
             end
           end
 
@@ -386,7 +386,7 @@ module Ai
 
               result = case action_type
               when 'run_skill'
-                skill = Ai::SkillRecord.find_by(name: body['skill_name'])
+                skill = Fang::SkillRecord.find_by(name: body['skill_name'])
                 unless skill
                   r.halt 404, { success: false, error: "Skill '#{body['skill_name']}' not found" }
                 end
@@ -401,27 +401,27 @@ module Ai
                   r.halt 400, { success: false, error: 'Missing code parameter' }
                 end
                 ctx = Object.new
-                Ai.constants.map { |c| Ai.const_get(c) }
+                Fang.constants.map { |c| Fang.const_get(c) }
                   .select { |c| c.is_a?(Class) && c < ActiveRecord::Base }
                   .each { |model| ctx.define_singleton_method(model.name.demodulize.to_sym) { model } }
                 output = ctx.instance_eval(code)
                 { success: true, result: output.inspect }
 
               when 'send_message'
-                conv = Ai::Conversation.find(body['conversation_id'])
+                conv = Fang::Conversation.find(body['conversation_id'])
                 message = conv.add_message(role: 'user', content: body['content'])
-                Ai::Jobs::AgentExecutorJob.perform_later(message.id)
+                Fang::Jobs::AgentExecutorJob.perform_later(message.id)
                 { success: true, message_id: message.id }
 
               when 'refresh_component'
-                component = Ai::CanvasComponent.find(body['component_id'])
-                widget_class = Ai::Widgets::BaseWidget.for_type(component.component_type)
+                component = Fang::CanvasComponent.find(body['component_id'])
+                widget_class = Fang::Widgets::BaseWidget.for_type(component.component_type)
                 if widget_class
                   widget = widget_class.new(component)
                   if widget.refresh_data!
                     turbo = "<turbo-stream action=\"replace\" target=\"canvas-component-#{component.id}\">" \
                             "<template>#{widget.render_component_html}</template></turbo-stream>"
-                    TurboBroadcast.broadcast("canvas:#{component.ai_page_id}", turbo)
+                    TurboBroadcast.broadcast("canvas:#{component.page_id}", turbo)
                   end
                   { success: true, refreshed: true }
                 else
@@ -429,7 +429,7 @@ module Ai
                 end
 
               when 'toggle_heartbeat'
-                heartbeat = Ai::Heartbeat.find(body['heartbeat_id'])
+                heartbeat = Fang::Heartbeat.find(body['heartbeat_id'])
                 if heartbeat.enabled?
                   heartbeat.update!(enabled: false, status: 'paused')
                 else
@@ -443,7 +443,7 @@ module Ai
 
               result
             rescue => e
-              Ai.logger.error "Action failed: #{e.message}"
+              Fang.logger.error "Action failed: #{e.message}"
               { success: false, error: e.message }
             end
           end
@@ -451,7 +451,7 @@ module Ai
           # Heartbeat toggle
           r.on 'heartbeats', Integer, 'toggle' do |hb_id|
             r.post do
-              heartbeat = Ai::Heartbeat.find(hb_id)
+              heartbeat = Fang::Heartbeat.find(hb_id)
               if heartbeat.enabled?
                 heartbeat.update!(enabled: false, status: 'paused')
               else
@@ -459,11 +459,11 @@ module Ai
               end
 
               # Trigger widget refresh
-              page = heartbeat.ai_page || AiPage.find_by(slug: 'heartbeats')
+              page = heartbeat.page || Page.find_by(slug: 'heartbeats')
               if page
                 component = page.canvas_components.find_by(component_type: 'heartbeat_monitor')
                 if component
-                  widget_class = Ai::Widgets::BaseWidget.for_type('heartbeat_monitor')
+                  widget_class = Fang::Widgets::BaseWidget.for_type('heartbeat_monitor')
                   if widget_class
                     widget = widget_class.new(component)
                     if widget.refresh_data!
@@ -482,7 +482,7 @@ module Ai
           # Widget type registry
           r.on 'widget_types' do
             r.get do
-              types = Ai::Widgets::BaseWidget.registry.map do |type, klass|
+              types = Fang::Widgets::BaseWidget.registry.map do |type, klass|
                 { type: type, label: klass.menu_label_text || type.tr('_', ' ').capitalize,
                   icon: klass.menu_icon_text, defaults: klass.default_metadata }
               end
@@ -492,7 +492,7 @@ module Ai
 
           # Page canvas content by page ID
           r.on 'pages', Integer do |page_id|
-            page = AiPage.find(page_id)
+            page = Page.find(page_id)
 
             # Canvas SSE stream — one per canvas
             r.on 'stream' do
@@ -526,7 +526,7 @@ module Ai
                   metadata = body['metadata'] || {}
 
                   # Merge widget default metadata
-                  widget_class = Ai::Widgets::BaseWidget.for_type(comp_type)
+                  widget_class = Fang::Widgets::BaseWidget.for_type(comp_type)
                   metadata = widget_class.default_metadata.merge(metadata) if widget_class
 
                   component = page.canvas_components.create!(
@@ -590,7 +590,7 @@ module Ai
         # Canvas URL: /:canvas_slug or /:canvas_slug/:chat_slug
         # This MUST be last — it's a catch-all for slug-based routes
         r.on String do |canvas_slug|
-          @page = AiPage.find_by(slug: canvas_slug)
+          @page = Page.find_by(slug: canvas_slug)
           next unless @page
 
           r.on String do |chat_slug|

@@ -3,7 +3,7 @@
 require 'net/http'
 require 'json'
 
-module Ai
+module Fang
   module Widgets
     class WeatherWidget < BaseWidget
       widget_type 'weather'
@@ -88,7 +88,7 @@ module Ai
           false
         end
       rescue => e
-        Ai.logger.error "Weather widget refresh failed: #{e.message}"
+        Fang.logger.error "Weather widget refresh failed: #{e.message}"
         false
       end
     end

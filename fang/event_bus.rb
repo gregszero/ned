@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module EventBus
     def self.emit(event_name, data = {})
-      Ai.logger.info "EventBus: #{event_name}"
+      Fang.logger.info "EventBus: #{event_name}"
 
       Trigger.where(enabled: true).find_each do |trigger|
         next unless trigger.matches?(event_name)

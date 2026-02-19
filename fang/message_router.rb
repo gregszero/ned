@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module MessageRouter
     def self.route(message, **)
-      Ai.logger.info "Routing message to agent: #{message.content[0..50]}..."
+      Fang.logger.info "Routing message to agent: #{message.content[0..50]}..."
       Jobs::AgentExecutorJob.perform_later(message.id)
     end
   end

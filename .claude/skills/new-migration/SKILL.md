@@ -49,12 +49,12 @@ end
 
 ### 2. Create Model
 
-File: `ai/models/thing.rb`
+File: `fang/models/thing.rb`
 
 ```ruby
 # frozen_string_literal: true
 
-module Ai
+module Fang
   class Thing < ActiveRecord::Base
     self.table_name = 'things'
 
@@ -71,7 +71,7 @@ end
 ### 3. Run Migration
 
 ```bash
-./ai.rb db:migrate
+./openfang.rb db:migrate
 ```
 
 ## Conventions
@@ -79,7 +79,7 @@ end
 - Migration class name matches the file description in PascalCase
 - Table names are plural, model class names are singular
 - Always use `self.table_name = 'table_name'` in models
-- All models live under the `Ai` module
-- Models are auto-loaded from `ai/models/` by `bootstrap.rb`
+- All models live under the `Fang` module
+- Models are auto-loaded from `fang/models/` by `bootstrap.rb`
 - Use `HasStatus` concern for models with status fields — gives you scopes like `.published`, `.draft`
 - Prefer `json` type for flexible metadata columns

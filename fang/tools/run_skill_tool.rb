@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class RunSkillTool < FastMcp::Tool
       tool_name 'run_skill'
@@ -22,7 +22,7 @@ module Ai
           }
         end
 
-        Ai.logger.info "Executing skill: #{skill_name} with params: #{parameters.inspect}"
+        Fang.logger.info "Executing skill: #{skill_name} with params: #{parameters.inspect}"
         result = skill_record.load_and_execute(**parameters.transform_keys(&:to_sym))
 
         skill_record.increment_usage!
@@ -34,7 +34,7 @@ module Ai
           usage_count: skill_record.usage_count
         }
       rescue => e
-        Ai.logger.error "Failed to execute skill #{skill_name}: #{e.message}"
+        Fang.logger.error "Failed to execute skill #{skill_name}: #{e.message}"
         { success: false, error: e.message }
       end
     end

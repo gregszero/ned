@@ -1,47 +1,47 @@
-# ai.rb — Claude Code Guide
+# OpenFang — Claude Code Guide
 
 ## What This Is
 
-A personal AI assistant framework ("Ned") built in Ruby. It combines a Roda web UI, ActiveRecord models (SQLite), FastMCP tool server, and a Claude Code CLI subprocess as the agent runtime.
+A personal AI assistant framework ("OpenFang") built in Ruby. It combines a Roda web UI, ActiveRecord models (SQLite), FastMCP tool server, and a Claude Code CLI subprocess as the agent runtime.
 
 ## Architecture
 
 ```
-ai.rb (entrypoint) → Ai::CLI (Thor)
+openfang.rb (entrypoint) → Fang::CLI (Thor)
 ├── web/app.rb          Roda web server (port 3000)
-├── ai/mcp_server.rb    FastMCP tool server (port 9292)
-├── ai/agent.rb         Spawns `claude` CLI subprocess per conversation
-├── ai/bootstrap.rb     Loads everything, connects DB
-└── ai/scheduler.rb     Rufus-scheduler for recurring tasks
+├── fang/mcp_server.rb    FastMCP tool server (port 9292)
+├── fang/agent.rb         Spawns `claude` CLI subprocess per conversation
+├── fang/bootstrap.rb     Loads everything, connects DB
+└── fang/scheduler.rb     Rufus-scheduler for recurring tasks
 ```
 
 **Real-time updates**: In-memory pub/sub (`web/turbo_broadcast.rb`) → SSE → Turbo Streams in the browser. No ActionCable or Redis needed — everything runs in one process.
 
-**Agent execution**: When a user sends a message, `AgentExecutorJob` runs `Ai::Agent.execute`, which spawns a `claude` CLI subprocess with MCP tools. The subprocess uses `workspace/.mcp.json` and `workspace/CLAUDE.md` as its system prompt.
+**Agent execution**: When a user sends a message, `AgentExecutorJob` runs `Fang::Agent.execute`, which spawns a `claude` CLI subprocess with MCP tools. The subprocess uses `workspace/.mcp.json` and `workspace/CLAUDE.md` as its system prompt.
 
 ## Key Conventions
 
-- **Auto-discovery via ObjectSpace**: MCP tools (`ai/tools/`) and resources (`ai/resources/`) are auto-registered by scanning for subclasses of `FastMcp::Tool` and `FastMcp::Resource`. Just create the file — no manual registration needed.
+- **Auto-discovery via ObjectSpace**: MCP tools (`fang/tools/`) and resources (`fang/resources/`) are auto-registered by scanning for subclasses of `FastMcp::Tool` and `FastMcp::Resource`. Just create the file — no manual registration needed.
 - **No index pages for content types**: When the AI creates a new page/content type, add a direct link to it in the nav bar (`web/views/layout.erb`) instead of creating a separate listing page. Each page is served at `/pages/:slug`.
-- **Models use concerns**: Shared behavior lives in `ai/concerns/` (e.g., `HasStatus`).
+- **Models use concerns**: Shared behavior lives in `fang/concerns/` (e.g., `HasStatus`).
 
 ## Running the App
 
 ```bash
-./ai.rb server        # Start web UI on port 3000
-./ai.rb console       # IRB with all models loaded
-./ai.rb db:migrate    # Run pending migrations
-./ai.rb mcp           # Start MCP server standalone
+./openfang.rb server        # Start web UI on port 3000
+./openfang.rb console       # IRB with all models loaded
+./openfang.rb db:migrate    # Run pending migrations
+./openfang.rb mcp           # Start MCP server standalone
 ```
 
 ## Adding a New MCP Tool
 
-1. Create `ai/tools/my_tool.rb`:
+1. Create `fang/tools/my_tool.rb`:
 
 ```ruby
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class MyTool < FastMcp::Tool
       tool_name 'my_tool'
@@ -53,7 +53,7 @@ module Ai
       end
 
       def call(name:, option: nil)
-        # Tool logic here — all Ai:: models are available
+        # Tool logic here — all Fang:: models are available
         { success: true, result: 'done' }
       rescue => e
         { success: false, error: e.message }
@@ -86,17 +86,17 @@ class CreateThings < ActiveRecord::Migration[8.0]
 end
 ```
 
-2. Create model in `ai/models/thing.rb`:
+2. Create model in `fang/models/thing.rb`:
 
 ```ruby
-module Ai
+module Fang
   class Thing < ActiveRecord::Base
     self.table_name = 'things'
   end
 end
 ```
 
-3. Run `./ai.rb db:migrate`
+3. Run `./openfang.rb db:migrate`
 
 ## Design System
 
@@ -104,7 +104,7 @@ Clean, minimal shadcn/ui-inspired design with terminal green accent. Supports li
 
 ### CSS Tokens (defined in `web/public/css/style.css`)
 
-Light and dark mode tokens are defined as CSS custom properties. The `--ned-*` aliases remain for backward compatibility with Tailwind classes.
+Light and dark mode tokens are defined as CSS custom properties. The `--fang-*` aliases are used by Tailwind classes.
 
 | Token | Light | Dark | Usage |
 |---|---|---|---|
@@ -134,47 +134,47 @@ Light and dark mode tokens are defined as CSS custom properties. The `--ned-*` a
 - **No inline styles** — all styling via Tailwind utilities or CSS classes
 - **No `text-transform: uppercase`** on headings — use `font-semibold tracking-tight`
 
-Tailwind CSS is loaded via CDN with custom colors: `ned-bg`, `ned-fg`, `ned-muted`, `ned-muted-fg`, `ned-accent`, `ned-accent-fg`, `ned-border`, `ned-card`, `ned-primary`, `ned-ring`.
+Tailwind CSS is loaded via CDN with custom colors: `fang-bg`, `fang-fg`, `fang-muted`, `fang-muted-fg`, `fang-accent`, `fang-accent-fg`, `fang-border`, `fang-card`, `fang-primary`, `fang-ring`.
 
 ## Event System
 
-`Ai::EventBus` is a simple in-process pub/sub for decoupled automation. Call `EventBus.emit("event:name", data)` to fire an event. Triggers and workflows listen for matching events.
+`Fang::EventBus` is a simple in-process pub/sub for decoupled automation. Call `EventBus.emit("event:name", data)` to fire an event. Triggers and workflows listen for matching events.
 
 **Emit points** are wired into:
 - `ScheduledTaskRunnerJob` → `task:completed:*` / `task:failed:*`
 - `HeartbeatRunnerJob` → `heartbeat:escalated:*` / `heartbeat:error:*`
 - `Notification#broadcast!` → `notification:created:*`
 
-**Triggers** (`ai/models/trigger.rb`) match events via glob patterns and fire a skill or prompt.
+**Triggers** (`fang/models/trigger.rb`) match events via glob patterns and fire a skill or prompt.
 
-**Workflows** (`ai/models/workflow.rb`) are multi-step pipelines with step types: `skill`, `prompt`, `condition`, `wait`, `notify`. Steps pass data via a JSON context hash with `{{context.step_name}}` interpolation. Workflows can auto-start on a `trigger_event`.
+**Workflows** (`fang/models/workflow.rb`) are multi-step pipelines with step types: `skill`, `prompt`, `condition`, `wait`, `notify`. Steps pass data via a JSON context hash with `{{context.step_name}}` interpolation. Workflows can auto-start on a `trigger_event`.
 
 ## Key Files
 
 | File | Purpose |
 |---|---|
-| `ai.rb` | CLI entrypoint |
-| `ai/bootstrap.rb` | Framework loader |
-| `ai/agent.rb` | Claude subprocess execution |
-| `ai/mcp_server.rb` | FastMCP tool/resource registration |
-| `ai/event_bus.rb` | In-process event pub/sub for triggers and workflows |
+| `openfang.rb` | CLI entrypoint |
+| `fang/bootstrap.rb` | Framework loader |
+| `fang/agent.rb` | Claude subprocess execution |
+| `fang/mcp_server.rb` | FastMCP tool/resource registration |
+| `fang/event_bus.rb` | In-process event pub/sub for triggers and workflows |
 | `web/app.rb` | All Roda routes |
 | `web/views/layout.erb` | Main layout with sidebar nav |
 | `web/view_helpers.rb` | HTML rendering helpers (turbo_stream, markdown, message/notification cards) |
 | `web/turbo_broadcast.rb` | In-memory pub/sub for SSE |
 | `web/public/css/style.css` | Complete design system |
-| `workspace/CLAUDE.md` | Ned's system prompt (the inner agent reads this) |
+| `workspace/CLAUDE.md` | OpenFang's system prompt (the inner agent reads this) |
 | `workspace/.mcp.json` | MCP config passed to claude subprocess |
 
 ## Existing MCP Tools
 
 | Tool | File | Purpose |
 |---|---|---|
-| `run_code` | `ai/tools/run_code_tool.rb` | Execute Ruby code with model access |
-| `run_skill` | `ai/tools/run_skill_tool.rb` | Execute saved skills by name |
-| `send_message` | `ai/tools/send_message_tool.rb` | Send message + broadcast via SSE |
-| `schedule_task` | `ai/tools/schedule_task_tool.rb` | Schedule future tasks/reminders (supports `cron:` for recurring) |
-| `create_page` | `ai/tools/create_page_tool.rb` | Create AiPage (appears in nav) |
-| `create_notification` | `ai/tools/create_notification_tool.rb` | Create + broadcast notification |
-| `create_trigger` | `ai/tools/create_trigger_tool.rb` | Create event trigger (fires skill/prompt on matching event) |
-| `create_workflow` | `ai/tools/create_workflow_tool.rb` | Create multi-step workflow pipeline |
+| `run_code` | `fang/tools/run_code_tool.rb` | Execute Ruby code with model access |
+| `run_skill` | `fang/tools/run_skill_tool.rb` | Execute saved skills by name |
+| `send_message` | `fang/tools/send_message_tool.rb` | Send message + broadcast via SSE |
+| `schedule_task` | `fang/tools/schedule_task_tool.rb` | Schedule future tasks/reminders (supports `cron:` for recurring) |
+| `create_page` | `fang/tools/create_page_tool.rb` | Create Page (appears in nav) |
+| `create_notification` | `fang/tools/create_notification_tool.rb` | Create + broadcast notification |
+| `create_trigger` | `fang/tools/create_trigger_tool.rb` | Create event trigger (fires skill/prompt on matching event) |
+| `create_workflow` | `fang/tools/create_workflow_tool.rb` | Create multi-step workflow pipeline |

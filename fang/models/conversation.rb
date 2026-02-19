@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   class Conversation < ActiveRecord::Base
     self.table_name = 'conversations'
 
     include HasJsonDefaults
 
     # Associations
-    belongs_to :ai_page, class_name: 'Ai::AiPage', optional: true
+    belongs_to :page, class_name: 'Fang::Page', optional: true
     has_many :messages, dependent: :destroy
     has_many :sessions, dependent: :destroy
 
@@ -46,11 +46,11 @@ module Ai
     end
 
     def ensure_canvas!
-      return ai_page if ai_page
+      return page if page
 
-      page = Ai::AiPage.create!(title: title.presence || 'Untitled Canvas', content: '', status: 'published', published_at: Time.current)
-      update!(ai_page_id: page.id)
-      reload.ai_page
+      page = Fang::Page.create!(title: title.presence || 'Untitled Canvas', content: '', status: 'published', published_at: Time.current)
+      update!(page_id: page.id)
+      reload.page
     end
 
     def broadcast_channel

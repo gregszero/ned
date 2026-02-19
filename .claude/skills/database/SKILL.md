@@ -1,10 +1,10 @@
 # Database Management
 
-Manages the ai.rb database including migrations, resets, and queries.
+Manages the OpenFang database including migrations, resets, and queries.
 
 ## What this does
 
-Provides commands and guidance for managing the ai.rb database:
+Provides commands and guidance for managing the OpenFang database:
 - Running migrations
 - Resetting database
 - Creating/dropping database
@@ -22,7 +22,7 @@ Use this skill when you need to:
 
 ## Database Overview
 
-**ai.rb uses:**
+**OpenFang uses:**
 - **Development**: SQLite (file: `storage/data.db`)
 - **Production**: PostgreSQL (recommended)
 - **ORM**: ActiveRecord 8.x
@@ -37,7 +37,7 @@ Use this skill when you need to:
 5. `skills` - Ruby skill metadata
 6. `mcp_connections` - External MCP servers
 7. `config` - Key-value configuration
-8. `ai_pages` - AI-generated pages
+8. `pages` - AI-generated pages
 9-17. `solid_queue_*` - Background job tables
 
 ## Commands
@@ -52,7 +52,7 @@ bundle exec rake db:migrate
 
 Or via CLI:
 ```bash
-./ai.rb db:migrate
+./openfang.rb db:migrate
 ```
 
 **When to use:**
@@ -70,7 +70,7 @@ bundle exec rake db:reset
 
 Or via CLI:
 ```bash
-./ai.rb db:reset
+./openfang.rb db:reset
 ```
 
 **Warning:** This deletes ALL data!
@@ -103,26 +103,26 @@ bundle exec rake db:drop
 Query database directly:
 
 ```bash
-./ai.rb console
+./openfang.rb console
 ```
 
 Then use ActiveRecord:
 
 ```ruby
 # Count conversations
-Ai::Conversation.count
+Fang::Conversation.count
 
 # List recent messages
-Ai::Message.order(created_at: :desc).limit(10)
+Fang::Message.order(created_at: :desc).limit(10)
 
 # Find conversation
-conv = Ai::Conversation.find(1)
+conv = Fang::Conversation.find(1)
 
 # See conversation messages
 conv.messages.each { |m| puts "#{m.role}: #{m.content}" }
 
 # Create test data
-Ai::Conversation.create!(title: "Test", source: "web")
+Fang::Conversation.create!(title: "Test", source: "web")
 
 # Exit
 exit
@@ -221,7 +221,7 @@ t.text :description
 t.timestamps
 ```
 
-### ai_pages
+### pages
 
 ```ruby
 t.string :title
@@ -239,93 +239,93 @@ t.timestamps
 
 ```ruby
 # List all
-Ai::Conversation.all
+Fang::Conversation.all
 
 # Recent conversations
-Ai::Conversation.recent.limit(10)
+Fang::Conversation.recent.limit(10)
 
 # By source
-Ai::Conversation.by_source('web')
+Fang::Conversation.by_source('web')
 
 # With message count
-Ai::Conversation.includes(:messages).map { |c| [c.title, c.messages.count] }
+Fang::Conversation.includes(:messages).map { |c| [c.title, c.messages.count] }
 
 # Find by ID
-Ai::Conversation.find(1)
+Fang::Conversation.find(1)
 ```
 
 ### Messages
 
 ```ruby
 # All messages for conversation
-conv = Ai::Conversation.find(1)
+conv = Fang::Conversation.find(1)
 conv.messages.chronological
 
 # User messages only
-Ai::Message.user_messages
+Fang::Message.user_messages
 
 # Assistant messages only
-Ai::Message.assistant_messages
+Fang::Message.assistant_messages
 
 # Recent messages
-Ai::Message.order(created_at: :desc).limit(20)
+Fang::Message.order(created_at: :desc).limit(20)
 ```
 
 ### Sessions
 
 ```ruby
 # Active sessions
-Ai::Session.active
+Fang::Session.active
 
 # Stopped sessions
-Ai::Session.stopped
+Fang::Session.stopped
 
 # Sessions with errors
-Ai::Session.with_errors
+Fang::Session.with_errors
 
 # Old sessions (for cleanup)
-Ai::Session.old
+Fang::Session.old
 ```
 
 ### Scheduled Tasks
 
 ```ruby
 # Pending tasks
-Ai::ScheduledTask.pending
+Fang::ScheduledTask.pending
 
 # Due tasks
-Ai::ScheduledTask.due
+Fang::ScheduledTask.due
 
 # Completed tasks
-Ai::ScheduledTask.completed
+Fang::ScheduledTask.completed
 
 # Failed tasks
-Ai::ScheduledTask.failed
+Fang::ScheduledTask.failed
 ```
 
 ### Skills
 
 ```ruby
 # All skills
-Ai::SkillRecord.all
+Fang::SkillRecord.all
 
 # By usage
-Ai::SkillRecord.by_usage
+Fang::SkillRecord.by_usage
 
 # Recent skills
-Ai::SkillRecord.recent
+Fang::SkillRecord.recent
 
 # Find by name
-Ai::SkillRecord.find_by(name: 'send_email')
+Fang::SkillRecord.find_by(name: 'send_email')
 ```
 
 ## Creating Test Data
 
 ```ruby
-# In console: ./ai.rb console
+# In console: ./openfang.rb console
 
 # Create conversation
-conv = Ai::Conversation.create!(
+conv = Fang::Conversation.create!(
   title: 'Test Conversation',
   source: 'web'
 )
@@ -342,7 +342,7 @@ conv.add_message(
 )
 
 # Create skill
-Ai::SkillRecord.create!(
+Fang::SkillRecord.create!(
   name: 'test_skill',
   description: 'A test skill',
   file_path: 'skills/test_skill.rb',
@@ -350,14 +350,14 @@ Ai::SkillRecord.create!(
 )
 
 # Create scheduled task
-Ai::ScheduledTask.create!(
+Fang::ScheduledTask.create!(
   title: 'Test Task',
   description: 'Run at midnight',
   scheduled_for: Time.current.end_of_day
 )
 
 # Create AI page
-Ai::AiPage.create!(
+Fang::Page.create!(
   title: 'Test Page',
   content: '<h1>Hello World</h1>',
   status: 'published',
@@ -432,10 +432,10 @@ cp storage/data.db.backup storage/data.db
 
 ```bash
 # Backup
-pg_dump ai_rb_production > backup.sql
+pg_dump openfang_production > backup.sql
 
 # Restore
-psql ai_rb_production < backup.sql
+psql openfang_production < backup.sql
 ```
 
 ### Export Data
@@ -445,7 +445,7 @@ psql ai_rb_production < backup.sql
 require 'json'
 
 # Export conversations
-data = Ai::Conversation.all.map do |c|
+data = Fang::Conversation.all.map do |c|
   {
     id: c.id,
     title: c.title,
@@ -494,8 +494,8 @@ echo $DATABASE_URL
 du -h storage/data.db
 
 # Clean up old sessions
-./ai.rb console
-> Ai::Session.old.delete_all
+./openfang.rb console
+> Fang::Session.old.delete_all
 ```
 
 ## Switching to PostgreSQL
@@ -513,8 +513,8 @@ brew install postgresql
 2. **Create Database**
 
 ```bash
-createdb ai_rb_development
-createdb ai_rb_production
+createdb openfang_development
+createdb openfang_production
 ```
 
 3. **Update Configuration**
@@ -524,7 +524,7 @@ Edit `config/database.yml`:
 ```yaml
 development:
   adapter: postgresql
-  database: ai_rb_development
+  database: openfang_development
   pool: 5
 
 production:
@@ -535,7 +535,7 @@ production:
 4. **Update .env**
 
 ```bash
-DATABASE_URL=postgresql://user:password@localhost/ai_rb_production
+DATABASE_URL=postgresql://user:password@localhost/openfang_production
 ```
 
 5. **Run Migrations**
@@ -567,7 +567,7 @@ SELECT * FROM conversations LIMIT 10;
 ### PostgreSQL
 
 ```bash
-psql ai_rb_production
+psql openfang_production
 
 # List tables
 \dt
@@ -611,8 +611,8 @@ end
 ## Documentation
 
 - Migrations: `workspace/migrations/`
-- Models: `ai/models/`
+- Models: `fang/models/`
 - Schema: `bundle exec rake db:schema:dump`
 - ActiveRecord Guide: https://guides.rubyonrails.org/active_record_basics.html
 
-**Database ready!** Use `./ai.rb console` to interact with data. 💾
+**Database ready!** Use `./openfang.rb console` to interact with data. 💾

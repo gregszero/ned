@@ -1,18 +1,18 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   class SkillLoader
     class << self
       # Load all skill files from skills/ directory
       def load_all
-        skills_path = "#{Ai.root}/skills"
+        skills_path = "#{Fang.root}/skills"
         return [] unless Dir.exist?(skills_path)
 
         skill_files = Dir["#{skills_path}/**/*.rb"].reject { |f| f.include?('/base.rb') }
 
         skill_files.each do |file|
           load file
-          Ai.logger.debug "Loaded skill: #{file}"
+          Fang.logger.debug "Loaded skill: #{file}"
         end
 
         # Auto-sync SkillRecord from loaded skill files
@@ -20,7 +20,7 @@ module Ai
           name = skill_name_from_class(klass)
           file = skill_files.find { |f| f.include?("/#{name}.rb") }
           next unless file
-          relative = file.sub("#{Ai.root}/", '')
+          relative = file.sub("#{Fang.root}/", '')
           SkillRecord.find_or_create_by(name: name) do |r|
             r.file_path = relative
             r.class_name = klass.name
@@ -74,7 +74,7 @@ module Ai
       private
 
       def loaded_skills
-        ObjectSpace.each_object(Class).select { |klass| klass < Ai::Skill }
+        ObjectSpace.each_object(Class).select { |klass| klass < Fang::Skill }
       end
 
       def find_skill(name)
@@ -118,12 +118,12 @@ module Ai
     def send_message(content, conversation_id: nil)
       conv_id = conversation_id || ENV['CONVERSATION_ID']
       return unless conv_id
-      conversation = Ai::Conversation.find(conv_id)
+      conversation = Fang::Conversation.find(conv_id)
       conversation.add_message(role: 'system', content: content)
     end
 
     def schedule_task(title:, scheduled_for:, skill_name: nil, parameters: {})
-      Ai::ScheduledTask.create!(
+      Fang::ScheduledTask.create!(
         title: title,
         scheduled_for: scheduled_for,
         skill_name: skill_name,

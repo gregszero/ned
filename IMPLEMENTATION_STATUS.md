@@ -1,4 +1,4 @@
-# Ned Implementation Status
+# OpenFang Implementation Status
 
 ## ✅ Completed Phases (5 of 9)
 
@@ -7,7 +7,7 @@
 
 - Project structure with proper directory organization
 - Gemfile with all dependencies (ActiveRecord 8.x, Solid Queue, FastMCP, Docker API, etc.)
-- Main entry point (`ai.rb`) with executable CLI
+- Main entry point (`openfang.rb`) with executable CLI
 - Bootstrap system that loads framework components
 - CLI interface using Thor with commands:
   - `chat` - CLI chat interface

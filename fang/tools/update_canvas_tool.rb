@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class UpdateCanvasTool < FastMcp::Tool
       tool_name 'update_canvas'
-      description 'Update the canvas area for the current conversation with HTML content. The canvas is a large display area above the chat that can show rich content like dashboards, reports, or interactive pages. Creates a named AiPage if none exists.'
+      description 'Update the canvas area for the current conversation with HTML content. The canvas is a large display area above the chat that can show rich content like dashboards, reports, or interactive pages. Creates a named Page if none exists.'
 
       arguments do
         required(:html).filled(:string).description('HTML content to display in the canvas')
@@ -15,28 +15,28 @@ module Ai
 
       def call(html:, title: nil, conversation_id: nil, mode: 'replace')
         conversation = if conversation_id
-          Ai::Conversation.find(conversation_id)
+          Fang::Conversation.find(conversation_id)
         elsif ENV['CONVERSATION_ID']
-          Ai::Conversation.find(ENV['CONVERSATION_ID'])
+          Fang::Conversation.find(ENV['CONVERSATION_ID'])
         else
-          Ai::Conversation.last
+          Fang::Conversation.last
         end
 
         unless conversation
           return { success: false, error: 'No conversation found' }
         end
 
-        # Auto-create an AiPage if conversation has none
-        page = conversation.ai_page
+        # Auto-create an Page if conversation has none
+        page = conversation.page
         unless page
           page_title = title || conversation.title || 'Canvas'
-          page = Ai::AiPage.create!(
+          page = Fang::Page.create!(
             title: page_title,
             content: '',
             status: 'published',
             published_at: Time.current
           )
-          conversation.update!(ai_page: page)
+          conversation.update!(page: page)
         end
 
         # Update page content
@@ -51,9 +51,9 @@ module Ai
         target = "canvas-page-#{page.id}"
         stream_html = "<turbo-stream action=\"#{action}\" target=\"#{target}\"><template>#{html}</template></turbo-stream>"
 
-        Ai::Web::TurboBroadcast.broadcast("canvas:#{page.id}", stream_html)
+        Fang::Web::TurboBroadcast.broadcast("canvas:#{page.id}", stream_html)
 
-        { success: true, mode: mode, conversation_id: conversation.id, ai_page_id: page.id, slug: page.slug }
+        { success: true, mode: mode, conversation_id: conversation.id, page_id: page.id, slug: page.slug }
       rescue => e
         { success: false, error: e.message }
       end

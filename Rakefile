@@ -1,30 +1,30 @@
 # frozen_string_literal: true
 
-require_relative 'ai/bootstrap'
+require_relative 'fang/bootstrap'
 
 namespace :db do
   desc "Run database migrations"
   task :migrate do
-    Ai::Database.migrate!
+    Fang::Database.migrate!
     puts "✅ Migrations complete"
   end
 
   desc "Rollback database migration"
   task :rollback do
-    migrations_path = "#{Ai.root}/workspace/migrations"
+    migrations_path = "#{Fang.root}/workspace/migrations"
     ActiveRecord::MigrationContext.new(migrations_path, ActiveRecord::SchemaMigration).rollback
     puts "✅ Rolled back last migration"
   end
 
   desc "Reset database (drop all tables and re-migrate)"
   task :reset do
-    Ai::Database.reset!
+    Fang::Database.reset!
     puts "✅ Database reset complete"
   end
 
   desc "Create database"
   task :create do
-    config = Ai::Database.send(:load_config)
+    config = Fang::Database.send(:load_config)
 
     if config.is_a?(String)
       puts "Using DATABASE_URL, database should already exist"
@@ -61,7 +61,7 @@ namespace :db do
 
   desc "Drop database"
   task :drop do
-    config = Ai::Database.send(:load_config)
+    config = Fang::Database.send(:load_config)
 
     if config.is_a?(String)
       puts "Using DATABASE_URL, cannot drop database"
@@ -92,7 +92,7 @@ namespace :db do
 
   desc "Load seed data"
   task :seed do
-    seed_file = "#{Ai.root}/workspace/seeds.rb"
+    seed_file = "#{Fang.root}/workspace/seeds.rb"
     if File.exist?(seed_file)
       load seed_file
       puts "✅ Seed data loaded"
@@ -108,15 +108,15 @@ end
 namespace :skills do
   desc "List all available skills"
   task :list do
-    Ai::SkillLoader.load_all
-    skills = Ai::SkillLoader.available_skills
+    Fang::SkillLoader.load_all
+    skills = Fang::SkillLoader.available_skills
 
     if skills.empty?
       puts "No skills found in skills/ directory"
     else
       puts "Available skills:"
       skills.each do |skill_name|
-        info = Ai::SkillLoader.skill_info(skill_name)
+        info = Fang::SkillLoader.skill_info(skill_name)
         puts "  - #{skill_name}: #{info[:description]}"
       end
     end
@@ -124,7 +124,7 @@ namespace :skills do
 
   desc "Reload all skills"
   task :reload do
-    Ai::SkillLoader.reload!
+    Fang::SkillLoader.reload!
     puts "✅ Skills reloaded"
   end
 end
@@ -132,13 +132,13 @@ end
 namespace :container do
   desc "Build agent container image"
   task :build do
-    sh "docker build -f container/Dockerfile -t ai-rb-agent ."
-    puts "✅ Container image built: ai-rb-agent"
+    sh "docker build -f container/Dockerfile -t openfang-agent ."
+    puts "✅ Container image built: openfang-agent"
   end
 
   desc "Cleanup old containers and sessions"
   task :cleanup do
-    Ai::Container.cleanup_old_sessions
+    Fang::Container.cleanup_old_sessions
     puts "✅ Cleaned up old sessions"
   end
 end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class GetCanvasTool < FastMcp::Tool
       tool_name 'get_canvas'
@@ -12,11 +12,11 @@ module Ai
 
       def call(page_id: nil)
         page = if page_id
-          AiPage.find_by(id: page_id)
-        elsif ENV['AI_PAGE_ID']
-          AiPage.find_by(id: ENV['AI_PAGE_ID'])
+          Page.find_by(id: page_id)
+        elsif ENV['PAGE_ID']
+          Page.find_by(id: ENV['PAGE_ID'])
         elsif ENV['CONVERSATION_ID']
-          Conversation.find_by(id: ENV['CONVERSATION_ID'])&.ai_page
+          Conversation.find_by(id: ENV['CONVERSATION_ID'])&.page
         end
 
         return { success: false, error: 'No canvas page found' } unless page
@@ -29,7 +29,7 @@ module Ai
           canvas_state: page.canvas_state || {}
         }
       rescue => e
-        Ai.logger.error "Failed to get canvas: #{e.message}"
+        Fang.logger.error "Failed to get canvas: #{e.message}"
         { success: false, error: e.message }
       end
     end

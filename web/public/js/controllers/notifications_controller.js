@@ -69,7 +69,7 @@ export default class extends Controller {
       if (append) {
         this.listTarget.insertAdjacentHTML("beforeend", data.html)
       } else {
-        this.listTarget.innerHTML = data.html || '<div class="p-4 text-center text-ned-muted-fg text-xs">No notifications</div>'
+        this.listTarget.innerHTML = data.html || '<div class="p-4 text-center text-fang-muted-fg text-xs">No notifications</div>'
       }
 
       this.loaded = true
@@ -84,7 +84,7 @@ export default class extends Controller {
     } catch (e) {
       console.error("[Notifications] Failed to fetch:", e)
       if (!append) {
-        this.listTarget.innerHTML = '<div class="p-4 text-center text-ned-muted-fg text-xs">Failed to load</div>'
+        this.listTarget.innerHTML = '<div class="p-4 text-center text-fang-muted-fg text-xs">Failed to load</div>'
       }
     }
   }

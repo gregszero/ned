@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class DefineWidgetTool < FastMcp::Tool
       tool_name 'define_widget'
@@ -8,7 +8,7 @@ module Ai
 
       arguments do
         required(:widget_type).filled(:string).description('Unique type key (snake_case, e.g. "countdown_timer")')
-        required(:ruby_code).filled(:string).description('Ruby class body inheriting from Ai::Widgets::BaseWidget')
+        required(:ruby_code).filled(:string).description('Ruby class body inheriting from Fang::Widgets::BaseWidget')
         optional(:js_code).filled(:string).description('Optional JS behavior registered via registerWidget()')
         optional(:menu_label).filled(:string).description('Label shown in canvas context menu')
         optional(:menu_icon).filled(:string).description('Emoji icon for the context menu')
@@ -28,7 +28,7 @@ module Ai
         load ruby_path
 
         # Reset the registry so the new widget type is discoverable
-        Ai::Widgets::BaseWidget.reset_registry!
+        Fang::Widgets::BaseWidget.reset_registry!
 
         result = {
           success: true,
@@ -48,15 +48,15 @@ module Ai
               <template><script src="/js/widgets/#{widget_type}.js"></script></template>
             </turbo-stream>
           HTML
-          Ai::Web::TurboBroadcast.broadcast('notifications', script_turbo)
+          Fang::Web::TurboBroadcast.broadcast('notifications', script_turbo)
         end
 
-        Ai.logger.info "Defined new widget type: #{widget_type}"
+        Fang.logger.info "Defined new widget type: #{widget_type}"
         result
       rescue SyntaxError => e
         { success: false, error: "Ruby syntax error: #{e.message}" }
       rescue => e
-        Ai.logger.error "Failed to define widget: #{e.message}"
+        Fang.logger.error "Failed to define widget: #{e.message}"
         { success: false, error: e.message }
       end
     end

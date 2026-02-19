@@ -1,10 +1,10 @@
-# Setup ai.rb
+# Setup OpenFang
 
-Sets up the ai.rb Ruby AI framework from scratch.
+Sets up the OpenFang Ruby AI framework from scratch.
 
 ## What this does
 
-This skill guides you through the complete setup of ai.rb:
+This skill guides you through the complete setup of OpenFang:
 
 1. Checks dependencies (Ruby 3.3+, Docker, Git)
 2. Installs Ruby gems
@@ -16,7 +16,7 @@ This skill guides you through the complete setup of ai.rb:
 ## When to use
 
 Use this skill when:
-- Setting up ai.rb for the first time
+- Setting up OpenFang for the first time
 - After cloning the repository
 - When dependencies need to be verified
 
@@ -74,12 +74,12 @@ This creates all necessary tables:
 - conversations, messages, sessions
 - scheduled_tasks, skills, mcp_connections, config
 - solid_queue_* tables
-- ai_pages
+- pages
 
 ### 4. Build Agent Container
 
 ```bash
-docker build -f container/Dockerfile -t ai-rb-agent .
+docker build -f container/Dockerfile -t openfang-agent .
 ```
 
 This builds a container with:
@@ -119,28 +119,28 @@ Test that everything works:
 
 ```bash
 # Check CLI
-./ai.rb version
+./openfang.rb version
 
 # Test database
-./ai.rb console
-> Ai::Conversation.count
+./openfang.rb console
+> Fang::Conversation.count
 > exit
 
 # Verify container
-docker images | grep ai-rb-agent
+docker images | grep openfang-agent
 ```
 
 ## Quick Start After Setup
 
 ```bash
 # Start web UI
-./ai.rb server
+./openfang.rb server
 
 # Open browser
 open http://localhost:3000
 
 # Start MCP server (in another terminal)
-./ai.rb mcp
+./openfang.rb mcp
 ```
 
 ## Troubleshooting
@@ -165,7 +165,7 @@ open http://localhost:3000
 ## What gets created
 
 ```
-ai.rb/
+OpenFang/
 ├── storage/
 │   ├── data.db          # SQLite database
 │   └── sessions/        # Container sessions
@@ -177,7 +177,7 @@ ai.rb/
 
 After setup:
 
-1. **Start the web UI**: `./ai.rb server`
+1. **Start the web UI**: `./openfang.rb server`
 2. **Create a conversation**: Open http://localhost:3000
 3. **Send a message**: AI will respond via container
 4. **View settings**: Check skills, MCP connections, config
@@ -188,10 +188,10 @@ After setup:
 ### PostgreSQL (Production)
 
 1. Install PostgreSQL
-2. Create database: `createdb ai_rb_production`
+2. Create database: `createdb openfang_production`
 3. Update `.env`:
    ```
-   DATABASE_URL=postgresql://user:pass@localhost/ai_rb_production
+   DATABASE_URL=postgresql://user:pass@localhost/openfang_production
    ```
 
 ### Docker Compose
@@ -213,10 +213,10 @@ Configure version control:
 
 ```bash
 # GitHub (primary)
-git remote add origin https://github.com/youruser/ai.rb.git
+git remote add origin https://github.com/youruser/OpenFang.git
 
 # entire.io (mirror)
-git remote add entire https://entire.io/youruser/ai.rb.git
+git remote add entire https://entire.io/youruser/OpenFang.git
 
 # Push to both
 git push origin master
@@ -227,10 +227,10 @@ git push entire master
 
 Setup is complete when:
 
-- ✅ `./ai.rb version` shows version 0.1.0
-- ✅ `./ai.rb server` starts web UI on port 3000
+- ✅ `./openfang.rb version` shows version 0.1.0
+- ✅ `./openfang.rb server` starts web UI on port 3000
 - ✅ Database has 17 tables
-- ✅ Docker image `ai-rb-agent` exists
+- ✅ Docker image `openfang-agent` exists
 - ✅ Web UI is accessible at http://localhost:3000
 
 ## Architecture Overview
@@ -255,9 +255,9 @@ Setup is complete when:
 
 If you encounter issues:
 
-1. Check `./ai.rb help` for available commands
+1. Check `./openfang.rb help` for available commands
 2. Read `FINAL_STATUS.md` for detailed documentation
 3. Review `docs/MCP_ARCHITECTURE.md` for architecture
-4. Check GitHub issues: https://github.com/youruser/ai.rb/issues
+4. Check GitHub issues: https://github.com/youruser/OpenFang/issues
 
-**Setup complete!** The ai.rb framework is ready to use. 🎉
+**Setup complete!** The OpenFang framework is ready to use. 🎉

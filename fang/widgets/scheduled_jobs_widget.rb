@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Widgets
     class ScheduledJobsWidget < BaseWidget
       widget_type 'scheduled_jobs'
@@ -11,8 +11,8 @@ module Ai
       def self.refresh_interval  = 30
 
       def render_content
-        tasks = Ai::ScheduledTask.order(scheduled_for: :desc)
-        skills = Ai::SkillRecord.all.order(usage_count: :desc)
+        tasks = Fang::ScheduledTask.order(scheduled_for: :desc)
+        skills = Fang::SkillRecord.all.order(usage_count: :desc)
 
         html = +%(<div class="max-w-5xl mx-auto space-y-6">)
         html << %(<h2 class="text-2xl font-semibold tracking-tight">Jobs & Skills</h2>)

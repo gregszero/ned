@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Resources
     class DatabaseSchemaResource < FastMcp::Resource
       uri 'database://schema'
@@ -45,13 +45,13 @@ module Ai
           total_tables: tables_data.count,
           tables: tables_data,
           models: {
-            'Conversation' => 'Ai::Conversation',
-            'Message' => 'Ai::Message',
-            'Session' => 'Ai::Session',
-            'ScheduledTask' => 'Ai::ScheduledTask',
-            'SkillRecord' => 'Ai::SkillRecord',
-            'McpConnection' => 'Ai::McpConnection',
-            'Config' => 'Ai::Config'
+            'Conversation' => 'Fang::Conversation',
+            'Message' => 'Fang::Message',
+            'Session' => 'Fang::Session',
+            'ScheduledTask' => 'Fang::ScheduledTask',
+            'SkillRecord' => 'Fang::SkillRecord',
+            'McpConnection' => 'Fang::McpConnection',
+            'Config' => 'Fang::Config'
           }
         }.to_json
       end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Jobs
     class WorkflowRunnerJob < ApplicationJob
       queue_as :workflows
@@ -23,9 +23,9 @@ module Ai
         workflow.advance!
 
       rescue ActiveRecord::RecordNotFound => e
-        Ai.logger.error "Workflow not found: #{e.message}"
+        Fang.logger.error "Workflow not found: #{e.message}"
       rescue => e
-        Ai.logger.error "Workflow step failed: #{e.message}"
+        Fang.logger.error "Workflow step failed: #{e.message}"
         step&.update!(status: 'failed', result: { error: e.message }.to_json)
         workflow&.fail!(e.message)
       end

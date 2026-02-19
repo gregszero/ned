@@ -2,11 +2,11 @@
 
 require 'active_job'
 
-module Ai
+module Fang
   class Queue
     class << self
       def configure!
-        Ai.logger.info "Queue adapter: #{ActiveJob::Base.queue_adapter.class.name}"
+        Fang.logger.info "Queue adapter: #{ActiveJob::Base.queue_adapter.class.name}"
       end
 
       def enqueue(job_class, *args, **kwargs)
@@ -24,4 +24,4 @@ end
 ActiveJob::Base.queue_adapter = :async
 
 # Auto-configure
-Ai::Queue.configure!
+Fang::Queue.configure!

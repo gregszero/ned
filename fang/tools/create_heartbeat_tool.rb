@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class CreateHeartbeatTool < FastMcp::Tool
       tool_name 'create_heartbeat'
@@ -23,7 +23,7 @@ module Ai
         end
 
         # Auto-link to heartbeats canvas page
-        page = AiPage.find_by(slug: 'heartbeats')
+        page = Page.find_by(slug: 'heartbeats')
 
         heartbeat = Heartbeat.create!(
           name: name,
@@ -32,7 +32,7 @@ module Ai
           description: description,
           prompt_template: prompt_template || "Heartbeat '{{name}}' ran skill '{{skill_name}}' and got this result:\n\n{{result}}\n\nPlease analyze and take appropriate action.",
           enabled: enabled,
-          ai_page_id: page&.id,
+          page_id: page&.id,
           metadata: {}
         )
 
@@ -51,7 +51,7 @@ module Ai
       rescue ActiveRecord::RecordInvalid => e
         { success: false, error: e.message }
       rescue => e
-        Ai.logger.error "Failed to create heartbeat: #{e.message}"
+        Fang.logger.error "Failed to create heartbeat: #{e.message}"
         { success: false, error: e.message }
       end
     end

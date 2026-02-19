@@ -3,7 +3,7 @@
 require 'net/http'
 require 'json'
 
-module Ai
+module Fang
   module Tools
     class WebFetchTool < FastMcp::Tool
       tool_name 'web_fetch'
@@ -39,7 +39,7 @@ module Ai
 
         result
       rescue => e
-        Ai.logger.error "Web fetch failed: #{e.message}"
+        Fang.logger.error "Web fetch failed: #{e.message}"
         { success: false, error: e.message }
       end
 
@@ -55,7 +55,7 @@ module Ai
         }.fetch(method.downcase) { raise "Unsupported HTTP method: #{method}" }
 
         request = request_class.new(uri)
-        request['User-Agent'] = 'Ned/1.0'
+        request['User-Agent'] = 'OpenFang/1.0'
 
         if headers.is_a?(Hash)
           headers.each { |k, v| request[k] = v }

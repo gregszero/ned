@@ -3,7 +3,7 @@
 require 'net/http'
 require 'json'
 
-module Ai
+module Fang
   module Widgets
     class HackerNewsWidget < BaseWidget
       widget_type 'hacker_news'
@@ -67,7 +67,7 @@ module Ai
           false
         end
       rescue => e
-        Ai.logger.error "HN widget refresh failed: #{e.message}"
+        Fang.logger.error "HN widget refresh failed: #{e.message}"
         false
       end
     end

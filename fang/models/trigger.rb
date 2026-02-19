@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   class Trigger < ActiveRecord::Base
     self.table_name = 'triggers'
 

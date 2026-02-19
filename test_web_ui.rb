@@ -1,13 +1,13 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative 'ai/bootstrap'
+require_relative 'fang/bootstrap'
 require_relative 'web/app'
 require 'rack/test'
 
 # Create test data
 puts "Creating test conversation..."
-conversation = Ai::Conversation.create!(
+conversation = Fang::Conversation.create!(
   title: 'Test Conversation',
   source: 'web'
 )
@@ -31,7 +31,7 @@ class TestApp
   include Rack::Test::Methods
 
   def app
-    Ai::Web::App.app
+    Fang::Web::App.app
   end
 end
 

@@ -5,7 +5,7 @@
 
 # Example skill structure:
 #
-# class MySkill < Ai::Skill
+# class MySkill < Fang::Skill
 #   description "Brief description of what this skill does"
 #
 #   param :name, :string, required: true, description: "User name"

@@ -1,6 +1,6 @@
 # Run Server
 
-Starts the ai.rb web server and guides you through using the web UI.
+Starts the OpenFang web server and guides you through using the web UI.
 
 ## What this does
 
@@ -23,13 +23,13 @@ Use this skill when you want to:
 ## Usage
 
 ```bash
-./ai.rb server
+./openfang.rb server
 ```
 
 Or with custom options:
 
 ```bash
-./ai.rb server --port 8080 --host 0.0.0.0
+./openfang.rb server --port 8080 --host 0.0.0.0
 ```
 
 ## What you need
@@ -44,7 +44,7 @@ Or with custom options:
 ### Basic Start
 
 ```bash
-./ai.rb server
+./openfang.rb server
 ```
 
 Expected output:
@@ -57,13 +57,13 @@ Puma starting in single mode...
 ### Custom Port
 
 ```bash
-./ai.rb server --port 8080
+./openfang.rb server --port 8080
 ```
 
 ### Custom Host
 
 ```bash
-./ai.rb server --host 127.0.0.1
+./openfang.rb server --host 127.0.0.1
 ```
 
 ## Accessing the UI
@@ -153,7 +153,7 @@ JSON endpoint:
 
 1. **Start server**
    ```bash
-   ./ai.rb server
+   ./openfang.rb server
    ```
 
 2. **Open browser**
@@ -258,30 +258,30 @@ Press `Ctrl+C` in the terminal:
 
 ```bash
 # Start new tmux session
-tmux new -s ai-rb
+tmux new -s openfang
 
 # Run server
-./ai.rb server
+./openfang.rb server
 
 # Detach: Ctrl+B then D
 
 # Reattach later
-tmux attach -t ai-rb
+tmux attach -t openfang
 ```
 
 ### Using screen
 
 ```bash
 # Start screen session
-screen -S ai-rb
+screen -S openfang
 
 # Run server
-./ai.rb server
+./openfang.rb server
 
 # Detach: Ctrl+A then D
 
 # Reattach later
-screen -r ai-rb
+screen -r openfang
 ```
 
 ### Using Docker Compose
@@ -305,7 +305,7 @@ docker-compose down
 lsof -i :3000
 
 # Kill process or use different port
-./ai.rb server --port 8080
+./openfang.rb server --port 8080
 ```
 
 **"Database not found"**
@@ -317,14 +317,14 @@ bundle exec rake db:migrate
 **"No conversations showing"**
 ```bash
 # Create test data
-./ai.rb console
-> Ai::Conversation.create!(title: "Test", source: "web")
+./openfang.rb console
+> Fang::Conversation.create!(title: "Test", source: "web")
 ```
 
 **"Messages not sending"**
 - Check `.env` has API key
 - Check Docker daemon is running
-- Check agent container built: `docker images | grep ai-rb-agent`
+- Check agent container built: `docker images | grep openfang-agent`
 
 **"AI not responding"**
 - Check API key is valid
@@ -355,7 +355,7 @@ kamal deploy
 Production `.env`:
 ```bash
 RAILS_ENV=production
-DATABASE_URL=postgresql://user:pass@localhost/ai_rb_production
+DATABASE_URL=postgresql://user:pass@localhost/openfang_production
 CLAUDE_CODE_OAUTH_TOKEN=your-token
 ```
 
@@ -375,7 +375,7 @@ curl http://localhost:3000/api/conversations
 
 Development:
 ```bash
-# Server logs in terminal where you ran ./ai.rb server
+# Server logs in terminal where you ran ./openfang.rb server
 ```
 
 Production:

@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Jobs
     class WidgetRefreshJob < ApplicationJob
       queue_as :default
 
       def perform
-        Ai::Widgets::BaseWidget.registry.each do |type, widget_class|
+        Fang::Widgets::BaseWidget.registry.each do |type, widget_class|
           next unless widget_class.refreshable? && widget_class.refresh_interval
 
           interval = widget_class.refresh_interval
@@ -18,10 +18,10 @@ module Ai
             if widget.refresh_data!
               turbo = "<turbo-stream action=\"replace\" target=\"canvas-component-#{component.id}\">" \
                       "<template>#{widget.render_component_html}</template></turbo-stream>"
-              Ai::Web::TurboBroadcast.broadcast("canvas:#{component.ai_page_id}", turbo)
+              Fang::Web::TurboBroadcast.broadcast("canvas:#{component.page_id}", turbo)
             end
           rescue => e
-            Ai.logger.error "Widget refresh failed for #{type}##{component.id}: #{e.message}"
+            Fang.logger.error "Widget refresh failed for #{type}##{component.id}: #{e.message}"
           end
         end
       end

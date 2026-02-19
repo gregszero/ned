@@ -1,13 +1,13 @@
 # Kamal deployment configuration
-service: ai-rb
-image: your-username/ai-rb
+service: openfang
+image: your-username/openfang
 
 servers:
   web:
     hosts:
       - your-server.com
     labels:
-      traefik.http.routers.ai-rb.rule: Host(`your-domain.com`)
+      traefik.http.routers.openfang.rule: Host(`your-domain.com`)
     options:
       network: private
 
@@ -27,7 +27,7 @@ env:
     - DATABASE_URL
 
 volumes:
-  - "ai-rb-storage:/app/storage"
+  - "openfang-storage:/app/storage"
 
 accessories:
   db:
@@ -36,7 +36,7 @@ accessories:
     port: 5432
     env:
       clear:
-        POSTGRES_DB: ai_rb_production
+        POSTGRES_DB: openfang_production
       secret:
         - POSTGRES_PASSWORD
     volumes:

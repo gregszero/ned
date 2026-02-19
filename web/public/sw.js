@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ned-v3';
+const CACHE_NAME = 'fang-v3';
 const PRECACHE = [
   '/css/style.css',
   '/icon.svg',

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class RemoveCanvasComponentTool < FastMcp::Tool
       tool_name 'remove_canvas_component'
@@ -14,18 +14,18 @@ module Ai
         component = CanvasComponent.find_by(id: component_id)
         return { success: false, error: "Component #{component_id} not found" } unless component
 
-        page = component.ai_page
+        page = component.page
         component.destroy!
 
         turbo = "<turbo-stream action=\"remove\" target=\"canvas-component-#{component_id}\"><template></template></turbo-stream>"
-        Ai::Web::TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
+        Fang::Web::TurboBroadcast.broadcast("canvas:#{page.id}", turbo)
 
         {
           success: true,
           removed_id: component_id
         }
       rescue => e
-        Ai.logger.error "Failed to remove canvas component: #{e.message}"
+        Fang.logger.error "Failed to remove canvas component: #{e.message}"
         { success: false, error: e.message }
       end
     end

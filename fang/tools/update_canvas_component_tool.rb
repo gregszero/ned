@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class UpdateCanvasComponentTool < FastMcp::Tool
       tool_name 'update_canvas_component'
@@ -39,7 +39,7 @@ module Ai
           component: component.as_canvas_json
         }
       rescue => e
-        Ai.logger.error "Failed to update canvas component: #{e.message}"
+        Fang.logger.error "Failed to update canvas component: #{e.message}"
         { success: false, error: e.message }
       end
 
@@ -48,7 +48,7 @@ module Ai
       def broadcast_component_replace(component)
         html = component.render_html
         turbo = "<turbo-stream action=\"replace\" target=\"canvas-component-#{component.id}\"><template>#{html}</template></turbo-stream>"
-        Ai::Web::TurboBroadcast.broadcast("canvas:#{component.ai_page.id}", turbo)
+        Fang::Web::TurboBroadcast.broadcast("canvas:#{component.page.id}", turbo)
       end
     end
   end

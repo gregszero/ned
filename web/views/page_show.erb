@@ -3,7 +3,7 @@
 
   <article class="mt-6">
     <h1><%= @page.title %></h1>
-    <p class="text-sm mt-2 text-ned-muted-fg">Published <%= @page.published_at&.strftime('%B %d, %Y') %></p>
+    <p class="text-sm mt-2 text-fang-muted-fg">Published <%= @page.published_at&.strftime('%B %d, %Y') %></p>
 
     <% if @page.conversations.any? %>
       <div class="flex flex-wrap gap-2 mt-3">

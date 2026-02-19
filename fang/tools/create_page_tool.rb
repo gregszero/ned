@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class CreatePageTool < FastMcp::Tool
       tool_name 'create_page'
@@ -13,7 +13,7 @@ module Ai
       end
 
       def call(title:, content:, status: 'published')
-        page = AiPage.create!(
+        page = Page.create!(
           title: title,
           content: content,
           status: status,
@@ -22,11 +22,11 @@ module Ai
 
         # Link to current conversation if available
         if ENV['CONVERSATION_ID']
-          conversation = Ai::Conversation.find_by(id: ENV['CONVERSATION_ID'])
-          conversation&.update!(ai_page: page) if conversation && conversation.ai_page_id.nil?
+          conversation = Fang::Conversation.find_by(id: ENV['CONVERSATION_ID'])
+          conversation&.update!(page: page) if conversation && conversation.page_id.nil?
         end
 
-        Ai.logger.info "Created page '#{page.title}' at /pages/#{page.slug}"
+        Fang.logger.info "Created page '#{page.title}' at /pages/#{page.slug}"
 
         {
           success: true,
@@ -37,7 +37,7 @@ module Ai
           status: page.status
         }
       rescue => e
-        Ai.logger.error "Failed to create page: #{e.message}"
+        Fang.logger.error "Failed to create page: #{e.message}"
         { success: false, error: e.message }
       end
     end

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Jobs
     class ScheduledTaskRunnerJob < ApplicationJob
       queue_as :scheduled_tasks
@@ -9,7 +9,7 @@ module Ai
       def perform(task_id)
         task = ScheduledTask.find(task_id)
 
-        Ai.logger.info "Running scheduled task: #{task.title}"
+        Fang.logger.info "Running scheduled task: #{task.title}"
 
         task.mark_running!
 
@@ -34,13 +34,13 @@ module Ai
         )
         notification.broadcast!
 
-        Ai.logger.info "Completed scheduled task #{task_id}"
+        Fang.logger.info "Completed scheduled task #{task_id}"
         EventBus.emit("task:completed:#{task.title.parameterize}", { task_id: task.id, title: task.title })
 
       rescue ActiveRecord::RecordNotFound => e
-        Ai.logger.error "Scheduled task not found: #{e.message}"
+        Fang.logger.error "Scheduled task not found: #{e.message}"
       rescue => e
-        Ai.logger.error "Scheduled task execution failed: #{e.message}"
+        Fang.logger.error "Scheduled task execution failed: #{e.message}"
         task&.mark_failed!(e.message)
         EventBus.emit("task:failed:#{task&.title&.parameterize}", { task_id: task&.id, error: e.message }) if task
         feed_error_to_conversation(task, e.message) if task
@@ -120,7 +120,7 @@ module Ai
           content: "Scheduled task '#{task.title}' failed: #{error_message}"
         )
       rescue => e
-        Ai.logger.error "Failed to feed error back to conversation: #{e.message}"
+        Fang.logger.error "Failed to feed error back to conversation: #{e.message}"
       end
     end
   end

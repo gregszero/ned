@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Jobs
     class TriggerRunnerJob < ApplicationJob
       queue_as :triggers
@@ -10,14 +10,14 @@ module Ai
         return unless trigger.enabled?
 
         event_data = JSON.parse(event_data_json) rescue {}
-        Ai.logger.info "Firing trigger '#{trigger.name}' for event '#{event_name}'"
+        Fang.logger.info "Firing trigger '#{trigger.name}' for event '#{event_name}'"
 
         trigger.fire!(event_data)
 
       rescue ActiveRecord::RecordNotFound => e
-        Ai.logger.error "Trigger not found: #{e.message}"
+        Fang.logger.error "Trigger not found: #{e.message}"
       rescue => e
-        Ai.logger.error "Trigger '#{trigger&.name}' failed: #{e.message}"
+        Fang.logger.error "Trigger '#{trigger&.name}' failed: #{e.message}"
         trigger&.record_failure!
       end
     end

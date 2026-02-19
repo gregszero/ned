@@ -481,7 +481,7 @@ export default class extends Controller {
         requestAnimationFrame(() => { msgs.scrollTop = msgs.scrollHeight })
       }
     } catch (e) {
-      panel.innerHTML = `<div class="p-4 text-ned-muted-fg text-sm">Failed to load conversation.</div>`
+      panel.innerHTML = `<div class="p-4 text-fang-muted-fg text-sm">Failed to load conversation.</div>`
     }
   }
 

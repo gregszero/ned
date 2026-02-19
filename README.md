@@ -1,4 +1,4 @@
-# Ned
+# OpenFang
 
 A Ruby AI framework for building self-growing AI assistants with Rails-inspired conventions.
 
@@ -13,8 +13,8 @@ A Ruby AI framework for building self-growing AI assistants with Rails-inspired 
 ## Quick Start
 
 ```bash
-git clone https://github.com/youruser/ai.rb.git
-cd ai.rb
+git clone https://github.com/youruser/openfang.git
+cd openfang
 ./setup.sh
 ```
 
@@ -33,8 +33,8 @@ Then open Claude Code and run `/setup` for guided configuration.
 ## Project Structure
 
 ```
-ai.rb/
-├── ai/                 # Framework code
+openfang/
+├── fang/               # Framework code
 │   ├── models/         # ActiveRecord models
 │   ├── generators/     # Code generators
 │   └── *.rb            # Core framework files
@@ -50,12 +50,12 @@ ai.rb/
 ## Commands
 
 ```bash
-./ai.rb chat              # Start CLI chat
-./ai.rb server            # Start web UI (port 3000)
-./ai.rb queue             # Start background worker
-./ai.rb console           # Interactive console
-./ai.rb db:migrate        # Run migrations
-./ai.rb setup             # Initial setup
+./openfang.rb chat              # Start CLI chat
+./openfang.rb server            # Start web UI (port 3000)
+./openfang.rb queue             # Start background worker
+./openfang.rb console           # Interactive console
+./openfang.rb db:migrate        # Run migrations
+./openfang.rb setup             # Initial setup
 ```
 
 ## Requirements

@@ -2,7 +2,7 @@
 
 require_relative '../../web/view_helpers'
 
-module Ai
+module Fang
   class Notification < ActiveRecord::Base
     self.table_name = 'notifications'
 
@@ -10,7 +10,7 @@ module Ai
     include Web::ViewHelpers
 
     # Associations
-    belongs_to :ai_page, class_name: 'Ai::AiPage', optional: true
+    belongs_to :page, class_name: 'Fang::Page', optional: true
 
     # Scopes
     scope :unread, -> { where(status: 'unread') }
@@ -37,12 +37,12 @@ module Ai
     end
 
     def start_conversation!
-      page = ai_page || ensure_ai_page!
+      page = self.page || ensure_page!
 
       conversation = Conversation.create!(
         title: title,
         source: 'web',
-        ai_page_id: page.id
+        page_id: page.id
       )
 
       conversation.add_message(
@@ -56,14 +56,14 @@ module Ai
 
     private
 
-    def ensure_ai_page!
-      page = AiPage.create!(
+    def ensure_page!
+      page = Page.create!(
         title: title,
         content: '',
         status: 'published',
         published_at: Time.current
       )
-      update!(ai_page_id: page.id)
+      update!(page_id: page.id)
       page
     end
   end

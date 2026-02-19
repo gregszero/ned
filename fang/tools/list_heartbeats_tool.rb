@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Tools
     class ListHeartbeatsTool < FastMcp::Tool
       tool_name 'list_heartbeats'
@@ -35,7 +35,7 @@ module Ai
           total: heartbeats.count
         }
       rescue => e
-        Ai.logger.error "Failed to list heartbeats: #{e.message}"
+        Fang.logger.error "Failed to list heartbeats: #{e.message}"
         { success: false, error: e.message }
       end
     end

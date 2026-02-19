@@ -28,7 +28,7 @@
         </table>
       </div>
     <% else %>
-      <p class="text-ned-muted-fg">No skills registered yet.</p>
+      <p class="text-fang-muted-fg">No skills registered yet.</p>
     <% end %>
   </div>
 
@@ -63,7 +63,7 @@
         </table>
       </div>
     <% else %>
-      <p class="text-ned-muted-fg">No MCP connections configured.</p>
+      <p class="text-fang-muted-fg">No MCP connections configured.</p>
     <% end %>
   </div>
 
@@ -71,15 +71,15 @@
   <div class="card">
     <h3 class="section-heading">WhatsApp Integration</h3>
     <div class="flex items-center gap-4">
-      <span class="badge <%= Ai::WhatsApp.enabled? ? 'success' : '' %>">
-        <%= Ai::WhatsApp.enabled? ? 'Enabled' : 'Disabled' %>
+      <span class="badge <%= Fang::WhatsApp.enabled? ? 'success' : '' %>">
+        <%= Fang::WhatsApp.enabled? ? 'Enabled' : 'Disabled' %>
       </span>
-      <% if Ai::WhatsApp.enabled? %>
+      <% if Fang::WhatsApp.enabled? %>
         <a href="http://localhost:3001" target="_blank">
           <button class="outline sm" type="button">Open GOWA Dashboard</button>
         </a>
       <% else %>
-        <p class="text-sm text-ned-muted-fg">Set <code>WHATSAPP_ENABLED=true</code> to activate.</p>
+        <p class="text-sm text-fang-muted-fg">Set <code>WHATSAPP_ENABLED=true</code> to activate.</p>
       <% end %>
     </div>
   </div>
@@ -106,7 +106,7 @@
           </tr>
           <tr>
             <td>Environment</td>
-            <td><%= @config['environment'] || Ai.env %></td>
+            <td><%= @config['environment'] || Fang.env %></td>
           </tr>
           <tr>
             <td>Database</td>

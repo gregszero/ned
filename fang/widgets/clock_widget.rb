@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Widgets
     class ClockWidget < BaseWidget
       widget_type 'clock'

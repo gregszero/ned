@@ -12,7 +12,7 @@ Add inside the `route do |r|` block, following existing patterns:
 r.on 'my-page' do
   r.is do
     r.get do
-      @my_data = Ai::MyModel.all
+      @my_data = Fang::MyModel.all
       view :my_page
     end
   end
@@ -30,7 +30,7 @@ Create `web/views/my_page.erb`:
   <% @my_data.each do |item| %>
     <div class="card">
       <h3 style="text-transform:none;"><%= item.title %></h3>
-      <p class="text-ned-muted-fg text-sm mt-1"><%= item.description %></p>
+      <p class="text-fang-muted-fg text-sm mt-1"><%= item.description %></p>
     </div>
   <% end %>
 </div>
@@ -50,7 +50,7 @@ Add inside the `<nav>` element in the sidebar:
 
 ### Layout
 - Use Tailwind utilities: `flex`, `gap-4`, `mt-4`, `p-6`, `max-w-7xl`
-- Custom colors: `text-ned-fg`, `bg-ned-card`, `border-ned-border`, `text-ned-accent`, `text-ned-muted-fg`
+- Custom colors: `text-fang-fg`, `bg-fang-card`, `border-fang-border`, `text-fang-accent`, `text-fang-muted-fg`
 
 ### Components
 - **Card**: `<div class="card">` — bordered, dark bg, hover accent
@@ -89,5 +89,5 @@ end
 
 3. Broadcast from Ruby:
 ```ruby
-Ai::Web::TurboBroadcast.broadcast('my-channel', turbo_html)
+Fang::Web::TurboBroadcast.broadcast('my-channel', turbo_html)
 ```

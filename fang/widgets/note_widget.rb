@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   module Widgets
     class NoteWidget < BaseWidget
       widget_type 'card'

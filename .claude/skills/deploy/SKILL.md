@@ -1,10 +1,10 @@
-# Deploy ai.rb
+# Deploy OpenFang
 
-Guide for deploying ai.rb to production using Docker Compose or Kamal.
+Guide for deploying OpenFang to production using Docker Compose or Kamal.
 
 ## What this does
 
-Explains how to deploy ai.rb to production:
+Explains how to deploy OpenFang to production:
 - Docker Compose (simple, single server)
 - Kamal (advanced, multiple servers)
 - Environment configuration
@@ -70,9 +70,9 @@ sudo apt-get install docker-compose-plugin
 ### Step 2: Clone Repository
 
 ```bash
-# Clone ai.rb
-git clone https://github.com/youruser/ai.rb.git
-cd ai.rb
+# Clone OpenFang
+git clone https://github.com/youruser/OpenFang.git
+cd OpenFang
 ```
 
 ### Step 3: Configure Environment
@@ -92,7 +92,7 @@ AI_ENV=production
 RACK_ENV=production
 
 # Database
-DATABASE_URL=postgresql://postgres:STRONG_PASSWORD@db/ai_rb_production
+DATABASE_URL=postgresql://postgres:STRONG_PASSWORD@db/openfang_production
 
 # API Key (choose one)
 CLAUDE_CODE_OAUTH_TOKEN=your-oauth-token
@@ -117,7 +117,7 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ai_rb_production
+      POSTGRES_DB: openfang_production
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
@@ -131,11 +131,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db/ai_rb_production
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db/openfang_production
       RAILS_ENV: production
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN}
     volumes:
-      - ai_rb_storage:/app/storage
+      - openfang_storage:/app/storage
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - db
@@ -143,7 +143,7 @@ services:
 
 volumes:
   postgres_data:
-  ai_rb_storage:
+  openfang_storage:
 ```
 
 ### Step 5: Build and Start
@@ -183,7 +183,7 @@ Or configure domain:
 sudo apt-get install nginx
 
 # Configure reverse proxy
-sudo nano /etc/nginx/sites-available/ai-rb
+sudo nano /etc/nginx/sites-available/openfang
 ```
 
 **nginx config:**
@@ -204,7 +204,7 @@ server {
 
 ```bash
 # Enable site
-sudo ln -s /etc/nginx/sites-available/ai-rb /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/openfang /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -236,16 +236,16 @@ gem install kamal
 Edit `config/deploy.yml`:
 
 ```yaml
-service: ai-rb
-image: youruser/ai-rb
+service: openfang
+image: youruser/openfang
 
 servers:
   web:
     hosts:
       - your-server.com
     labels:
-      traefik.http.routers.ai-rb.rule: Host(`your-domain.com`)
-      traefik.http.routers.ai-rb.tls.certresolver: letsencrypt
+      traefik.http.routers.openfang.rule: Host(`your-domain.com`)
+      traefik.http.routers.openfang.tls.certresolver: letsencrypt
 
 registry:
   server: ghcr.io
@@ -267,7 +267,7 @@ accessories:
     port: 5432
     env:
       clear:
-        POSTGRES_DB: ai_rb_production
+        POSTGRES_DB: openfang_production
       secret:
         - POSTGRES_PASSWORD
     volumes:
@@ -292,7 +292,7 @@ Create `.kamal/secrets`:
 
 ```bash
 KAMAL_REGISTRY_PASSWORD=your-github-token
-DATABASE_URL=postgresql://postgres:password@ai-rb-db:5432/ai_rb_production
+DATABASE_URL=postgresql://postgres:password@openfang-db:5432/openfang_production
 CLAUDE_CODE_OAUTH_TOKEN=your-token
 POSTGRES_PASSWORD=strong-password
 ```
@@ -362,10 +362,10 @@ SMTP_FROM=your-email@gmail.com
 
 ```bash
 # Create production database
-createdb ai_rb_production
+createdb openfang_production
 
 # Or via Docker
-docker-compose exec db createdb -U postgres ai_rb_production
+docker-compose exec db createdb -U postgres openfang_production
 
 # Run migrations
 bundle exec rake db:migrate RAILS_ENV=production
@@ -375,13 +375,13 @@ bundle exec rake db:migrate RAILS_ENV=production
 
 ```bash
 # Backup database
-docker-compose exec db pg_dump -U postgres ai_rb_production > backup.sql
+docker-compose exec db pg_dump -U postgres openfang_production > backup.sql
 
 # Restore database
-docker-compose exec -T db psql -U postgres ai_rb_production < backup.sql
+docker-compose exec -T db psql -U postgres openfang_production < backup.sql
 
 # Automated backups (cron)
-0 2 * * * cd /path/to/ai.rb && docker-compose exec -T db pg_dump -U postgres ai_rb_production > backups/backup-$(date +\%Y\%m\%d).sql
+0 2 * * * cd /path/to/OpenFang && docker-compose exec -T db pg_dump -U postgres openfang_production > backups/backup-$(date +\%Y\%m\%d).sql
 ```
 
 ## Monitoring

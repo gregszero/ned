@@ -3,7 +3,7 @@
 require_relative '../../web/turbo_broadcast'
 require_relative '../../web/view_helpers'
 
-module Ai
+module Fang
   module Jobs
     class AgentExecutorJob < ApplicationJob
       include Web::ViewHelpers
@@ -15,7 +15,7 @@ module Ai
         conversation = message.conversation
         channel = conversation.broadcast_channel
 
-        Ai.logger.info "Processing message #{message_id} for conversation #{conversation.id}"
+        Fang.logger.info "Processing message #{message_id} for conversation #{conversation.id}"
 
         progress_id = "agent-progress-#{message_id}"
         broadcast_progress_container(conversation, progress_id)
@@ -49,22 +49,22 @@ module Ai
 
             role = event['subtype'] == 'success' ? 'assistant' : 'system'
             response_message = conversation.add_message(role: role, content: result_text)
-            Ai.logger.info "Agent responded to message #{message_id}"
+            Fang.logger.info "Agent responded to message #{message_id}"
             broadcast_final(conversation, progress_id, response_message)
             deliver_to_whatsapp(conversation, response_message)
 
           when 'error'
-            Ai.logger.error "Agent error: #{event['message']}"
+            Fang.logger.error "Agent error: #{event['message']}"
             error_msg = conversation.add_message(role: 'system', content: "Agent error: #{event['message']}")
             broadcast_final(conversation, progress_id, error_msg)
           end
         end
 
       rescue ActiveRecord::RecordNotFound => e
-        Ai.logger.error "Message not found: #{e.message}"
+        Fang.logger.error "Message not found: #{e.message}"
       rescue => e
-        Ai.logger.error "Agent execution failed: #{e.message}"
-        Ai.logger.error e.backtrace.first(10).join("\n")
+        Fang.logger.error "Agent execution failed: #{e.message}"
+        Fang.logger.error e.backtrace.first(10).join("\n")
         error_msg = conversation&.add_message(role: 'system', content: "Unexpected error: #{e.message}")
         broadcast_final(conversation, "agent-progress-#{message_id}", error_msg) if conversation && error_msg
       end
@@ -126,9 +126,9 @@ module Ai
         phone = conversation.context&.dig('whatsapp_phone')
         return unless phone
 
-        Ai::WhatsApp.send_message(phone: phone, content: message.content)
+        Fang::WhatsApp.send_message(phone: phone, content: message.content)
       rescue => e
-        Ai.logger.error "WhatsApp delivery failed: #{e.message}"
+        Fang.logger.error "WhatsApp delivery failed: #{e.message}"
       end
     end
   end

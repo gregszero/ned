@@ -2,7 +2,7 @@
 
 require 'redcarpet'
 
-module Ai
+module Fang
   module Tools
     class SendMessageTool < FastMcp::Tool
       tool_name 'send_message'
@@ -31,7 +31,7 @@ module Ai
         # Broadcast via TurboBroadcast so the message appears in the UI in real-time
         broadcast_message(conversation, message)
 
-        Ai.logger.info "Message sent to conversation #{conversation.id}"
+        Fang.logger.info "Message sent to conversation #{conversation.id}"
 
         {
           success: true,
@@ -39,7 +39,7 @@ module Ai
           conversation_id: conversation.id
         }
       rescue => e
-        Ai.logger.error "Failed to send message: #{e.message}"
+        Fang.logger.error "Failed to send message: #{e.message}"
         { success: false, error: e.message }
       end
 
@@ -68,9 +68,9 @@ module Ai
 
         turbo_html = "<turbo-stream action=\"remove\" target=\"thinking-indicator-#{conversation.id}\"><template></template></turbo-stream>" \
                      "<turbo-stream action=\"append\" target=\"messages-#{conversation.id}\"><template>#{message_html}</template></turbo-stream>"
-        Ai::Web::TurboBroadcast.broadcast(conversation.broadcast_channel, turbo_html)
+        Fang::Web::TurboBroadcast.broadcast(conversation.broadcast_channel, turbo_html)
       rescue => e
-        Ai.logger.error "Failed to broadcast message: #{e.message}"
+        Fang.logger.error "Failed to broadcast message: #{e.message}"
       end
     end
   end

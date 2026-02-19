@@ -2,28 +2,28 @@
 
 require 'active_record'
 
-module Ai
+module Fang
   class Database
     class << self
       def configured?
-        ENV['DATABASE_URL'] || File.exist?("#{Ai.root}/config/database.yml") || File.exist?("#{Ai.root}/storage/data.db")
+        ENV['DATABASE_URL'] || File.exist?("#{Fang.root}/config/database.yml") || File.exist?("#{Fang.root}/storage/data.db")
       end
 
       def connect!
         config = load_config
         ActiveRecord::Base.establish_connection(config)
-        ActiveRecord::Base.logger = Ai.logger
-        Ai.logger.info "Connected to database: #{config[:database]}"
+        ActiveRecord::Base.logger = Fang.logger
+        Fang.logger.info "Connected to database: #{config[:database]}"
       rescue => e
-        Ai.logger.error "Failed to connect to database: #{e.message}"
+        Fang.logger.error "Failed to connect to database: #{e.message}"
         raise
       end
 
       def migrate!
-        migrations_path = "#{Ai.root}/workspace/migrations"
+        migrations_path = "#{Fang.root}/workspace/migrations"
 
         unless Dir.exist?(migrations_path)
-          Ai.logger.warn "No migrations directory found at #{migrations_path}"
+          Fang.logger.warn "No migrations directory found at #{migrations_path}"
           return
         end
 
@@ -102,13 +102,13 @@ module Ai
         end
 
         # Load from config/database.yml
-        config_file = "#{Ai.root}/config/database.yml"
+        config_file = "#{Fang.root}/config/database.yml"
 
         unless File.exist?(config_file)
           # Default to SQLite in development
           return {
             adapter: 'sqlite3',
-            database: "#{Ai.root}/storage/data.db",
+            database: "#{Fang.root}/storage/data.db",
             pool: 16,
             timeout: 5000
           }
@@ -122,7 +122,7 @@ module Ai
           aliases: true
         )
 
-        config[Ai.env] || config[Ai.env.to_sym]
+        config[Fang.env] || config[Fang.env.to_sym]
       end
     end
   end

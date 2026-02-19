@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Ai
+module Fang
   class Config < ActiveRecord::Base
     self.table_name = 'config'
 
