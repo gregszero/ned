@@ -1,0 +1,133 @@
+Implement the following plan:
+
+# Fix Drag Handle Position & Font Size Movement
+
+## Context
+
+Two bugs from the Nova-style canvas redesign:
+
+1. **Font size moves widget**: `zoom: 0.85`/`1.15` on `.canvas-component` scales the entire element including its CSS `left`/`top` position, causing it to visually shift on the canvas when font size changes.
+2. **Drag dots are in the header bar** (inline after title text). User wants them on the **right edge** of the card as a vertical side grip, and dragging should work from anywhere on the component when edit lock is off (not just the dots).
+
+## Fix 1: Font Size — Apply Zoom to Content Only
+
+**Problem**: `zoom` on `.canvas-component` affects the absolute `left`/`top` positioning.
+
+**Fix**: Move `zoom` from `.canvas-component` to `.canvas-component-content` so only the inner content scales, not the component's canvas position or header.
+
+**File**: `web/public/css/style.css` (lines 1151-1153)
+
+```css
+/* Before */
+.canvas-component.font-sm { zoom: 0.85; }
+.canvas-component.font-lg { zoom: 1.15; }
+
+/* After */
+.canvas-component.font-sm .canvas-component-content { zoom: 0.85; }
+.canvas-component.font-lg .canvas-component-content { zoom: 1.15; }
+```
+
+## Fix 2: Drag Handle → Right-Edge Vertical Grip
+
+**Problem**: The 6-dot drag handle is `position: absolute; top-right` but from the screenshot it renders inline in the header. User wants it as a vertical strip on the right edge of the entire card.
+
+### CSS changes (`web/public/css/style.css`)
+
+Restyle `.canvas-drag-handle` as a narrow vertical strip on the right edge, vertically centered:
+
+```css
+.canvas-drag-handle {
+  position: absolute;
+  top: 50%;
+  right: -1px;
+  transform: translateY(-50%);
+  z-index: 2;
+  padding: 0.5rem 0.25rem;
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  color: var(--muted-foreground);
+  opacity: 0;
+  cursor: grab;
+  transition: opacity 0.15s, background 0.15s;
+}
+```
+
+Make the SVG dots vertical (taller than wide) — change from 6-dot 2×3 grid to a vertical 1×3 dot strip.
+
+Remove `padding-right: 2rem` from `.canvas-component-header` since the dots are no longer overlapping it.
+
+### Ruby changes (`fang/widgets/base_widget.rb`)
+
+Update `DRAG_HANDLE` SVG to a vertical 3-dot strip (simpler, fits the narrow right-edge strip):
+
+```ruby
+DRAG_HANDLE = '<div class="canvas-drag-handle"><svg width="6" height="18" viewBox="0 0 6 18" fill="currentColor"><circle cx="3" cy="3" r="1.5"/><circle cx="3" cy="9" r="1.5"/><circle cx="3" cy="15" r="1.5"/></svg></div>'
+```
+
+## Fix 3: Drag From Anywhere (Unless Edit-Locked)
+
+**Problem**: Currently drag only starts from `.canvas-drag-handle`. User wants to drag from anywhere on the component (restoring old behavior), with the drag dots as a visual affordance.
+
+### JS changes (`web/public/js/controllers/canvas_controller.js`)
+
+**`onMouseDown`**: Remove the `dragHandle` check — if component is found and not edit-locked, start dragging:
+
+```js
+if (component) {
+  this.selectComponent(component)
+  // Drag from anywhere on the component (unless edit-locked)
+  this.isDragging = true
+  this.dragTarget = component
+  // ... start drag
+}
+```
+
+**`onTouchStart`**: Same change — remove dragHandle check.
+
+Restore `cursor: grab` on `.canvas-component` in CSS (currently `cursor: default`).
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `web/public/css/style.css` | Move zoom to content, restyle drag handle as right-edge strip, restore grab cursor |
+| `fang/widgets/base_widget.rb` | Update DRAG_HANDLE SVG to vertical 3-dot strip |
+| `web/public/js/controllers/canvas_controller.js` | Remove dragHandle-only restriction on mouse/touch drag |
+
+## Verification
+
+1. Start server, open canvas with existing widgets
+2. Drag a widget by clicking anywhere on it — should drag smoothly
+3. Toggle edit lock — dragging should be disabled
+4. Hover over a widget — see 3 vertical dots appear on right edge
+5. Change font size via toolbar — widget should stay in place, only content scales
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+the drag handle is in the wrong place, should be on top bar of widget, and the drag should work only if i drag the drag handle not in the entire widget. because widgets may have buttons and clickable stuff
+
+---
+
+[Request interrupted by user]
+
+---
+
+[Request interrupted by user]
+
+---
+
+the drag handle is in the wrong place, should be on top bar of widget, and the drag should work only if i drag the drag handle not in the entire widget. because widgets may have buttons and clickable stuff
+
+---
+
+just need to align the handle a lil bit to the top and make 6 dots instead of 3
+
+---
+
+3 dots only, but the rest is nice
+
+---
+
+commit this
