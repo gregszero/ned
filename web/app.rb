@@ -521,7 +521,9 @@ module Fang
             r.on 'components' do
               r.is do
                 r.post do
-                  body = JSON.parse(r.body.read) rescue r.params
+                  raw = r.body.read
+                  r.body.rewind
+                  body = begin; JSON.parse(raw); rescue; r.params; end
                   comp_type = body['component_type'] || 'card'
                   metadata = body['metadata'] || {}
 
@@ -563,7 +565,9 @@ module Fang
                 end
 
                 r.patch do
-                  body = begin; JSON.parse(r.body.read); rescue; r.params; end
+                  raw = r.body.read
+                  r.body.rewind
+                  body = begin; JSON.parse(raw); rescue; r.params; end
                   updates = {}
                   %w[x y width height z_index].each do |attr|
                     updates[attr] = (body[attr] || r.params[attr]).to_f if body[attr] || r.params[attr]
