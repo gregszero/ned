@@ -1,0 +1,110 @@
+Implement the following plan:
+
+# Gmail Integration — Ruby API + MCP Tools
+
+## Context
+Give OpenFang direct Gmail access so both the AI agent (via MCP tools) and Ruby skills/scheduled tasks can read, search, send, label, and manage emails without spending LLM tokens for routine operations.
+
+## Approach
+- `Fang::Clients::GmailClient < ApplicationClient` for HTTP calls (typed errors, logging, JSON parsing for free)
+- `Fang::Gmail` module for OAuth lifecycle + high-level API (like `whatsapp.rb`)
+- 6 MCP tools delegate to `Fang::Gmail`
+- OAuth2 via loopback redirect, refresh token in `Config` model
+
+## Files to Create
+
+### `fang/clients/gmail_client.rb` — HTTP client
+Subclasses `ApplicationClient`. Overrides `authorization_header` to use the OAuth access token from `Fang::Gmail`. Methods map 1:1 to Gmail REST API endpoints:
+- `list_messages(query:, max_results:)` → `GET /gmail/v1/users/me/messages`
+- `get_message(id, format:)` → `GET /gmail/v1/users/me/messages/:id`
+- `send_message(raw:)` → `POST /gmail/v1/users/me/messages/send`
+- `create_draft(raw:)` → `POST /gmail/v1/users/me/drafts`
+- `modify_message(id, add_labels:, remove_labels:)` → `POST .../messages/:id/modify`
+- `delete_message(id)` → `DELETE .../messages/:id`
+- `list_labels` → `GET /gmail/v1/users/me/labels`
+
+### `fang/gmail.rb` — High-level module
+`class << self` pattern (like `whatsapp.rb`):
+- **OAuth**: `authorization_url`, `exchange_code!(code)`, auto-refresh via `Config.get('gmail.refresh_token')`
+- **Public API**:
+  - `search(query, max_results: 10)` → `[{id, subject, from, date, snippet, labels}]`
+  - `read(message_id)` → `{id, subject, from, to, date, body, labels}`
+  - `send_email(to:, subject:, body:, html: false)` → `{id, thread_id}`
+  - `draft(to:, subject:, body:)` → `{id, message_id}`
+  - `modify(message_id, add_labels:, remove_labels:)` → true
+  - `delete(message_id)` → true
+  - `labels` → `[{id, name, type}]`
+- Uses `GmailClient` internally for all HTTP calls
+- MIME building, base64url encoding, body part extraction (text/plain + text/html)
+
+### `fang/tools/gmail_search_tool.rb`
+`gmail_search` — Search emails with Gmail query syntax. Returns summaries.
+
+### `fang/tools/gmail_read_tool.rb`
+`gmail_read` — Read full email by message ID.
+
+### `fang/tools/gmail_send_tool.rb`
+`gmail_send` — Send email (to, subject, body, optional html flag).
+
+### `fang/tools/gmail_draft_tool.rb`
+`gmail_draft` — Create draft without sending.
+
+### `fang/tools/gmail_modify_tool.rb`
+`gmail_modify` — Add/remove labels (mark read, archive, star, etc).
+
+### `fang/tools/gmail_labels_tool.rb`
+`gmail_labels` — List all labels and IDs.
+
+## Files to Modify
+
+### `fang/bootstrap.rb`
+Add `require_relative 'gmail'` after line 39 (`require_relative 'whatsapp'`).
+
+### `fang/cli.rb`
+Add `gmail_auth` command:
+1. Check `Fang::Gmail.enabled?`
+2. Spin up temp `TCPServer` on `127.0.0.1:8484`
+3. Print auth URL + open browser
+4. Catch redirect with `?code=` param
+5. Call `Fang::Gmail.exchange_code!(code)`
+
+### `workspace/CLAUDE.md`
+Add Gmail tools to tools table + usage section with common patterns.
+
+### `.env` (user adds manually)
+```
+GMAIL_CLIENT_ID=...apps.googleusercontent.com
+GMAIL_CLIENT_SECRET=...
+```
+
+## What the Agent Gets (MCP Tools)
+| Tool | Purpose |
+|---|---|
+| `gmail_search` | Search by query (`is:unread`, `from:x`, `newer_than:1d`) → summaries |
+| `gmail_read` | Full email content by ID |
+| `gmail_send` | Send plain text or HTML email |
+| `gmail_draft` | Save draft without sending |
+| `gmail_modify` | Label operations (mark read, archive, star, categorize) |
+| `gmail_labels` | List all labels and IDs |
+
+## What Ruby Code Gets (Direct API)
+Same as above plus `Fang::Gmail.delete(id)` — intentionally not exposed to the agent to prevent accidental permanent deletion.
+
+## One-Time Setup
+1. Google Cloud Console → create project → enable Gmail API
+2. Create OAuth 2.0 credentials → type: **Desktop app**
+3. Add `GMAIL_CLIENT_ID` and `GMAIL_CLIENT_SECRET` to `.env`
+4. `./openfang.rb gmail:auth` → browser consent → done
+
+## Verification
+1. Console: `Fang::Gmail.search('is:unread')` → returns messages
+2. Console: `Fang::Gmail.labels` → lists labels
+3. Agent chat: "search my unread emails" → uses `gmail_search`
+4. Console: `Fang::Gmail.send_email(to: 'self@gmail.com', subject: 'Test', body: 'Hi')` → check inbox
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this

@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "ff620a541162",
+  "session_id": "ec44ecca-5f77-4fb5-9e42-517a12951464",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-19T11:30:09.941240873Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "fang/bootstrap.rb",
+    "fang/cli.rb",
+    "fang/clients/gmail_client.rb",
+    "fang/gmail.rb",
+    "fang/tools/gmail_draft_tool.rb",
+    "fang/tools/gmail_labels_tool.rb",
+    "fang/tools/gmail_modify_tool.rb",
+    "fang/tools/gmail_read_tool.rb",
+    "fang/tools/gmail_search_tool.rb",
+    "fang/tools/gmail_send_tool.rb",
+    "workspace/CLAUDE.md"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 22,
+    "cache_creation_tokens": 31932,
+    "cache_read_tokens": 749941,
+    "output_tokens": 6565,
+    "api_call_count": 18
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-19T11:30:09.855382563Z",
+    "agent_lines": 478,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 478,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/ec44ecca-5f77-4fb5-9e42-517a12951464.jsonl"
+}
