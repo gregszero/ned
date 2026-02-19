@@ -1,0 +1,73 @@
+Implement the following plan:
+
+# Add Tests for Real-Time Updates / SSE
+
+## Context
+TurboBroadcast powers all real-time updates (10 broadcast sites across tools, models, and routes) but has zero test coverage — only stubbed out to prevent errors.
+
+## Plan
+
+### 1. Create `test/lib/turbo_broadcast_test.rb`
+
+Unit tests for `Fang::Web::TurboBroadcast` (`web/turbo_broadcast.rb`):
+- subscribe returns the block handle
+- broadcast delivers to all subscribers on that channel
+- channel isolation — doesn't leak across channels
+- unsubscribe stops delivery
+- error isolation — one failing subscriber doesn't break others
+
+Reset `@subscribers` in setup/teardown.
+
+### 2. Create `test/lib/broadcast_integration_test.rb`
+
+Capture pattern: subscribe a block that records `[channel, html]`, call the code, assert on captures.
+
+**Model broadcasts:**
+- `Notification#broadcast!` → `notifications` channel, `prepend` card + `replace` badge
+
+**Tool broadcasts:**
+- `SendMessageTool` → `canvas:{page_id}`, `remove` thinking + `append` message
+- `AddCanvasComponentTool` → `canvas:{page_id}`, `append` component
+- `RemoveCanvasComponentTool` → `canvas:{page_id}`, `remove` component
+- `UpdateCanvasComponentTool` → `canvas:{page_id}`, `replace` component
+- `UpdateCanvasTool` → `canvas:{page_id}`, `update` or `append` raw HTML
+- `DefineWidgetTool` → `notifications`, `append` script tag (only when js_code given)
+
+### 3. Create `test/web/broadcast_routes_test.rb`
+
+Route-level broadcast tests using Rack::Test + captured broadcasts:
+- `POST /api/pages/:id/components` → `append` component
+- `DELETE /api/pages/:id/components/:id` → `remove` component
+
+Skip `refresh_component` and `heartbeat toggle` — they depend on widget `refresh_data!` which hits external APIs; not worth the stubbing complexity.
+
+### Helper: add `capture_broadcasts` to test_helper.rb
+
+Add a helper method to `Fang::TestCase` that temporarily subscribes to a channel and yields captured broadcasts:
+
+```ruby
+def capture_broadcasts(channel)
+  captured = []
+  sub = Fang::Web::TurboBroadcast.subscribe(channel) { |html| captured << html }
+  yield
+  captured
+ensure
+  Fang::Web::TurboBroadcast.unsubscribe(channel, sub)
+end
+```
+
+### Files
+- `test/test_helper.rb` — add `capture_broadcasts` helper
+- `test/lib/turbo_broadcast_test.rb` (new)
+- `test/lib/broadcast_integration_test.rb` (new)
+- `test/web/broadcast_routes_test.rb` (new)
+
+## Verification
+- `rake test` — all existing + new tests pass
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this

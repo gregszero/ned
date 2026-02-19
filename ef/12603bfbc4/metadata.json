@@ -3,10 +3,15 @@
   "checkpoint_id": "ef12603bfbc4",
   "strategy": "manual-commit",
   "branch": "master",
-  "checkpoints_count": 0,
+  "checkpoints_count": 1,
   "files_touched": [
+    ".claude/settings.local.json",
     ".github/workflows/ci.yml",
-    ".gitignore"
+    ".gitignore",
+    "test/lib/broadcast_integration_test.rb",
+    "test/lib/turbo_broadcast_test.rb",
+    "test/test_helper.rb",
+    "test/web/broadcast_routes_test.rb"
   ],
   "sessions": [
     {
@@ -15,13 +20,20 @@
       "context": "/ef/12603bfbc4/0/context.md",
       "content_hash": "/ef/12603bfbc4/0/content_hash.txt",
       "prompt": "/ef/12603bfbc4/0/prompt.txt"
+    },
+    {
+      "metadata": "/ef/12603bfbc4/1/metadata.json",
+      "transcript": "/ef/12603bfbc4/1/full.jsonl",
+      "context": "/ef/12603bfbc4/1/context.md",
+      "content_hash": "/ef/12603bfbc4/1/content_hash.txt",
+      "prompt": "/ef/12603bfbc4/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 14,
-    "cache_creation_tokens": 35820,
-    "cache_read_tokens": 499208,
-    "output_tokens": 2116,
-    "api_call_count": 12
+    "input_tokens": 7882,
+    "cache_creation_tokens": 81050,
+    "cache_read_tokens": 1431582,
+    "output_tokens": 5924,
+    "api_call_count": 31
   }
 }
