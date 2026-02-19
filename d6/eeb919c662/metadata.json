@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "d6eeb919c662",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "web/public/css/style.css",
+    "web/public/js/controllers/chat_footer_controller.js",
+    "web/public/js/controllers/notifications_controller.js",
+    "web/views/conversation_panel.erb",
+    "web/views/conversation_show.erb",
+    "web/views/jobs_and_skills.erb",
+    "web/views/layout.erb",
+    "web/views/page_show.erb",
+    "web/views/settings.erb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/d6/eeb919c662/0/metadata.json",
+      "transcript": "/d6/eeb919c662/0/full.jsonl",
+      "context": "/d6/eeb919c662/0/context.md",
+      "content_hash": "/d6/eeb919c662/0/content_hash.txt",
+      "prompt": "/d6/eeb919c662/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 71,
+    "cache_creation_tokens": 160109,
+    "cache_read_tokens": 4712846,
+    "output_tokens": 13865,
+    "api_call_count": 67
+  }
+}

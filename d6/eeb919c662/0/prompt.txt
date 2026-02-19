@@ -1,0 +1,179 @@
+Implement the following plan:
+
+# Pixel-Perfect UI Polish for YC/a16z Demo
+
+## Context
+OpenFang's UI needs to go from "functional prototype" to "investor-demo quality." The current CSS has a muddy grey light mode, missing interaction states, invisible loading feedback, inconsistent spacing, and several broken/unfinished features. This plan covers the highest-impact visual and interaction fixes — the stuff that makes the difference between "side project" and "polished product."
+
+## 1. Fix Light Mode Color Palette
+**File:** `web/public/css/style.css` (lines 7-30)
+
+Keep the grey-toned aesthetic (it's distinctive) but fix the contrast hierarchy. Currently cards (#c8ccd0) are *darker* than background (#d5d8dc) — inverted. Fix so cards are lighter than background, with clear layering:
+
+```css
+:root {
+  --background: #c8ccd1;   /* base layer — cool grey */
+  --foreground: #0f172a;   /* darker text for better contrast */
+  --card: #dde0e4;         /* cards float ABOVE background */
+  --card-foreground: #0f172a;
+  --muted: #b8bcc2;        /* recessed/muted areas */
+  --muted-foreground: #4a5568;
+  --accent: #e8f5ec;       /* light green tint */
+  --accent-foreground: #14532d;
+  --primary: #16a34a;      /* match dark mode green */
+  --primary-foreground: #ffffff;
+  --border: #a8adb4;       /* visible but not harsh */
+  --ring: #16a34a;
+}
+```
+
+Key change: cards (#dde0e4) are now *lighter* than background (#c8ccd1), creating proper visual hierarchy where cards appear to float.
+
+## 2. Add Missing Action Button CSS (Critical)
+**File:** `web/public/css/style.css`
+
+The JS in `fang-components.js` applies `.fang-action-loading`, `.fang-action-success`, `.fang-action-error`, and `.fang-spinner` classes — but none have CSS definitions. Action buttons show zero visual feedback.
+
+Add:
+- `.fang-spinner` — spinning animation (small ring)
+- `.fang-action-loading` — reduced opacity, pointer-events none
+- `.fang-action-success` — brief green tint
+- `.fang-action-error` — brief red tint
+
+## 3. Add Shadow Scale + Dark Mode Shadows
+**File:** `web/public/css/style.css`
+
+Define shadow CSS variables so they can be themed:
+```css
+:root {
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+```
+Dark mode: slightly brighter shadows (`rgb(255 255 255 / 0.05)`) so cards have depth on dark backgrounds. Replace all hardcoded `box-shadow` values with the variables.
+
+## 4. Add Destructive + Badge Color Tokens
+**File:** `web/public/css/style.css`
+
+Add `--destructive` and `--destructive-foreground` tokens for both modes. Migrate hardcoded badge colors (`#dcfce7`, `#fee2e2`, etc.) and heartbeat cell colors to CSS variables with proper dark mode values.
+
+## 5. Fix Border Radius Scale
+**File:** `web/public/css/style.css`
+
+Define a clear radius scale as CSS variables:
+```css
+--radius-sm: 0.25rem;   /* code, small pills */
+--radius-md: 0.375rem;  /* buttons, inputs */
+--radius-lg: 0.5rem;    /* cards, dropdowns */
+```
+Replace the 5+ different raw values with these variables. Update Tailwind config `borderRadius.DEFAULT` to match.
+
+## 6. Fix Typography Issues
+**File:** `web/public/css/style.css`
+
+- Increase `.msg-meta` from `0.65rem` (10.4px) to `0.6875rem` (11px) — still small but readable
+- Remove `text-transform: uppercase` from `.msg-meta` (violates design rules, hurts readability)
+- Increase `.notification-badge` from `0.6rem` to `0.6875rem`
+- Increase `.chat-panel-messages .msg-meta` from `0.6rem` to `0.625rem`
+- Fix `.prose-bubble h3` from `1.05em` (invisible difference) to `1.1em`
+
+## 7. Add Focus-Visible States
+**File:** `web/public/css/style.css`
+
+Add `:focus-visible` with `outline: 2px solid var(--ring); outline-offset: 2px` to:
+- `.nav-trigger`
+- `.chat-tab`
+- `.chat-tab-close`
+- `.notification-submenu > summary`
+- `.canvas-scroll-lock-btn` (also remove `all: unset`, replace with specific resets)
+- `.canvas-context-menu-item`
+
+## 8. Add Smooth Transitions
+**File:** `web/public/css/style.css`
+
+- Add `transition: height 0.15s ease` to `.chat-footer` for smooth expand/collapse
+- Fix `ctx-menu-in` animation: add `transform-origin: top right` for notification dropdown, `transform-origin: top left` for context menu
+- Add fade transition to notifications dropdown (class-based toggle instead of `style.display`)
+
+## 9. Fix Mobile Button Override
+**File:** `web/public/css/style.css` (line 1144)
+
+The mobile `button { min-height: 2.75rem }` overrides `button.sm` and `button.xs`. Fix:
+```css
+button:not(.sm):not(.xs):not(.chat-tab):not(.chat-tab-new):not(.chat-tab-close) {
+  min-height: 2.75rem;
+}
+```
+
+## 10. Polish Notification Dropdown
+**Files:** `web/public/css/style.css`, `web/public/js/controllers/notifications_controller.js`
+
+- Switch from `style.display` toggle to class-based `.open` toggle with animation
+- Add badge count decrement on mark-read (JS fix)
+- Add `aria-label` to bell button, `aria-expanded` toggle
+
+## 11. Add "AI Thinking" Indicator
+**Files:** `web/public/css/style.css`, `web/public/js/controllers/chat_footer_controller.js`
+
+After sending a message, show a subtle typing indicator (three pulsing dots) in the message area until the first AI response arrives via SSE. This is critical demo polish — investors expect to see the AI "working."
+
+## 12. Standardize Empty States
+**Files:** Multiple view templates
+
+Unify all empty states to use consistent padding (`py-12`) and styling:
+- `home.erb` — already `py-12` (keep)
+- `conversation_show.erb` — change from `py-16` to `py-12`
+- `conversation_panel.erb` — change from `py-8` to `py-12`
+- `jobs_and_skills.erb` — wrap bare `<p>` in `py-12 text-center`
+
+## 13. Fix Input Background in Light Mode
+**File:** `web/public/css/style.css`
+
+With the refined grey palette, inputs using `background: var(--background)` will blend into the page. Add a dedicated `--input` token so inputs are slightly lighter than their card container:
+```css
+--input: #e8eaee;  /* light: lighter than card for contrast */
+/* dark: keep current --background */
+```
+
+## 14. Clean Up CSS Noise
+**File:** `web/public/css/style.css`
+
+- Remove explicit `border-radius: 0; background: none; border: none` from `.chat-msg` (already defaults)
+- Remove `opacity: 1` override from `button.ghost:hover` — instead change base button hover from `opacity: 0.9` to a dedicated `background` darkening approach
+- Remove dead `.messages::-webkit-scrollbar` rules (legacy view)
+
+## 15. Fix Page Content Rendering
+**File:** `web/views/page_show.erb` (line 31)
+
+`@page.content` is rendered raw — markdown won't process. Change to use `render_markdown(@page.content)`.
+
+## 16. Fix Invalid HTML
+**File:** `web/views/settings.erb` (line ~78-80)
+
+Replace `<a><button>` nesting with a properly styled anchor:
+```erb
+<a href="..." target="_blank" rel="noopener noreferrer" class="inline-flex items-center ...">
+  Open GOWA Dashboard
+</a>
+```
+
+---
+
+## Verification
+1. Start the server: `./openfang.rb server`
+2. Check light mode: background should be cool grey, cards lighter than background, text dark
+3. Check dark mode: cards should have visible depth (subtle light shadows)
+4. Click action buttons (Mark Read, etc.) — should show spinner + success/error feedback
+5. Send a chat message — should see "AI thinking" dots appear
+6. Tab through all interactive elements — should see green focus rings
+7. Check mobile (resize to 375px) — buttons should be appropriately sized
+8. Right-click canvas — context menu should animate from click position
+9. Open/close notification dropdown — should animate smoothly
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
