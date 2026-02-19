@@ -1,0 +1,38 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "1995b5100019",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 3,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "fang/agent.rb",
+    "fang/bootstrap.rb",
+    "fang/clients/anthropic_client.rb",
+    "fang/computer_use/agent.rb",
+    "fang/computer_use/display_server.rb",
+    "fang/jobs/computer_use_executor_job.rb",
+    "fang/tools/start_computer_use_tool.rb",
+    "fang/widgets/computer_use_widget.rb",
+    "setup.sh",
+    "web/public/css/style.css",
+    "web/public/js/application.js",
+    "web/public/js/widgets/computer_use.js"
+  ],
+  "sessions": [
+    {
+      "metadata": "/19/95b5100019/0/metadata.json",
+      "transcript": "/19/95b5100019/0/full.jsonl",
+      "context": "/19/95b5100019/0/context.md",
+      "content_hash": "/19/95b5100019/0/content_hash.txt",
+      "prompt": "/19/95b5100019/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 53,
+    "cache_creation_tokens": 56964,
+    "cache_read_tokens": 2547260,
+    "output_tokens": 7447,
+    "api_call_count": 47
+  }
+}

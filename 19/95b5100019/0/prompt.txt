@@ -1,0 +1,189 @@
+Implement the following plan:
+
+# Computer Use Agent for OpenFang
+
+## Context
+
+Add an Orgo.ai-style Computer Use Agent. When the AI decides a task needs visual interaction (browsing, clicking, filling forms), it launches a virtual desktop (Xvfb), opens a browser, and streams live screenshots into the OpenFang canvas. The user sees every action happening in real-time. No Docker — runs natively on the host using Xvfb (works both locally and on headless servers via SSH).
+
+## Architecture
+
+```
+User: "find trending TikTok videos"
+  → Inner Claude agent calls `start_computer_use` MCP tool
+    → ComputerUseExecutorJob starts:
+      1. Launch Xvfb :99 (1024x768) — virtual framebuffer (no physical display needed)
+      2. Start openbox + firefox inside it
+      3. Create computer_use canvas widget (shows live screen)
+      4. Loop: Anthropic API (computer_20251124 tool)
+         → Claude says "click at (500, 300)"
+         → DISPLAY=:99 xdotool mousemove 500 300 click 1
+         → DISPLAY=:99 scrot /tmp/cua-screenshot.png
+         → base64 screenshot → send back to API + broadcast to canvas widget
+      5. Claude returns text → done, kill Xvfb
+```
+
+**Why Xvfb instead of Xephyr?** Xvfb works headlessly — no parent display needed. This means the same code works on your local Hyprland desktop AND on a headless server accessed via SSH. The user always views through the canvas widget.
+
+## Prerequisites
+
+Handled by `setup.sh` (see below). Packages: `xorg-server-xvfb xdotool scrot openbox firefox`
+
+## Files to Create
+
+### 1. `fang/clients/anthropic_client.rb` — Anthropic Messages API
+
+Subclass `ApplicationClient` (`fang/application_client.rb`).
+
+- `BASE_URI = "https://api.anthropic.com/v1"`
+- Override `authorization_header` → `{ "x-api-key" => token }`
+- `create_message(model:, messages:, tools:, system:, max_tokens:, betas:)` → POST `/messages`
+- Sends `anthropic-beta` header from `betas` array
+- Uses `ENV['ANTHROPIC_API_KEY']` for token
+
+### 2. `fang/computer_use/display_server.rb` — Xvfb lifecycle
+
+Manages the virtual display and applications inside it.
+
+- `initialize(display: ":99", width: 1024, height: 768)`
+- `start` — spawns `Xvfb :99 -screen 0 1024x768x24 -ac` as background process, waits for display ready, then starts `openbox` and `firefox --no-remote` inside it
+- `stop` — kills Xvfb process group (children die with it)
+- `running?` — checks if Xvfb process is alive
+- `screenshot` — `DISPLAY=:99 scrot -o /tmp/cua-#{session}.png` → reads file → base64 encodes → returns string
+- `exec_action(action, params)` — translates Claude computer tool actions to xdotool:
+  - `left_click [x,y]` → `xdotool mousemove --sync x y click 1`
+  - `right_click [x,y]` → `xdotool mousemove --sync x y click 3`
+  - `double_click [x,y]` → `xdotool mousemove --sync x y click --repeat 2 1`
+  - `type "text"` → `xdotool type --delay 50 "text"`
+  - `key "ctrl+l"` → `xdotool key ctrl+l`
+  - `scroll [x,y] up/down` → `xdotool mousemove x y click 4/5` (repeated for amount)
+  - `mouse_move [x,y]` → `xdotool mousemove --sync x y`
+  - `screenshot` → just captures screenshot
+  - `cursor_position` → `xdotool getmouselocation`
+- After each non-screenshot action: `sleep 1` then auto-capture screenshot
+- All commands run with `DISPLAY=:99` env var
+
+### 3. `fang/computer_use/agent.rb` — Core API loop
+
+Calls Anthropic API with computer use tools.
+
+- `execute(task:, page_id:, conversation_id:, &on_event)`
+- Builds tool definitions:
+  ```ruby
+  [{ type: "computer_20251124", name: "computer",
+     display_width_px: 1024, display_height_px: 768 }]
+  ```
+- System prompt: purpose-built for computer control tasks
+- Loop (max 50 iterations):
+  1. Call `AnthropicClient#create_message` with `betas: ["computer-use-2025-11-24"]`
+  2. Parse response content blocks
+  3. For `tool_use` blocks: call `DisplayServer#exec_action` → get screenshot
+  4. Build `tool_result` with base64 image as `{ type: "image", source: { type: "base64", ... } }`
+  5. Yield events: `{type: :action, action:, params:}`, `{type: :screenshot, base64:}`, `{type: :text, content:}`
+  6. If no `tool_use` blocks in response → task complete, break
+
+### 4. `fang/widgets/computer_use_widget.rb` — Canvas widget
+
+- `widget_type :computer_use`
+- `render_content`: `<img>` element with `id="cua-screen-#{component.id}"` showing latest screenshot (data URI), plus action overlay bar
+- `header_title` = "Computer Use", `header_icon` = monitor SVG
+- Metadata: `{ status: "running"/"stopped"/"error", last_action: "..." }`
+
+### 5. `fang/jobs/computer_use_executor_job.rb` — Background job
+
+Modeled after `AgentExecutorJob` (`fang/jobs/agent_executor_job.rb`).
+
+- `perform(message_id, task:)`
+- Start `DisplayServer.new.start`
+- Create `CanvasComponent` with type `computer_use` on the conversation's page
+- Broadcast widget to canvas via `TurboBroadcast`
+- Run `ComputerUse::Agent.execute` with event callback:
+  - `:screenshot` → Turbo Stream `replace` the widget's `<img>` src with new base64 data URI
+  - `:action` → Turbo Stream `append` action step to chat progress area (reuse step pattern from `AgentExecutorJob`)
+  - `:text` → Stream text to chat bubble
+- On done: stop `DisplayServer`, update widget metadata to `stopped`, save final message
+- On error: stop `DisplayServer`, broadcast error
+
+### 6. `fang/tools/start_computer_use_tool.rb` — MCP tool
+
+```ruby
+tool_name 'start_computer_use'
+description 'Launch a computer use session to visually interact with a desktop and browser. Use when you need to browse websites, fill forms, click buttons, or interact with any GUI application.'
+arguments do
+  required(:task).filled(:string).description('What to accomplish on the computer')
+end
+```
+
+The inner Claude agent decides when to call this — no user command needed.
+
+## Files to Modify
+
+| File | Change |
+|---|---|
+| `setup.sh` | Add section to detect OS and install CUA deps (`xvfb xdotool scrot openbox firefox`) |
+| `fang/bootstrap.rb` | Add `require` for `fang/computer_use/*.rb` and `fang/clients/anthropic_client.rb` |
+| `web/public/js/widgets/registry.js` | Register `computer_use` widget (crossfade screenshots, stop button) |
+| `web/public/css/style.css` | `.cua-screen`, `.cua-action-bar`, `.cua-status` styles |
+
+### `setup.sh` changes
+
+Add after the existing dependency checks (around line 12):
+
+```bash
+# Check/install Computer Use Agent dependencies
+echo "Checking Computer Use Agent dependencies..."
+CUA_DEPS="xorg-server-xvfb xdotool scrot openbox"
+if command -v pacman >/dev/null; then
+  MISSING=""
+  for pkg in $CUA_DEPS; do
+    pacman -Q "$pkg" &>/dev/null || MISSING="$MISSING $pkg"
+  done
+  if [ -n "$MISSING" ]; then
+    echo "Installing CUA dependencies:$MISSING"
+    sudo pacman -S --noconfirm $MISSING
+  fi
+elif command -v apt-get >/dev/null; then
+  sudo apt-get install -y xvfb xdotool scrot openbox firefox-esr
+fi
+echo "✅ Computer Use Agent dependencies ready"
+```
+
+## Reused Existing Code
+
+- **`ApplicationClient`** (`fang/application_client.rb`) — base HTTP client for `AnthropicClient`
+- **`BaseWidget`** (`fang/widgets/base_widget.rb`) — auto-registers via `widget_type`
+- **`AgentExecutorJob`** (`fang/jobs/agent_executor_job.rb`) — pattern for `broadcast_progress_container`, `broadcast_step`, `broadcast_final`, `broadcast_streaming_text`
+- **`TurboBroadcast`** (`web/turbo_broadcast.rb`) — real-time canvas updates
+- **`ViewHelpers#turbo_stream`** (`web/view_helpers.rb`) — building Turbo Stream HTML
+- **`CanvasComponent`** model — widget positioning and persistence
+
+## Verification
+
+1. Run `./setup.sh` (installs xvfb, xdotool, scrot, openbox if missing)
+2. Start OpenFang: `./openfang.rb server`
+3. Open a conversation, ask: "Go to google.com and search for OpenFang"
+4. AI calls `start_computer_use` → canvas widget appears showing a desktop
+5. Live screenshots update as AI clicks Firefox, types URL, searches
+6. Chat shows action steps: "Clicking at (500, 300)", "Typing 'OpenFang'", etc.
+7. When done, display stops, final summary in chat
+8. Works via SSH to a headless server (no physical display needed)
+9. Run `rake test` to verify no regressions
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+Agent error: Agent exited with code 1: Error: When using --print, --output-format=stream-json requires --verbose
+
+---
+
+Computer use error: No such file or directory - xdpyinfo
+
+---
+
+Agent error: Agent exited with code : {"level":"warn","message":"[BashTool] Pre-flight check is taking longer than expected. Run with ANTHROPIC_LOG=debug to check for failed or slow API requests."}
+
+---
+
+[Request interrupted by user for tool use]
