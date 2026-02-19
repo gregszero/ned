@@ -58,6 +58,11 @@ export default class extends Controller {
     this.menu = document.getElementById("canvas-context-menu")
     this.menuItems = document.getElementById("canvas-context-menu-items")
 
+    // Selection + floating toolbar
+    this.selectedComponent = null
+    this.toolbar = null
+    this.colorPicker = null
+
     // Configurable menu item registries — built from widget types API
     this.canvasMenuItems = [
       { label: "Add Note", action: (wx, wy) => this.addWidget('card', wx, wy) },
@@ -116,6 +121,7 @@ export default class extends Controller {
     this.element.removeEventListener("contextmenu", this.onContextMenu)
     document.removeEventListener("click", this.onDocumentClick)
     document.removeEventListener("keydown", this.onKeyDown)
+    this.deselectComponent()
     this.observer?.disconnect()
     if (window.canvasController === this) window.canvasController = null
   }
@@ -148,7 +154,14 @@ export default class extends Controller {
 
   onDblClick(e) {
     const component = e.target.closest(".canvas-component")
-    if (!component) return
+    if (!component) {
+      // Double-click on empty canvas — open context menu at that position
+      const rect = this.element.getBoundingClientRect()
+      const worldX = (e.clientX - rect.left - this.panX) / this.scale
+      const worldY = (e.clientY - rect.top - this.panY) / this.scale
+      this.showCanvasMenu(e.clientX, e.clientY, worldX, worldY)
+      return
+    }
 
     const contentEl = component.querySelector(".canvas-component-content")
     if (!contentEl || contentEl.isContentEditable) return
@@ -196,7 +209,7 @@ export default class extends Controller {
     contentEl.contentEditable = "false"
     contentEl.style.cursor = ""
     contentEl.style.userSelect = ""
-    component.style.cursor = "grab"
+    component.style.cursor = ""
     this.editingComponent = null
 
     // Persist updated content
@@ -217,9 +230,8 @@ export default class extends Controller {
   onContextMenu(e) {
     e.preventDefault()
     const component = e.target.closest(".canvas-component")
-    if (component) {
-      this.showComponentMenu(e.clientX, e.clientY, component)
-    } else {
+    if (!component) {
+      // Only show context menu on canvas background
       const rect = this.element.getBoundingClientRect()
       const worldX = (e.clientX - rect.left - this.panX) / this.scale
       const worldY = (e.clientY - rect.top - this.panY) / this.scale
@@ -277,10 +289,15 @@ export default class extends Controller {
 
   onDocumentClick(e) {
     if (this.menu && !this.menu.contains(e.target)) this.hideMenu()
+    // Deselect when clicking outside the canvas
+    if (this.selectedComponent && !this.element.contains(e.target)) this.deselectComponent()
   }
 
   onKeyDown(e) {
-    if (e.key === "Escape") this.hideMenu()
+    if (e.key === "Escape") {
+      this.hideMenu()
+      this.deselectComponent()
+    }
   }
 
   // --- Context Menu Actions ---
@@ -428,6 +445,184 @@ export default class extends Controller {
     }
   }
 
+  // --- Selection & Floating Toolbar ---
+
+  selectComponent(comp) {
+    if (this.selectedComponent === comp) return
+    this.deselectComponent()
+    this.selectedComponent = comp
+    comp.classList.add("selected")
+    this.showToolbar(comp)
+  }
+
+  deselectComponent() {
+    if (this.selectedComponent) {
+      this.selectedComponent.classList.remove("selected")
+      this.selectedComponent = null
+    }
+    this.hideToolbar()
+  }
+
+  showToolbar(comp) {
+    this.hideToolbar()
+    const tb = document.createElement("div")
+    tb.className = "canvas-component-toolbar"
+    tb.id = "canvas-component-toolbar"
+
+    const paletteIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="0.5" fill="currentColor"/><circle cx="17.5" cy="10.5" r="0.5" fill="currentColor"/><circle cx="8.5" cy="7.5" r="0.5" fill="currentColor"/><circle cx="6.5" cy="12" r="0.5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2Z"/></svg>`
+    const chatIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
+    const copyIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`
+    const trashIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`
+
+    const btn = (action, title, content, cls = '') => {
+      const b = document.createElement("button")
+      b.dataset.action = action
+      b.title = title
+      b.innerHTML = content
+      if (cls) b.className = cls
+      return b
+    }
+
+    const sep = () => {
+      const d = document.createElement("div")
+      d.className = "toolbar-separator"
+      return d
+    }
+
+    // Build toolbar
+    tb.appendChild(btn("style", "Color", paletteIcon))
+    tb.appendChild(sep())
+    tb.appendChild(btn("font-sm", "Small text", "A"))
+    tb.appendChild(btn("font-md", "Medium text", "A"))
+    tb.appendChild(btn("font-lg", "Large text", "A"))
+    tb.appendChild(sep())
+    tb.appendChild(btn("chat", "Chat about this", chatIcon))
+    tb.appendChild(btn("duplicate", "Duplicate", copyIcon))
+    tb.appendChild(btn("delete", "Delete", trashIcon, "destructive"))
+
+    // Style font size buttons
+    const fontBtns = tb.querySelectorAll('[data-action^="font-"]')
+    fontBtns[0].style.fontSize = "0.625rem"
+    fontBtns[2].style.fontSize = "0.875rem"
+    // Highlight current font size
+    const meta = JSON.parse(comp.dataset.widgetMetadata || '{}')
+    const currentSize = meta.font_size || 'md'
+    fontBtns.forEach(b => { if (b.dataset.action === `font-${currentSize}`) b.classList.add("active") })
+
+    // Event delegation
+    tb.addEventListener("click", (e) => {
+      const target = e.target.closest("button")
+      if (!target) return
+      e.stopPropagation()
+      const action = target.dataset.action
+      switch (action) {
+        case "style": this.toggleColorPicker(tb, comp); break
+        case "font-sm": this.setFontSize(comp, "sm"); break
+        case "font-md": this.setFontSize(comp, "md"); break
+        case "font-lg": this.setFontSize(comp, "lg"); break
+        case "chat": this.chatAboutComponent(comp); this.deselectComponent(); break
+        case "duplicate": this.duplicateComponent(comp); this.deselectComponent(); break
+        case "delete": this.deleteComponent(comp); this.deselectComponent(); break
+      }
+    })
+
+    this.world.appendChild(tb)
+    this.toolbar = tb
+    this.positionToolbar(comp)
+  }
+
+  positionToolbar(comp) {
+    if (!this.toolbar) return
+    const compX = parseFloat(comp.style.left) || 0
+    const compY = parseFloat(comp.style.top) || 0
+    const compW = comp.offsetWidth
+    const compH = comp.offsetHeight
+    const tbW = this.toolbar.offsetWidth
+    this.toolbar.style.left = (compX + compW / 2 - tbW / 2) + "px"
+    this.toolbar.style.top = (compY + compH + 8) + "px"
+  }
+
+  hideToolbar() {
+    this.hideColorPicker()
+    if (this.toolbar) {
+      this.toolbar.remove()
+      this.toolbar = null
+    }
+  }
+
+  toggleColorPicker(toolbar, comp) {
+    if (this.colorPicker) { this.hideColorPicker(); return }
+    const colors = ['#ef4444', '#f97316', '#f59e0b', '#22c55e', '#14b8a6', '#60a5fa', '#a78bfa', '#a1a1aa']
+    const picker = document.createElement("div")
+    picker.className = "toolbar-color-picker"
+    colors.forEach(c => {
+      const swatch = document.createElement("div")
+      swatch.className = "color-swatch"
+      swatch.style.background = c
+      swatch.addEventListener("click", (e) => {
+        e.stopPropagation()
+        this.setHeaderColor(comp, c)
+        this.hideColorPicker()
+      })
+      picker.appendChild(swatch)
+    })
+    // Position relative to the style button
+    const styleBtn = toolbar.querySelector('[data-action="style"]')
+    picker.style.position = "absolute"
+    picker.style.bottom = "calc(100% + 4px)"
+    picker.style.left = `${styleBtn.offsetLeft - 60}px`
+    toolbar.appendChild(picker)
+    this.colorPicker = picker
+  }
+
+  hideColorPicker() {
+    if (this.colorPicker) {
+      this.colorPicker.remove()
+      this.colorPicker = null
+    }
+  }
+
+  setHeaderColor(comp, color) {
+    const meta = JSON.parse(comp.dataset.widgetMetadata || '{}')
+    meta.title_color = color
+    comp.dataset.widgetMetadata = JSON.stringify(meta)
+    // Update the header color visually
+    const header = comp.querySelector(".canvas-component-header")
+    if (header) header.style.color = color
+    // Persist
+    this.patchComponentMetadata(comp, meta)
+  }
+
+  setFontSize(comp, size) {
+    comp.classList.remove("font-sm", "font-lg")
+    if (size !== "md") comp.classList.add(`font-${size}`)
+    const meta = JSON.parse(comp.dataset.widgetMetadata || '{}')
+    meta.font_size = size
+    comp.dataset.widgetMetadata = JSON.stringify(meta)
+    this.patchComponentMetadata(comp, meta)
+    // Update active state on toolbar buttons
+    if (this.toolbar) {
+      this.toolbar.querySelectorAll('[data-action^="font-"]').forEach(b => {
+        b.classList.toggle("active", b.dataset.action === `font-${size}`)
+      })
+    }
+  }
+
+  async patchComponentMetadata(comp, meta) {
+    const compId = comp.dataset.componentId
+    const pageId = this.pageIdValue
+    if (!compId || !pageId) return
+    try {
+      await fetch(`/api/pages/${pageId}/components/${compId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metadata: meta })
+      })
+    } catch (e) {
+      console.error("[Canvas] Failed to update metadata:", e)
+    }
+  }
+
   toggleScrollLock() {
     this.scrollLock = !this.scrollLock
     this.element.classList.toggle("scroll-locked", this.scrollLock)
@@ -459,22 +654,33 @@ export default class extends Controller {
     if (e.button !== 0) return // Only primary (left) button
     // Don't drag while editing
     if (this.editingComponent) return
+
+    // Ignore clicks inside toolbar
+    if (e.target.closest(".canvas-component-toolbar") || e.target.closest(".toolbar-color-picker")) return
+
     const component = e.target.closest(".canvas-component")
     if (component && this.editLock) {
       // Edit lock: let the event pass through for normal HTML behavior
       return
     }
     if (component) {
-      // Start dragging component (works in both normal and scroll-lock mode)
-      this.isDragging = true
-      this.dragTarget = component
-      this.startX = e.clientX
-      this.startY = e.clientY
-      this.startElX = parseFloat(component.style.left) || 0
-      this.startElY = parseFloat(component.style.top) || 0
-      component.classList.add("dragging")
-      e.preventDefault()
+      // Select component + show toolbar
+      this.selectComponent(component)
+      // Only start dragging if mousedown is on the drag handle
+      const dragHandle = e.target.closest(".canvas-drag-handle")
+      if (dragHandle) {
+        this.isDragging = true
+        this.dragTarget = component
+        this.startX = e.clientX
+        this.startY = e.clientY
+        this.startElX = parseFloat(component.style.left) || 0
+        this.startElY = parseFloat(component.style.top) || 0
+        component.classList.add("dragging")
+        e.preventDefault()
+      }
     } else if (!this.scrollLock && (e.target === this.element || e.target === this.world || e.target.classList.contains("canvas-dot-grid"))) {
+      // Deselect on canvas background click
+      this.deselectComponent()
       // Start panning (disabled in scroll-lock mode)
       this.isPanning = true
       this.startX = e.clientX
@@ -507,6 +713,8 @@ export default class extends Controller {
     if (this.isDragging && this.dragTarget) {
       this.dragTarget.classList.remove("dragging")
       this.saveComponentPosition(this.dragTarget)
+      // Reposition toolbar after drag
+      if (this.selectedComponent === this.dragTarget) this.positionToolbar(this.dragTarget)
       this.isDragging = false
       this.dragTarget = null
     }
@@ -523,15 +731,18 @@ export default class extends Controller {
       return
     }
     if (component) {
-      // Allow dragging in both normal and scroll-lock mode
-      this.isDragging = true
-      this.dragTarget = component
-      this.startX = touch.clientX
-      this.startY = touch.clientY
-      this.startElX = parseFloat(component.style.left) || 0
-      this.startElY = parseFloat(component.style.top) || 0
-      component.classList.add("dragging")
-      e.preventDefault()
+      // Only start dragging if touch is on the drag handle
+      const dragHandle = touch.target.closest(".canvas-drag-handle")
+      if (dragHandle) {
+        this.isDragging = true
+        this.dragTarget = component
+        this.startX = touch.clientX
+        this.startY = touch.clientY
+        this.startElX = parseFloat(component.style.left) || 0
+        this.startElY = parseFloat(component.style.top) || 0
+        component.classList.add("dragging")
+        e.preventDefault()
+      }
     } else if (!this.scrollLock) {
       this.isPanning = true
       this.startX = touch.clientX

@@ -7,6 +7,12 @@ module Fang
       menu_label 'Add Clock'
       menu_icon "\u{1F550}"
 
+      def self.header_title = 'Clock'
+      def self.header_color = '#c084fc'
+      def self.header_icon
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+      end
+
       def self.default_metadata = { 'timezone' => 'UTC', 'label' => 'UTC' }
 
       def render_content

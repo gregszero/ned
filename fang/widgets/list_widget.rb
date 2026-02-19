@@ -7,6 +7,12 @@ module Fang
       menu_label 'Add List'
       menu_icon "\u{1F4CB}"
 
+      def self.header_title = 'List'
+      def self.header_color = '#a78bfa'
+      def self.header_icon
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>'
+      end
+
       def self.refreshable?     = true
       def self.refresh_interval  = 300
 

@@ -10,6 +10,7 @@ import "/js/widgets/registry.js"
 import "/js/widgets/clock.js"
 import "/js/widgets/chart.js"
 import "/js/widgets/data_table.js"
+import "/js/widgets/website.js"
 
 // Import controllers
 import ConversationController from "/js/controllers/conversation_controller.js"

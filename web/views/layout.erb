@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#15803d" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#1a1a1e" media="(prefers-color-scheme: dark)">
   <meta name="description" content="OpenFang">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -59,9 +59,16 @@
     <label for="sidebar-toggle"></label>
     <aside class="sidebar">
       <div class="text-fang-primary font-semibold text-lg tracking-tight mb-6">OpenFang</div>
+      <div class="sidebar-header">
+        <span class="sidebar-heading">Canvases</span>
+        <button class="sidebar-add-btn ghost xs" onclick="if(window.chatFooter){chatFooter.newTab()}" type="button" title="New canvas">+</button>
+      </div>
       <nav class="flex flex-col gap-0.5">
         <% Fang::Page.published.recent.each do |page| %>
-          <a href="/<%= page.slug %>" onclick="if(window.chatFooter){chatFooter.openCanvas(<%= page.id %>, '<%= page.title.gsub("'", "\\\\'") %>', '<%= page.slug %>');return false}"><%= page.title %></a>
+          <a href="/<%= page.slug %>" class="sidebar-link" onclick="if(window.chatFooter){chatFooter.openCanvas(<%= page.id %>, '<%= page.title.gsub("'", "\\\\'") %>', '<%= page.slug %>');return false}">
+            <span><%= page.title %></span>
+            <span class="sidebar-count"><%= page.canvas_components.count %></span>
+          </a>
         <% end %>
       </nav>
     </aside>

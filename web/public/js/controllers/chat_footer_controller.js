@@ -535,6 +535,10 @@ export default class extends Controller {
   }
 
   _renderCanvasComponent(comp) {
+    // Use server-rendered HTML which includes header, drag handle, etc.
+    if (comp.html) return comp.html
+
+    // Fallback for legacy responses
     let style = `left:${comp.x}px;top:${comp.y}px;width:${comp.width}px;`
     if (comp.height) style += `height:${comp.height}px;`
     const metaJson = JSON.stringify(comp.metadata || {}).replace(/"/g, '&quot;')

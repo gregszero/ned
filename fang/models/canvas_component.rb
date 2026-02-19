@@ -16,6 +16,7 @@ module Fang
         id: id,
         type: component_type,
         content: content,
+        html: render_html,
         x: x,
         y: y,
         width: width,
