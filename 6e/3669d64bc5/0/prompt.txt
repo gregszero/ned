@@ -1,0 +1,17 @@
+understand the project and update the readme.md make something really showing the features, how to use, how it saves token by creating code, how scheduling and hearthbeats work, mcp, skills etc
+
+---
+
+maybe we should consider more threads for puma? also in the key/auth only suggest ANTHROPIC_API_KEY because oauth key seems to be trouble
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+update the readme but lets keep the thread as is
+
+---
+
+commit this
