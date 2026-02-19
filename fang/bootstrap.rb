@@ -43,6 +43,10 @@ module Fang
       require_relative 'mcp_server'
       require_relative 'event_bus'
 
+      # Load computer use subsystem
+      require_relative 'computer_use/display_server'
+      require_relative 'computer_use/agent'
+
       # Load concerns and models
       Dir[root.join('fang/concerns/**/*.rb')].sort.each { |f| require f }
       Dir[root.join('fang/models/**/*.rb')].sort.each { |f| require f }

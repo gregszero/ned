@@ -12,6 +12,25 @@ command -v git >/dev/null || { echo "❌ Git not found. Please install Git"; exi
 echo "✅ All dependencies found"
 echo ""
 
+# Check/install Computer Use Agent dependencies
+echo "Checking Computer Use Agent dependencies..."
+CUA_DEPS_PACMAN="xorg-server-xvfb xorg-xset xdotool scrot openbox"
+CUA_DEPS_APT="xvfb x11-xserver-utils xdotool scrot openbox firefox-esr"
+if command -v pacman >/dev/null; then
+  MISSING=""
+  for pkg in $CUA_DEPS_PACMAN; do
+    pacman -Q "$pkg" &>/dev/null || MISSING="$MISSING $pkg"
+  done
+  if [ -n "$MISSING" ]; then
+    echo "Installing CUA dependencies:$MISSING"
+    sudo pacman -S --noconfirm $MISSING
+  fi
+elif command -v apt-get >/dev/null; then
+  sudo apt-get install -y $CUA_DEPS_APT
+fi
+echo "✅ Computer Use Agent dependencies ready"
+echo ""
+
 # 2. Check Ruby version
 RUBY_VERSION=$(ruby -e 'puts RUBY_VERSION')
 echo "Ruby version: $RUBY_VERSION"

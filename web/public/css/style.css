@@ -1424,3 +1424,72 @@ button.icon.sm {
   .chat-tab-title { max-width: 80px; }
   .chat-panel-messages .chat-msg { max-width: 100%; }
 }
+
+/* --- Computer Use Agent --- */
+
+.cua-container {
+  position: relative;
+  background: #000;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  overflow: hidden;
+}
+
+.cua-screen {
+  display: block;
+  width: 100%;
+  height: auto;
+  image-rendering: auto;
+}
+
+.cua-screen-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.cua-status {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cua-status-running {
+  background: rgba(22, 163, 74, 0.9);
+  color: #fff;
+}
+
+.cua-status-stopped {
+  background: rgba(100, 116, 139, 0.9);
+  color: #fff;
+}
+
+.cua-status-error {
+  background: rgba(220, 38, 38, 0.9);
+  color: #fff;
+}
+
+.cua-action-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.cua-action-label {
+  color: #e2e8f0;
+  font-size: 0.75rem;
+  font-family: monospace;
+}
