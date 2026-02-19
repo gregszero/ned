@@ -1,0 +1,756 @@
+Implement the following plan:
+
+# Add Test Infrastructure (Ruby + Python)
+
+## Context
+OpenFang has zero formal tests. There are two informal smoke scripts (`test_jobs.rb`, `test_web_ui.rb`) at the project root with no assertions. The `config/database.yml` already has a `test:` key pointing to `storage/test.db`, and `minitest`/`rack-test` are available as transitive dependencies. We need a proper test suite to keep the framework stable as it grows.
+
+## Plan
+
+### 1. Add test gems to Gemfile
+**File:** `Gemfile`
+
+Add a `group :test` block:
+```ruby
+group :test do
+  gem 'webmock'                        # Stub HTTP for ApplicationClient tests
+  gem 'database_cleaner-active_record' # Clean DB between tests
+end
+```
+
+Run `bundle install`.
+
+### 2. Create test helper
+**File:** `test/test_helper.rb`
+
+- Set `FANG_ENV=test` and `RACK_ENV=test` before requiring `fang/bootstrap`
+- Run `Fang::Database.migrate!` at boot
+- Configure `DatabaseCleaner` with `:transaction` strategy
+- Set `ActiveJob::Base.queue_adapter = :inline`
+- Disable real HTTP via `webmock/minitest`
+- Define three base classes:
+  - `Fang::TestCase` — DB cleanup in setup/teardown
+  - `Fang::ToolTestCase` — silences TurboBroadcast
+  - `Fang::RouteTestCase` — includes `Rack::Test::Methods`
+
+### 3. Create Rake test tasks
+**File:** `Rakefile`
+
+Add `Rake::TestTask` for `:test` (all Ruby), plus namespaced tasks: `test:models`, `test:tools`, `test:web`, `test:lib`, `test:python` (runs pytest), `test:all` (Ruby + Python).
+
+### 4. Write Ruby tests (priority order)
+
+**Concerns** (small, validate infrastructure works):
+- `test/concerns/has_status_test.rb` — status predicates, scopes
+- `test/concerns/has_json_defaults_test.rb` — JSON column defaults on new records
+
+**Models** (core business logic):
+- `test/models/conversation_test.rb` — validations, `add_message`, `generate_slug`
+- `test/models/message_test.rb` — role validations, predicates, `truncated_content`
+- `test/models/page_test.rb` — slug generation, `publish!`, `archive!`
+- `test/models/notification_test.rb` — `mark_read!`, `start_conversation!`
+- `test/models/trigger_test.rb` — `matches?` glob patterns, `fire!`, `record_failure!` auto-disable
+- `test/models/scheduled_task_test.rb` — `due?`, state transitions
+- `test/models/session_test.rb` — `start!`/`stop!`/`error!`, `duration`
+- `test/models/heartbeat_test.rb` — `due_now?`, `interpolated_prompt`, `record_run!`
+- `test/models/workflow_test.rb` — `advance!`, `complete!`, `merge_context!`
+
+**Pure logic:**
+- `test/lib/agent_test.rb` — `to_uuid` determinism/format, `parse_response` edge cases
+
+**HTTP client:**
+- `test/lib/application_client_test.rb` — GET/POST with WebMock, error code mapping, auth headers
+
+**Tools** (integration-level):
+- `test/tools/create_notification_tool_test.rb`
+- `test/tools/create_page_tool_test.rb`
+- `test/tools/schedule_task_tool_test.rb`
+- `test/tools/send_message_tool_test.rb`
+- `test/tools/run_code_tool_test.rb`
+
+**EventBus & PythonRunner:**
+- `test/lib/event_bus_test.rb` — emit with matching trigger
+- `test/lib/python_runner_test.rb` — stubbed subprocess
+
+**Routes:**
+- `test/web/routes_test.rb` — health check, conversation CRUD, page rendering
+
+### 5. Write Python tests
+- `test/python/test_bridge.py` — invoke `fang/python/bridge.py` via subprocess, test expression eval, print capture, error handling, context access, actions
+- `test/python/test_skill_runner.py` — create temp skill file, invoke via subprocess, verify JSON output
+
+Run with: `python3 -m pytest test/python/ -v`
+
+### 6. Clean up old smoke scripts
+Move `test_jobs.rb` and `test_web_ui.rb` to `test/legacy/` or delete them.
+
+## Directory Structure
+```
+test/
+├── test_helper.rb
+├── concerns/
+│   ├── has_status_test.rb
+│   └── has_json_defaults_test.rb
+├── models/
+│   ├── conversation_test.rb
+│   ├── message_test.rb
+│   ├── page_test.rb
+│   ├── notification_test.rb
+│   ├── trigger_test.rb
+│   ├── scheduled_task_test.rb
+│   ├── session_test.rb
+│   ├── heartbeat_test.rb
+│   ├── workflow_test.rb
+│   └── skill_record_test.rb
+├── tools/
+│   ├── create_notification_tool_test.rb
+│   ├── create_page_tool_test.rb
+│   ├── schedule_task_tool_test.rb
+│   ├── send_message_tool_test.rb
+│   └── run_code_tool_test.rb
+├── lib/
+│   ├── agent_test.rb
+│   ├── application_client_test.rb
+│   ├── event_bus_test.rb
+│   └── python_runner_test.rb
+├── web/
+│   └── routes_test.rb
+└── python/
+    ├── test_bridge.py
+    └── test_skill_runner.py
+```
+
+## Verification
+- `rake test` — runs all Ruby tests
+- `rake test:models` — just model tests
+- `python3 -m pytest test/python/ -v` — Python tests
+- `rake test:all` — everything
+
+## Key Files Modified
+- `Gemfile` — add test group
+- `Rakefile` — add test tasks
+
+## Key Files Referenced (read-only, for writing tests)
+- `fang/bootstrap.rb` — understand boot sequence
+- `fang/concerns/has_status.rb`, `has_json_defaults.rb`
+- `fang/models/*.rb` — all models
+- `fang/tools/*.rb` — all tools
+- `fang/agent.rb`, `fang/application_client.rb`, `fang/event_bus.rb`, `fang/python_runner.rb`
+- `web/app.rb` — routes
+- `config/database.yml` — test DB config already exists
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+<task-notification>
+<task-id>a587f61</task-id>
+<tool-use-id>toolu_01VJRS5Qe6e6xokvnRbkrr85</tool-use-id>
+<status>completed</status>
+<summary>Agent "Explore codebase for tests" completed</summary>
+<result>I now have a thorough picture of the entire codebase. Here is the complete findings report:
+
+---
+
+## OpenFang Codebase: Complete Analysis for Test Suite
+
+### Project Overview
+
+- **Language/Runtime**: Ruby 3.3+, SQLite (dev/test), PostgreSQL (production)
+- **Test DB**: `storage/test.db` (SQLite), environment via `FANG_ENV=test`
+- **ActiveJob adapter**: `:async` (in-memory, inline for tests)
+- **Queue adapter set**: `fang/queue.rb` at load time — override with `:test` in specs
+- **Framework bootstrap**: Require `fang/bootstrap.rb` to load everything
+
+---
+
+### Concerns
+
+#### `/home/greg/Developer/openfang/fang/concerns/has_status.rb`
+```ruby
+module Fang::HasStatus
+  extend ActiveSupport::Concern
+  class_methods do
+    def statuses(*names)
+      # creates scope :name and #name? predicate for each status
+    end
+  end
+end
+```
+
+#### `/home/greg/Developer/openfang/fang/concerns/has_json_defaults.rb`
+```ruby
+module Fang::HasJsonDefaults
+  extend ActiveSupport::Concern
+  class_methods do
+    def json_defaults(**columns)
+      # after_initialize: sets column to default value if nil and new_record?
+    end
+  end
+end
+```
+
+---
+
+### Models (complete)
+
+#### `Fang::Conversation` — table: `conversations`
+Columns: `id`, `title:string`, `source:string (NOT NULL, default: 'web')`, `last_message_at:datetime`, `context:json (default: {})`, `slug:string`, `page_id:integer`, `created_at`, `updated_at`
+
+Includes: `HasJsonDefaults`
+
+Associations:
+- `belongs_to :page, class_name: 'Fang::Page', optional: true`
+- `has_many :messages, dependent: :destroy`
+- `has_many :sessions, dependent: :destroy`
+
+Validations:
+- `source` presence + inclusion in `%w[web cli scheduled_task whatsapp heartbeat]`
+- `slug` uniqueness, allow_nil
+
+Scopes: `recent` (order last_message_at desc), `by_source(source)`
+
+Callbacks:
+- `after_initialize :set_last_message_at, if: :new_record?` — sets `last_message_at ||= Time.current`
+- `before_validation :generate_slug, if: slug.blank?` — parameterizes `title` or `"chat-{hex}"`, deduplicates with counter suffix
+
+json_defaults: `context: {}`
+
+Methods:
+- `add_message(role:, content:, metadata: {})` → creates Message, touches `last_message_at`
+- `active_session` → first `running` session
+- `latest_messages(limit=10)` → ordered desc, reversed
+- `ensure_canvas!` → finds or creates associated Page
+- `broadcast_channel` → `"canvas:#{ensure_canvas!.id}"`
+
+---
+
+#### `Fang::Message` — table: `messages`
+Columns: `id`, `conversation_id:integer (NOT NULL, FK)`, `content:text (NOT NULL)`, `role:string (NOT NULL)`, `streaming:boolean (default: false)`, `metadata:json (default: {})`, `created_at`, `updated_at`
+
+Includes: `HasJsonDefaults`
+
+Associations: `belongs_to :conversation`
+
+Validations:
+- `content` presence
+- `role` presence + inclusion in `%w[user assistant system]`
+
+Scopes: `by_role(role)`, `user_messages`, `assistant_messages`, `system_messages`, `chronological`
+
+json_defaults: `metadata: {}`
+
+Methods: `user?`, `assistant?`, `system?`, `truncated_content(length=100)`
+
+---
+
+#### `Fang::Session` — table: `sessions`
+Columns: `id`, `conversation_id:integer (NOT NULL, FK)`, `container_id:string` (used as session_uuid), `status:string (NOT NULL, default: 'starting')`, `session_path:string`, `started_at:datetime`, `stopped_at:datetime`, `created_at`, `updated_at`
+
+Includes: `HasStatus`
+
+Associations: `belongs_to :conversation`
+
+Validations: `status` presence + inclusion in `%w[starting running stopped error]`
+
+statuses: `:starting, :running, :stopped, :error` (creates scopes + predicates)
+
+Scopes: `active` (status='running'), `with_errors` (status='error')
+
+Methods:
+- `duration` → nil if no started_at, else `(stopped_at||Time.current) - started_at`
+- `start!` → updates status='running', started_at=Time.current
+- `stop!` → updates status='stopped', stopped_at=Time.current
+- `error!(message=nil)` → updates status='error', stopped_at=Time.current
+- `session_uuid` / `session_uuid=` → aliases for `container_id`
+
+---
+
+#### `Fang::Config` — table: `config`
+Columns: `id`, `key:string (NOT NULL)`, `value:text`, `value_type:string (NOT NULL, default: 'string')`, `description:text`, `created_at`, `updated_at`
+
+Validations:
+- `key` presence, uniqueness
+- `value_type` presence + inclusion in `%w[string json encrypted]`
+
+Class methods:
+- `get(key, default=nil)` → finds by key, returns `parsed_value` or default
+- `set(key, value, type: 'string', description: nil)` → find_or_initialize, saves, returns parsed_value
+- `delete(key)` → destroy if exists
+- `all_config` → hash of key→parsed_value
+
+Instance methods:
+- `parsed_value` → parses based on value_type ('json' → JSON.parse, else raw string)
+- `update_value(new_value)` → re-serializes and saves
+
+---
+
+#### `Fang::ScheduledTask` — table: `scheduled_tasks`
+Columns: `id`, `title:string (NOT NULL)`, `description:text`, `scheduled_for:datetime (NOT NULL)`, `status:string (NOT NULL, default: 'pending')`, `result:text`, `parameters:json (default: {})`, `skill_name:string`, `cron_expression:string`, `recurring:boolean (default: false)`, `last_completed_at:datetime`, `created_at`, `updated_at`
+
+Includes: `HasStatus`, `HasJsonDefaults`
+
+Validations: `title` presence, `scheduled_for` presence, `status` presence + inclusion in `%w[pending running completed failed]`
+
+statuses: `:pending, :running, :completed, :failed`
+
+Scopes:
+- `due` → `scheduled_for <= Time.current AND status='pending'`
+- `upcoming` → `scheduled_for > Time.current AND status='pending'`
+
+json_defaults: `parameters: {}`
+
+Methods:
+- `due?` → `scheduled_for <= Time.current && pending?`
+- `mark_running!` → updates status='running'
+- `mark_completed!(result=nil)` → updates status='completed', result
+- `mark_failed!(error_message)` → updates status='failed', result=error_message
+- `recurring?` → `recurring && cron_expression.present?`
+- `schedule_next_run!` → if recurring?, parses cron, creates new task for next_time, updates last_completed_at
+
+---
+
+#### `Fang::Trigger` — table: `triggers`
+Columns: `id`, `name:string (NOT NULL)`, `event_pattern:string (NOT NULL)`, `action_type:string (NOT NULL)`, `action_config:text`, `enabled:boolean (default: true)`, `fire_count:integer (default: 0)`, `consecutive_failures:integer (default: 0)`, `last_fired_at:datetime`, `created_at`, `updated_at`
+
+Validations:
+- `name` presence
+- `event_pattern` presence
+- `action_type` presence + inclusion in `%w[skill prompt]`
+
+Scopes: `enabled` (where enabled: true)
+
+Methods:
+- `parsed_config` → JSON.parse(action_config) or {}
+- `matches?(event_name)` → converts `*` → `.*` in pattern, matches with regex
+- `fire!(event_data={})` → increments fire_count + last_fired_at, dispatches skill or creates conversation+message
+- `record_failure!` → increments consecutive_failures, disables if >= 5
+
+---
+
+#### `Fang::Workflow` — table: `workflows`
+Columns: `id`, `name:string (NOT NULL)`, `description:text`, `status:string (default: 'pending')`, `current_step_index:integer (default: 0)`, `context:text`, `conversation_id:integer (FK optional)`, `trigger_event:string`, `created_at`, `updated_at`
+
+Includes: `HasStatus`
+
+Associations:
+- `belongs_to :conversation, optional: true`
+- `has_many :workflow_steps, -> { order(:position) }, dependent: :destroy`
+
+Validations:
+- `name` presence
+- `status` inclusion in `%w[pending running completed failed paused]`
+
+statuses: `:pending, :running, :completed, :failed, :paused`
+
+Methods:
+- `current_step` → finds workflow_step by position=current_step_index
+- `parsed_context` → JSON.parse(context) or {}
+- `merge_context!(data)` → merges data into context JSON
+- `advance!` → increments current_step_index; if next step is prompt/wait, skips job enqueue; if no more steps, calls complete!
+- `complete!` → sets status='completed', emits EventBus event
+- `fail!(error)` → sets status='failed', emits EventBus event
+- `pause!` → sets status='paused'
+- `ensure_conversation!` → finds or creates conversation
+
+---
+
+#### `Fang::WorkflowStep` — table: `workflow_steps`
+Columns: `id`, `workflow_id:integer (NOT NULL, FK)`, `position:integer (NOT NULL)`, `name:string`, `step_type:string (NOT NULL)`, `config:text`, `status:string (default: 'pending')`, `result:text`, `created_at`, `updated_at`
+
+Associations: `belongs_to :workflow`
+
+Validations:
+- `position` presence
+- `step_type` presence + inclusion in `%w[skill prompt condition wait notify]`
+- `status` inclusion in `%w[pending running completed failed skipped]`
+
+Methods:
+- `parsed_config` → JSON.parse(config) or {}
+- `execute!(workflow_context)` → dispatches based on step_type:
+  - `skill`: find SkillRecord by name, execute with params
+  - `prompt`: ensure_conversation!, add_message, AgentExecutorJob
+  - `condition`: eval expression against context, skips if false
+  - `wait`: create ScheduledTask to resume, pause workflow
+  - `notify`: create and broadcast Notification
+- Private: `interpolate_string`, `interpolate_params`, `eval_condition`, `parse_duration`
+
+---
+
+#### `Fang::HeartbeatRun` — table: `heartbeat_runs`
+Columns: `id`, `heartbeat_id:integer (NOT NULL, FK)`, `status:string (NOT NULL)`, `result:text`, `error_message:text`, `escalated:boolean (NOT NULL, default: false)`, `duration_ms:integer`, `ran_at:datetime (NOT NULL)`
+
+Associations: `belongs_to :heartbeat`
+
+Scopes: `recent` (order ran_at desc)
+
+---
+
+#### `Fang::McpConnection` — table: `mcp_connections`
+Columns: `id`, `name:string (NOT NULL)`, `transport_type:string (NOT NULL)`, `command:text`, `url:string`, `enabled:boolean (default: true)`, `available_tools:json (default: [])`, `config:json (default: {})`, `created_at`, `updated_at`
+
+Validations:
+- `name` presence, uniqueness
+- `transport_type` presence + inclusion in `%w[stdio sse http]`
+- custom `transport_configuration_valid` → command required for stdio, url required for sse/http
+
+Callbacks: `before_create :set_defaults` (sets config={}, available_tools=[])
+
+Scopes: `enabled`, `by_transport(type)`
+
+Methods: `enable!`, `disable!`, `stdio?`, `sse?`, `http?`, `connection_string`, `test_connection`
+
+---
+
+#### `Fang::Page` — table: `pages` (originally `ai_pages`)
+Columns: `id`, `title:string (NOT NULL)`, `slug:string (NOT NULL)`, `content:text (NOT NULL)`, `status:string (NOT NULL, default: 'draft')`, `published_at:datetime`, `metadata:json (default: {})`, `canvas_state:json (default: {})`, `created_at`, `updated_at`
+
+Includes: `HasStatus`
+
+Associations:
+- `has_many :conversations, foreign_key: :page_id, dependent: :nullify`
+- `has_many :canvas_components, dependent: :destroy`
+
+Validations:
+- `title` presence
+- `slug` presence, uniqueness
+- `content` length max 1_000_000, allow_blank
+- `status` presence + inclusion in `%w[draft published archived]`
+
+statuses: `:draft, :published, :archived`
+
+Callbacks: `before_validation :generate_slug, if: slug.blank?`
+
+Scopes: `recent` (order created_at desc)
+
+Methods:
+- `publish!` → updates status='published', published_at=Time.current
+- `archive!` → updates status='archived'
+
+---
+
+#### `Fang::Notification` — table: `notifications`
+Columns: `id`, `title:string (NOT NULL)`, `body:text`, `kind:string`, `status:string (default: 'unread')`, `action_url:string`, `conversation_id:integer`, `page_id:integer (FK)`, `created_at`, `updated_at`
+
+Includes: `HasStatus`, `Web::ViewHelpers`
+
+Associations: `belongs_to :page, class_name: 'Fang::Page', optional: true`
+
+Validations:
+- `title` presence
+- `kind` inclusion in `%w[info success warning error]`, allow_nil
+- `status` inclusion in `%w[unread read dismissed]`
+
+Scopes: `unread`, `recent` (order created_at desc)
+
+Methods:
+- `mark_read!` → updates status='read'
+- `broadcast!` → renders HTML card, broadcasts via TurboBroadcast to 'notifications' channel, emits EventBus event
+- `start_conversation!` → ensures page, creates Conversation with message, updates conversation_id
+- Private: `ensure_page!` → creates Page, updates page_id
+
+---
+
+#### `Fang::CanvasComponent` — table: `canvas_components`
+Columns: `id`, `ai_page_id:integer (NOT NULL, FK)` (references `pages` table), `component_type:string (NOT NULL, default: 'card')`, `content:text`, `x:float (NOT NULL, default: 0)`, `y:float (NOT NULL, default: 0)`, `width:float (NOT NULL, default: 320)`, `height:float`, `z_index:integer (NOT NULL, default: 0)`, `metadata:json (default: {})`, `created_at`, `updated_at`
+
+Associations: `belongs_to :page`
+
+Validations: `component_type` presence, `x`, `y`, `width` presence
+
+Scopes: `ordered` (order z_index, created_at)
+
+Methods:
+- `as_canvas_json` → hash with id, type, content, x, y, width, height, z_index, metadata
+- `render_html` → delegates to widget class or fallback HTML
+- `render_content_html` → delegates to widget class or raw content
+- Private: `fallback_html`
+
+---
+
+#### `Fang::Heartbeat` — table: `heartbeats`
+Columns: `id`, `name:string (NOT NULL)`, `description:text`, `skill_name:string (NOT NULL)`, `frequency:integer (NOT NULL, default: 300)`, `prompt_template:text`, `status:string (NOT NULL, default: 'active')`, `enabled:boolean (NOT NULL, default: true)`, `ai_page_id:integer (FK optional)`, `last_run_at:datetime`, `run_count:integer (NOT NULL, default: 0)`, `error_count:integer (NOT NULL, default: 0)`, `metadata:json (default: {})`, `created_at`, `updated_at`
+
+Note: `belongs_to :page, optional: true` — references column `ai_page_id` (aliased to `page`)
+
+Includes: `HasStatus`
+
+Associations:
+- `has_many :heartbeat_runs, dependent: :destroy`
+- `belongs_to :page, optional: true`
+
+Validations:
+- `name` presence, uniqueness
+- `skill_name` presence
+- `frequency` presence, numericality greater_than: 0
+
+statuses: `:active, :paused, :error`
+
+Scopes:
+- `enabled` → where enabled: true
+- `due` → enabled + active + (last_run_at IS NULL OR last_run_at <= Time.current)
+
+Methods:
+- `due_now?` → `enabled? && active? && (last_run_at.nil? || (Time.current - last_run_at) >= frequency)`
+- `result_meaningful?(result)` → false if nil/false/empty
+- `interpolated_prompt(result)` → gsub placeholders in prompt_template
+- `record_run!(status:, result: nil, error: nil, escalated: false, duration_ms: nil)` → creates HeartbeatRun, updates last_run_at + run_count (and error_count on error)
+- `frequency_label` → converts seconds to "30s", "5m", "2h"
+- `recent_runs(limit=30)` → ordered by ran_at desc
+
+---
+
+#### `Fang::SkillRecord` — table: `skills`
+Columns: `id`, `name:string (NOT NULL)`, `description:text`, `file_path:string (NOT NULL)`, `class_name:string`, `usage_count:integer (default: 0)`, `metadata:json (default: {})`, `language:string (NOT NULL, default: 'ruby')`, `created_at`, `updated_at`
+
+Validations: `name` presence+uniqueness, `file_path` presence
+
+Callbacks:
+- `before_create :set_defaults` (metadata={}, usage_count=0)
+- `before_save :derive_class_name` → converts snake_case name to CamelCase if class_name blank and language != 'python'
+
+Scopes: `by_usage` (order usage_count desc), `recent`
+
+Methods:
+- `increment_usage!`
+- `load_and_execute(**params)` → if python: PythonRunner.run_skill; else load file + constantize + new.execute(**params)
+- `file_exists?` → File.exist?(full_file_path)
+- `full_file_path` → File.join(Fang.root, file_path)
+
+---
+
+### Concerns Summary
+
+| Concern | Effect |
+|---|---|
+| `HasStatus` | `statuses(*names)` class method → creates named scopes and `name?` predicates |
+| `HasJsonDefaults` | `json_defaults(**cols)` class method → after_initialize sets nil columns to defaults on new records |
+
+---
+
+### MCP Tools (complete)
+
+| File | Tool Name | Required Args | Optional Args |
+|---|---|---|---|
+| `send_message_tool.rb` | `send_message` | `content:string` | `conversation_id:integer` |
+| `create_page_tool.rb` | `create_page` | `title:string, content:string` | `status:string` |
+| `schedule_task_tool.rb` | `schedule_task` | `title:string, scheduled_for:string` | `description, skill_name, cron` |
+| `create_trigger_tool.rb` | `create_trigger` | `name, event_pattern, action_type, action_config` | — |
+| `create_workflow_tool.rb` | `create_workflow` | `name:string, steps:array` | `description, trigger_event` |
+| `run_code_tool.rb` | `run_code` | `code:string` | `language:string (default 'ruby'), description` |
+| `run_skill_tool.rb` | `run_skill` | `skill_name:string` | `parameters:hash` |
+| `create_notification_tool.rb` | `create_notification` | `title:string, canvas_id:integer` | `body, kind (default 'info')` |
+| `get_canvas_tool.rb` | `get_canvas` | — | `page_id:integer` |
+| `update_canvas_tool.rb` | `update_canvas` | `html:string` | `title, conversation_id, mode (default 'replace')` |
+| `add_canvas_component_tool.rb` | `add_canvas_component` | — | `content, component_type, x, y, width, height, z_index, metadata` |
+| `update_canvas_component_tool.rb` | `update_canvas_component` | `component_id:integer` | `content, x, y, width, height, z_index, metadata` |
+| `remove_canvas_component_tool.rb` | `remove_canvas_component` | `component_id:integer` | — |
+| `define_widget_tool.rb` | `define_widget` | `widget_type:string, ruby_code:string` | `js_code, menu_label, menu_icon` |
+| `create_heartbeat_tool.rb` | `create_heartbeat` | `name:string, skill_name:string` | `frequency (default 300), description, prompt_template, enabled (default true)` |
+| `update_heartbeat_tool.rb` | `update_heartbeat` | `name:string` | `frequency, description, prompt_template, enabled, skill_name` |
+| `list_heartbeats_tool.rb` | `list_heartbeats` | — | `enabled_only:bool` |
+| `web_fetch_tool.rb` | `web_fetch` | `url:string` | `method, headers, body` |
+| `manage_python_tool.rb` | `manage_python` | `action:string` | `packages` |
+| `gmail_search_tool.rb` | `gmail_search` | `query:string` | `max_results (default 10)` |
+| `gmail_read_tool.rb` | `gmail_read` | `message_id:string` | — |
+| `gmail_send_tool.rb` | `gmail_send` | `to, subject, body` | `html:bool` |
+| `gmail_draft_tool.rb` | `gmail_draft` | `to, subject, body` | — |
+| `gmail_modify_tool.rb` | `gmail_modify` | `message_id:string` | `add_labels:array, remove_labels:array` |
+| `gmail_labels_tool.rb` | `gmail_labels` | — | — |
+
+---
+
+### Jobs
+
+#### `Fang::Jobs::ApplicationJob`
+Inherits `ActiveJob::Base`. Configured: `retry_on StandardError` (exponential, 3 attempts), `discard_on ActiveJob::DeserializationError`. Logs start/end + duration.
+
+#### `Fang::Jobs::AgentExecutorJob` — queue: `agent_execution`
+`perform(message_id)`:
+- Finds Message + Conversation
+- Calls `Agent.execute_streaming` with streaming block
+- Broadcasts progress steps, accumulated text, final message via TurboBroadcast
+- On `result` event: adds assistant/system message, calls `deliver_to_whatsapp` if source='whatsapp'
+- On `error`: adds system message
+
+#### `Fang::Jobs::ScheduledTaskRunnerJob` — queue: `scheduled_tasks`
+`perform(task_id)`:
+- mark_running!, executes skill (if skill_name present) or creates conversation+message+enqueues AgentExecutorJob
+- mark_completed!, schedule_next_run! if recurring?, creates success Notification, emits EventBus
+
+#### `Fang::Jobs::HeartbeatRunnerJob` — queue: `scheduled_tasks`
+`perform(heartbeat_id)`:
+- Guards: checks due_now? first
+- Executes skill, measures duration_ms
+- If meaningful result: record_run!(escalated: true), escalates to AgentExecutorJob, emits EventBus
+- If empty result: record_run!(skipped, escalated: false)
+- On error: record_run!(error), sets status='error' if error_count >= 3, emits EventBus
+
+#### `Fang::Jobs::TriggerRunnerJob` — queue: `triggers`
+`perform(trigger_id, event_name, event_data_json)`:
+- Finds Trigger, returns unless enabled?
+- Calls `trigger.fire!(event_data)`
+- On error: `trigger.record_failure!`
+
+#### `Fang::Jobs::WorkflowRunnerJob` — queue: `workflows`
+`perform(workflow_id)`:
+- Returns if completed? or failed?
+- Gets current_step, calls complete! if no step
+- Executes step, updates status='completed', merges context, advances!
+- On error: step='failed', workflow.fail!
+
+#### `Fang::Jobs::WidgetRefreshJob` — queue: `default`
+`perform`:
+- Iterates all refreshable widget types in registry
+- For each CanvasComponent of that type, calls widget.refresh_data! and broadcasts turbo-stream if true
+
+---
+
+### Key Infrastructure
+
+#### `Fang::Agent`
+- `execute(prompt:, session_id:, conversation: nil)` → non-streaming, returns `{'type'=>'content'/'error', 'content'=>...}`
+- `execute_streaming(prompt:, session_id:, conversation: nil, &block)` → yields parsed NDJSON events
+- Private: `run_claude`, `run_claude_streaming`, `find_or_create_session`, `to_uuid(value)` (SHA1 UUID v5), `build_env(conversation)`, `parse_response`
+- `to_uuid` converts any value to deterministic UUID via `Digest::SHA1.hexdigest("ai.rb:#{value}")`
+
+#### `Fang::EventBus`
+- `emit(event_name, data={})` → finds enabled Triggers matching pattern → TriggerRunnerJob.perform_later; finds pending Workflows with trigger_event=event_name → sets running + WorkflowRunnerJob
+
+#### `Fang::PythonRunner`
+- `TIMEOUT = 30` seconds
+- `venv_path` → `workspace/python/venv`
+- `python_bin`, `pip_bin`
+- `venv_exists?`, `ensure_venv!` (creates if absent)
+- `run_code(code, context: {})` → JSON input to bridge.py, parses result
+- `run_skill(skill_path, params: {}, context: {})` → JSON input to skill_runner.py
+- `pip_install(*packages)`, `pip_list`
+- `process_actions(actions)` → handles `send_message` and `create_notification` action types
+- Private: `run_python(script, args:[], stdin_data:)`, `parse_result(stdout, stderr, status)`
+
+#### `Fang::Database`
+- `configured?` → checks DATABASE_URL or config/database.yml or storage/data.db
+- `connect!` → establish_connection from config
+- `migrate!` → loads migrations from workspace/migrations/, skips already-run versions
+- `reset!` → drops all tables, re-migrates
+- Config priority: DATABASE_URL > config/database.yml > default SQLite at storage/data.db
+
+#### `Fang::Web::TurboBroadcast`
+- `subscribe(channel, &block)` → appends block to @subscribers[channel], thread-safe via MonitorMixin
+- `unsubscribe(channel, block)` → removes block
+- `broadcast(channel, html)` → calls all subscriber blocks with html, swallows errors
+
+#### `Fang::Scheduler`
+- `start!` → creates Rufus::Scheduler, polls tasks every 60s, refreshes widgets every 5m, polls heartbeats every 30s
+- `stop!`, `running?`
+
+#### `Fang::McpServer`
+- `configure!` → creates FastMcp::Server named 'ned', auto-discovers tool/resource subclasses via ObjectSpace
+- `start!(host:, port: 9292)` → configure! + run!
+
+#### `Fang::Queue`
+- `ActiveJob::Base.queue_adapter = :async` (set at load time)
+
+---
+
+### Web Routes (`web/app.rb`)
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/` | Redirect to latest published page, or home |
+| GET | `/conversations/:id` | Show conversation |
+| GET | `/conversations/:id/panel` | Chat panel fragment |
+| GET | `/conversations/:id/canvas` | Canvas HTML content |
+| POST | `/conversations/:id/messages` | Add message + enqueue agent |
+| GET | `/pages/:slug` | Show published page |
+| GET | `/notifications/stream` | SSE stream |
+| POST | `/notifications/:id/read` | Mark notification read |
+| POST | `/notifications/:id/chat` | Start conversation from notification |
+| GET | `/jobs[/:chat_slug]` | Jobs canvas page |
+| GET | `/heartbeats[/:chat_slug]` | Heartbeats canvas page |
+| GET | `/settings[/:chat_slug]` | Settings canvas page |
+| POST | `/webhooks/whatsapp` | WhatsApp inbound webhook |
+| GET | `/health` | Health check → `{status: 'ok'}` |
+| GET | `/api/tables/:id/rows` | Paginated data table rows |
+| GET | `/api/notifications` | Paginated notifications (JSON) |
+| GET | `/api/conversations` | List conversations |
+| POST | `/api/conversations` | Create conversation |
+| POST | `/api/canvases` | Create Page + Conversation together |
+| POST | `/api/actions` | Execute actions (run_skill, run_code, send_message, refresh_component, toggle_heartbeat) |
+| POST | `/api/heartbeats/:id/toggle` | Toggle heartbeat enabled |
+| GET | `/api/widget_types` | List registered widget types |
+| GET | `/api/pages/:id/stream` | SSE stream for canvas |
+| GET | `/api/pages/:id/canvas` | Canvas components JSON |
+| POST | `/api/pages/:id/components` | Create canvas component |
+| GET | `/api/pages/:id/components/:cid` | Get component |
+| PATCH | `/api/pages/:id/components/:cid` | Update component |
+| DELETE | `/api/pages/:id/components/:cid` | Delete component |
+| GET | `/:slug[/:chat_slug]` | Catch-all: canvas page by slug |
+
+---
+
+### Python Bridge Files
+
+#### `fang/python/bridge.py`
+- Reads JSON from stdin: `{code, context}`
+- Writes JSON to stdout: `{success, result, output, actions}`
+- Helpers injected into namespace: `send_message(content, conversation_id=None)`, `create_notification(title, body, kind)`
+- Tries `eval` first (expressions), falls back to `exec` (statements); result from exec can be `namespace['result']`
+
+#### `fang/python/skill_runner.py`
+- Takes skill file path as argv[1]
+- Reads JSON from stdin: `{params, context}`
+- Loads module via `importlib.util`, injects `send_message`, `create_notification`, `context`
+- Requires a module-level `call(**params)` function
+- Writes JSON to stdout: `{success, result, output, actions}`
+
+---
+
+### Database Schema Summary
+
+| Table | Key Columns |
+|---|---|
+| `conversations` | id, title, source, last_message_at, context (json), slug, page_id |
+| `messages` | id, conversation_id, content, role, streaming, metadata (json) |
+| `sessions` | id, conversation_id, container_id (session_uuid), status, session_path, started_at, stopped_at |
+| `scheduled_tasks` | id, title, description, scheduled_for, status, result, parameters (json), skill_name, cron_expression, recurring, last_completed_at |
+| `skills` | id, name, description, file_path, class_name, usage_count, metadata (json), language |
+| `mcp_connections` | id, name, transport_type, command, url, enabled, available_tools (json), config (json) |
+| `config` | id, key, value, value_type, description |
+| `pages` | id, title, slug, content, status, published_at, metadata (json), canvas_state (json) |
+| `notifications` | id, title, body, kind, status, action_url, conversation_id, page_id |
+| `canvas_components` | id, ai_page_id (→pages), component_type, content, x, y, width, height, z_index, metadata (json) |
+| `heartbeats` | id, name, description, skill_name, frequency, prompt_template, status, enabled, ai_page_id, last_run_at, run_count, error_count, metadata (json) |
+| `heartbeat_runs` | id, heartbeat_id, status, result, error_message, escalated, duration_ms, ran_at |
+| `triggers` | id, name, event_pattern, action_type, action_config, enabled, fire_count, consecutive_failures, last_fired_at |
+| `workflows` | id, name, description, status, current_step_index, context, conversation_id, trigger_event |
+| `workflow_steps` | id, workflow_id, position, name, step_type, config, status, result |
+
+---
+
+### Test Infrastructure Notes
+
+1. **Bootstrap**: `require_relative 'fang/bootstrap'` loads everything. Set `FANG_ENV=test` to use test DB.
+2. **DB**: SQLite at `storage/test.db`. Config in `config/database.yml` test section.
+3. **ActiveJob**: Override `ActiveJob::Base.queue_adapter = :test` (or `:inline`) in test setup to control job execution.
+4. **Session uniqueness**: `sessions.container_id` has a unique index — be careful creating test sessions.
+5. **Slug generation**: Both `Page` and `Conversation` auto-generate slugs with counter deduplication.
+6. **JSON columns**: `context`, `parameters`, `metadata` default to `{}` via either DB default or `HasJsonDefaults`.
+7. **Status predicates**: All models with `HasStatus` have `#pending?`, `#running?` etc. and named scopes (e.g., `Conversation.web` does NOT exist — HasStatus only used on models that call `statuses()`).
+8. **Existing smoke scripts**: `test_web_ui.rb` uses `Rack::Test` directly; `test_jobs.rb` exercises jobs inline. Both are standalone scripts, not a formal test framework.
+9. **No existing test framework** — the project has no `spec/` or `test/` directory; you'll be writing from scratch.
+10. **`CanvasComponent` FK**: The migration uses `ai_page_id` as the FK column but the model does `belongs_to :page` — Rails infers `page_id`, but the actual column is `ai_page_id`. This may require `foreign_key: 'ai_page_id'` or the migration was intended to rename.</result>
+<usage>total_tokens: 109876
+tool_uses: 97
+duration_ms: 228439</usage>
+</task-notification>
+Full transcript available at: /tmp/claude-1000/-home-greg-Developer-openfang/tasks/a587f61.output
+
+---
+
+can we create a .github to run CI ?
+
+---
+
+[Request interrupted by user for tool use]

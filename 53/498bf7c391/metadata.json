@@ -1,0 +1,60 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "53498bf7c391",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 2,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "Gemfile",
+    "Rakefile",
+    "storage/test.db",
+    "test/concerns/has_json_defaults_test.rb",
+    "test/concerns/has_status_test.rb",
+    "test/legacy/test_jobs.rb",
+    "test/legacy/test_web_ui.rb",
+    "test/lib/agent_test.rb",
+    "test/lib/application_client_test.rb",
+    "test/lib/event_bus_test.rb",
+    "test/lib/python_runner_test.rb",
+    "test/models/conversation_test.rb",
+    "test/models/heartbeat_test.rb",
+    "test/models/message_test.rb",
+    "test/models/notification_test.rb",
+    "test/models/page_test.rb",
+    "test/models/scheduled_task_test.rb",
+    "test/models/session_test.rb",
+    "test/models/skill_record_test.rb",
+    "test/models/trigger_test.rb",
+    "test/models/workflow_test.rb",
+    "test/python/__pycache__/test_bridge.cpython-314-pytest-9.0.2.pyc",
+    "test/python/__pycache__/test_skill_runner.cpython-314-pytest-9.0.2.pyc",
+    "test/python/test_bridge.py",
+    "test/python/test_skill_runner.py",
+    "test/test_helper.rb",
+    "test/tools/create_notification_tool_test.rb",
+    "test/tools/create_page_tool_test.rb",
+    "test/tools/run_code_tool_test.rb",
+    "test/tools/schedule_task_tool_test.rb",
+    "test/tools/send_message_tool_test.rb",
+    "test/web/routes_test.rb",
+    "test_jobs.rb",
+    "test_web_ui.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/53/498bf7c391/0/metadata.json",
+      "transcript": "/53/498bf7c391/0/full.jsonl",
+      "context": "/53/498bf7c391/0/context.md",
+      "content_hash": "/53/498bf7c391/0/content_hash.txt",
+      "prompt": "/53/498bf7c391/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 100,
+    "cache_creation_tokens": 132690,
+    "cache_read_tokens": 9541602,
+    "output_tokens": 15326,
+    "api_call_count": 92
+  }
+}
