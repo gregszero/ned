@@ -1,0 +1,5 @@
+when i move things in canvas, the new position is not saved
+
+---
+
+commit this
