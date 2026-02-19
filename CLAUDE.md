@@ -98,6 +98,56 @@ end
 
 3. Run `./openfang.rb db:migrate`
 
+## Adding an API Client
+
+`Fang::ApplicationClient` (`fang/application_client.rb`) is a base HTTP client using `Net::HTTP`. Subclasses get their own `Response`, `Error`, `NotFound`, etc. classes automatically.
+
+1. Create `fang/clients/my_service_client.rb`:
+
+```ruby
+# frozen_string_literal: true
+
+module Fang
+  module Clients
+    class MyService < ApplicationClient
+      BASE_URI = "https://api.myservice.com/v1"
+
+      # Override if the API uses a different auth scheme
+      # def authorization_header = { "X-API-Key" => token }
+
+      def widgets
+        get("/widgets")
+      rescue *NET_HTTP_ERRORS
+        raise Error, "Unable to fetch widgets"
+      end
+
+      def create_widget(name:)
+        post("/widgets", body: { name: name })
+      end
+    end
+  end
+end
+```
+
+2. Restart the server. Clients in `fang/clients/` are auto-loaded.
+
+### Key features
+
+- **HTTP methods**: `get`, `post`, `patch`, `put`, `delete` — all accept `headers:`, `query:`, `body:`, `form_data:`
+- **JSON by default**: Request bodies are serialized to JSON. Responses with `application/json` are parsed to `OpenStruct` for dot-access (e.g., `response.name`).
+- **Auth**: Pass `token:` on init. Override `authorization_header` for non-Bearer schemes.
+- **Error handling**: Raises typed errors (`NotFound`, `Unauthorized`, `RateLimit`, etc.). Rescue `*NET_HTTP_ERRORS` for network failures.
+- **Pagination**: `with_pagination(path) { |response| next_page_or_nil }` loops until the block returns nil.
+- **Custom response parsers**: Override per-client with `Response::PARSER["text/html"] = ->(r) { Nokogiri::HTML(r.body) }`
+
+### Usage
+
+```ruby
+client = Fang::Clients::MyService.new(token: ENV["MY_SERVICE_API_KEY"])
+client.widgets          # => Response with dot-access to parsed JSON
+client.create_widget(name: "Foo")
+```
+
 ## Design System
 
 Clean, minimal shadcn/ui-inspired design with terminal green accent. Supports light/dark mode via `prefers-color-scheme`. Inter font, rounded corners, subtle shadows.
@@ -157,6 +207,7 @@ Tailwind CSS is loaded via CDN with custom colors: `fang-bg`, `fang-fg`, `fang-m
 | `fang/bootstrap.rb` | Framework loader |
 | `fang/agent.rb` | Claude subprocess execution |
 | `fang/mcp_server.rb` | FastMCP tool/resource registration |
+| `fang/application_client.rb` | Base HTTP API client (subclass for new integrations) |
 | `fang/event_bus.rb` | In-process event pub/sub for triggers and workflows |
 | `web/app.rb` | All Roda routes |
 | `web/views/layout.erb` | Main layout with sidebar nav |

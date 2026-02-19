@@ -30,6 +30,7 @@ module Fang
 
     def load_core_components
       # Core framework files (order matters)
+      require_relative 'application_client'
       require_relative 'database'
       require_relative 'system_profile'
       require_relative 'agent'
@@ -43,6 +44,9 @@ module Fang
       # Load concerns and models
       Dir[root.join('fang/concerns/**/*.rb')].sort.each { |f| require f }
       Dir[root.join('fang/models/**/*.rb')].sort.each { |f| require f }
+
+      # Load API clients
+      Dir[root.join('fang/clients/**/*.rb')].sort.each { |f| require f }
 
       # Load widgets
       require_relative 'widgets/base_widget'
