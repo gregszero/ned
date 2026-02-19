@@ -1,0 +1,107 @@
+Implement the following plan:
+
+# System Profile: Make OpenFang aware of its host machine
+
+## Context
+
+OpenFang runs bare-metal on a server, not in Docker. The inner Claude agent currently has no idea what system it's running on — no OS info, no hardware specs, no knowledge of which CLI tools are installed. Every time it needs system info, it has to probe manually via `run_code`.
+
+**Goal**: On startup, detect and catalog the host system's capabilities, cache the result, and expose it as a structured MCP resource. The agent always knows what it's working with. Refresh only happens when explicitly requested.
+
+## Changes
+
+### 1. Create `fang/system_profile.rb` — Detection module
+
+`Fang::SystemProfile` singleton that detects once, caches forever until `refresh!` is called.
+
+**What it detects:**
+
+| Category | Method | Source |
+|---|---|---|
+| OS | distro, kernel, arch, uptime | `/etc/os-release`, `uname` |
+| Hostname | hostname, FQDN | `hostname` |
+| Hardware | CPU model + cores, RAM total/available | `/proc/cpuinfo`, `/proc/meminfo` |
+| Disk | mount points, sizes, usage | `df` |
+| Network | interfaces + IPs, public IP | `ip addr`, `curl ifconfig.me --max-time 2` |
+| CLI tools | ~40 common tools with version | `which` + `--version` |
+| Services | running systemd units | `systemctl list-units` |
+| User | username, groups, sudo access, shell | `whoami`, `groups`, `sudo -n true` |
+| Environment | PATH dirs, locale, display server, SSH | `ENV` vars |
+
+**Design:**
+- `run(cmd)` helper — wraps shell calls in rescue, any failure returns nil (never crashes)
+- `detect!` — runs all detection, stores in `@profile`, logs elapsed time
+- `refresh!` — re-runs `detect!` (callable from agent via `run_code` or MCP)
+- `to_h` — returns `{ detected_at:, profile: }` from cache
+- Target: < 2s total on startup
+
+### 2. Create `fang/resources/system_profile_resource.rb` — MCP resource
+
+- URI: `system://profile`
+- Reads from `SystemProfile.to_h` (cached, no re-detection)
+- Adds a `summary` key: system string, hostname, CPU, cores, memory, tool count, notable tools
+- Auto-discovered by MCP server (same pattern as `config_resource.rb`)
+
+### 3. Edit `fang/bootstrap.rb` — Wire detection into startup
+
+- Add `require_relative 'system_profile'` after line 33
+- Add `Fang::SystemProfile.detect!` after line 58 (end of `load_core_components`)
+
+Detection runs once on every server start. Cached in memory for the process lifetime.
+
+### 4. Edit `workspace/CLAUDE.md` — Tell the inner agent
+
+Add a "System Awareness" section after "Architecture" (line 220) explaining:
+- `system://profile` resource exists with OS, hardware, tools, services, etc.
+- Check it before running system commands (right package manager, tool availability, disk space)
+- Refresh after installing packages: `Fang::SystemProfile.refresh!` via `run_code`
+
+### 5. Edit `setup.sh` — Run profile during setup, remove Docker requirement
+
+Current issues with `setup.sh`:
+- Line 10 requires Docker (`command -v docker`) but we're bare-metal now
+- Line 47-54 builds a Docker container image
+
+Changes:
+- Remove Docker from required dependencies check (line 10)
+- Remove the Docker container build step (lines 47-54)
+- After bundle install + db:migrate, run `SystemProfile.detect!` via Ruby and print a summary of what was found (OS, notable tools, missing recommended tools)
+- This gives the user immediate feedback on their system's capabilities during setup
+
+Example new setup step:
+```bash
+# System profile
+echo "Detecting system capabilities..."
+bundle exec ruby -e "
+  require_relative 'fang/bootstrap'
+  profile = Fang::SystemProfile.profile
+  puts \"  OS: #{profile.dig(:os, :distribution)}\"
+  puts \"  CPU: #{profile.dig(:hardware, :cpu, :model)} (#{profile.dig(:hardware, :cpu, :cores)} cores)\"
+  puts \"  RAM: #{profile.dig(:hardware, :memory, :total_mb)}MB\"
+  puts \"  Tools: #{profile[:cli_tools]&.keys&.join(', ')}\"
+"
+echo "✅ System profile cached"
+```
+
+## Files to create
+- `fang/system_profile.rb`
+- `fang/resources/system_profile_resource.rb`
+
+## Files to edit
+- `fang/bootstrap.rb` (2 lines added)
+- `workspace/CLAUDE.md` (new section)
+- `setup.sh` (remove Docker, add system profile step)
+
+## Verification
+
+1. `./openfang.rb server` — check log for "System profile detected in X.XXs"
+2. Chat: ask "what system are you running on?" — agent reads the resource and answers with real details
+3. Chat: ask to install something, then "refresh your system profile" — agent calls `refresh!`
+4. Run `setup.sh` — should print system summary without requiring Docker
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
