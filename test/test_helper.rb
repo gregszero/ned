@@ -37,6 +37,16 @@ module Fang
     def teardown
       DatabaseCleaner.clean
     end
+
+    # Subscribe to a TurboBroadcast channel, yield, return captured HTML strings
+    def capture_broadcasts(channel)
+      captured = []
+      sub = Fang::Web::TurboBroadcast.subscribe(channel) { |html| captured << html }
+      yield
+      captured
+    ensure
+      Fang::Web::TurboBroadcast.unsubscribe(channel, sub)
+    end
   end
 
   class ToolTestCase < TestCase
