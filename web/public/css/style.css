@@ -1171,31 +1171,51 @@ button.icon.sm {
   align-items: center;
   gap: 0.25rem;
 }
-.canvas-scroll-lock-btn {
+.canvas-toolbar-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 0.125rem;
+  padding: 0.25rem;
   border-radius: var(--radius-sm);
   line-height: 1;
-  font-size: 0.8rem;
   pointer-events: auto;
-  color: inherit;
+  color: var(--muted-foreground);
+  height: auto;
+  width: auto;
+  transition: background 0.15s, color 0.15s;
 }
-.canvas-scroll-lock-btn:hover {
+.canvas-toolbar-btn:hover {
   background: var(--muted);
+  color: var(--foreground);
 }
-.canvas-scroll-lock-btn:focus-visible {
+.canvas-toolbar-btn:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+.canvas-toolbar-btn.active {
+  color: var(--primary);
+}
+.canvas-toolbar-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 /* --- Scroll Lock Mode --- */
 .conversation-canvas.scroll-locked .canvas-dot-grid {
   display: none;
+}
+
+/* --- Edit Lock Mode --- */
+.conversation-canvas.edit-locked .canvas-component {
+  cursor: default;
+  user-select: text;
+}
+.conversation-canvas.edit-locked .canvas-component-content {
+  pointer-events: auto;
+  user-select: text;
 }
 
 /* --- Heartbeat Grid --- */

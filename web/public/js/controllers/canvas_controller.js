@@ -15,6 +15,7 @@ export default class extends Controller {
     this.startElX = 0
     this.startElY = 0
     this.scrollLock = this.scrollLockedValue
+    this.editLock = false
 
     this.world = this.element.querySelector(".canvas-world")
     if (!this.world) return
@@ -59,20 +60,21 @@ export default class extends Controller {
 
     // Configurable menu item registries — built from widget types API
     this.canvasMenuItems = [
-      { label: "Add Note", icon: "\ud83d\udcdd", action: (wx, wy) => this.addWidget('card', wx, wy) },
+      { label: "Add Note", action: (wx, wy) => this.addWidget('card', wx, wy) },
       { separator: true },
-      { label: () => this.scrollLock ? "Scroll Lock: On" : "Scroll Lock: Off", icon: "\ud83d\udd12", action: () => this.toggleScrollLock() },
-      { label: "Reset View", icon: "\ud83d\udd04", action: () => this.resetView() },
+      { label: () => this.scrollLock ? "Scroll Lock: On" : "Scroll Lock: Off", action: () => this.toggleScrollLock() },
+      { label: () => this.editLock ? "Edit Lock: On" : "Edit Lock: Off", action: () => this.toggleEditLock() },
+      { label: "Reset View", action: () => this.resetView() },
     ]
 
     // Fetch widget types and rebuild menu dynamically
     this._loadWidgetTypes()
 
     this.componentMenuItems = [
-      { label: "Chat about this", icon: "\ud83d\udcac", action: (comp) => this.chatAboutComponent(comp) },
-      { label: "Duplicate", icon: "\ud83d\udccb", action: (comp) => this.duplicateComponent(comp) },
+      { label: "Chat about this", action: (comp) => this.chatAboutComponent(comp) },
+      { label: "Duplicate", action: (comp) => this.duplicateComponent(comp) },
       { separator: true },
-      { label: "Delete", icon: "\ud83d\uddd1\ufe0f", destructive: true, action: (comp) => this.deleteComponent(comp) },
+      { label: "Delete", destructive: true, action: (comp) => this.deleteComponent(comp) },
     ]
 
     // Expose for extensibility
@@ -234,7 +236,7 @@ export default class extends Controller {
         const label = typeof item.label === "function" ? item.label() : item.label
         const btn = document.createElement("button")
         btn.className = "canvas-context-menu-item"
-        btn.innerHTML = `<span>${item.icon}</span><span>${label}</span>`
+        btn.textContent = label
         btn.addEventListener("click", () => { this.hideMenu(); item.action(worldX, worldY) })
         this.menuItems.appendChild(btn)
       }
@@ -248,9 +250,10 @@ export default class extends Controller {
       if (item.separator) {
         this.menuItems.appendChild(Object.assign(document.createElement("div"), { className: "canvas-context-menu-separator" }))
       } else {
+        const label = typeof item.label === "function" ? item.label() : item.label
         const btn = document.createElement("button")
         btn.className = "canvas-context-menu-item" + (item.destructive ? " destructive" : "")
-        btn.innerHTML = `<span>${item.icon}</span><span>${item.label}</span>`
+        btn.textContent = label
         btn.addEventListener("click", () => { this.hideMenu(); item.action(component) })
         this.menuItems.appendChild(btn)
       }
@@ -318,13 +321,13 @@ export default class extends Controller {
       // Rebuild canvas menu: widget items + separator + utility items
       const widgetItems = this._widgetTypes.map(w => ({
         label: w.label,
-        icon: w.icon || "\ud83d\udccc",
         action: (wx, wy) => this.addWidget(w.type, wx, wy)
       }))
 
       const utilityItems = [
-        { label: () => this.scrollLock ? "Scroll Lock: On" : "Scroll Lock: Off", icon: "\ud83d\udd12", action: () => this.toggleScrollLock() },
-        { label: "Reset View", icon: "\ud83d\udd04", action: () => this.resetView() },
+        { label: () => this.scrollLock ? "Scroll Lock: On" : "Scroll Lock: Off", action: () => this.toggleScrollLock() },
+        { label: () => this.editLock ? "Edit Lock: On" : "Edit Lock: Off", action: () => this.toggleEditLock() },
+        { label: "Reset View", action: () => this.resetView() },
       ]
 
       this.canvasMenuItems = [...widgetItems, { separator: true }, ...utilityItems]
@@ -431,6 +434,12 @@ export default class extends Controller {
     this.updateZoomIndicator()
   }
 
+  toggleEditLock() {
+    this.editLock = !this.editLock
+    this.element.classList.toggle("edit-locked", this.editLock)
+    this.updateZoomIndicator()
+  }
+
   updateScrollLockIndicator() {
     // Merged into updateZoomIndicator
     this.updateZoomIndicator()
@@ -451,6 +460,10 @@ export default class extends Controller {
     // Don't drag while editing
     if (this.editingComponent) return
     const component = e.target.closest(".canvas-component")
+    if (component && this.editLock) {
+      // Edit lock: let the event pass through for normal HTML behavior
+      return
+    }
     if (component) {
       // Start dragging component (works in both normal and scroll-lock mode)
       this.isDragging = true
@@ -505,6 +518,10 @@ export default class extends Controller {
     if (e.touches.length !== 1) return
     const touch = e.touches[0]
     const component = touch.target.closest(".canvas-component")
+    if (component && this.editLock) {
+      // Edit lock: let the event pass through for normal HTML behavior
+      return
+    }
     if (component) {
       // Allow dragging in both normal and scroll-lock mode
       this.isDragging = true
@@ -593,18 +610,18 @@ export default class extends Controller {
     if (!indicator) return
 
     const zoom = Math.round(this.scale * 100) + "%"
-    const lockIcon = this.scrollLock ? "\ud83d\udd12" : "\ud83d\udd13"
-    indicator.innerHTML = `<span>${zoom} </span><button class="canvas-scroll-lock-btn" title="Toggle scroll lock">${lockIcon}</button>`
+
+    // SVG icons (14px, stroke-based, 1.5px stroke)
+    const scrollIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="m8 6 4-3 4 3"/><path d="m8 18 4 3 4-3"/></svg>`
+    const editLockOffIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l4-4 4 4"/><path d="M9 5v10"/><path d="M19 15l-4 4-4-4"/><path d="M15 19V9"/></svg>`
+    const editLockOnIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`
+
+    indicator.innerHTML = `<span>${zoom}</span><button class="canvas-toolbar-btn${this.scrollLock ? ' active' : ''}" title="Toggle scroll lock">${scrollIcon}</button><button class="canvas-toolbar-btn${this.editLock ? ' active' : ''}" title="Toggle edit lock">${this.editLock ? editLockOnIcon : editLockOffIcon}</button>`
     indicator.style.pointerEvents = "auto"
 
-    // Bind lock button click
-    const lockBtn = indicator.querySelector(".canvas-scroll-lock-btn")
-    if (lockBtn) {
-      lockBtn.onclick = (e) => {
-        e.stopPropagation()
-        this.toggleScrollLock()
-      }
-    }
+    const buttons = indicator.querySelectorAll(".canvas-toolbar-btn")
+    buttons[0].onclick = (e) => { e.stopPropagation(); this.toggleScrollLock() }
+    buttons[1].onclick = (e) => { e.stopPropagation(); this.toggleEditLock() }
   }
 
   // --- Persist position ---
