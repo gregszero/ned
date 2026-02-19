@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "11b64daf7c65",
+  "session_id": "4c83c09e-b0f7-407a-847d-5097ceb9397b",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-19T11:33:20.985409089Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    ".claude/skills/setup/SKILL.md",
+    "fang/cli.rb",
+    "fang/clients/whatsapp_client.rb",
+    "fang/whatsapp.rb",
+    "whatsapp/.gitignore",
+    "whatsapp/index.js",
+    "whatsapp/package.json"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 23,
+    "cache_creation_tokens": 27177,
+    "cache_read_tokens": 708319,
+    "output_tokens": 1587,
+    "api_call_count": 19
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-19T11:33:20.903401599Z",
+    "agent_lines": 283,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 283,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/4c83c09e-b0f7-407a-847d-5097ceb9397b.jsonl"
+}

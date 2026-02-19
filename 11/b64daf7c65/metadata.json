@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "11b64daf7c65",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    ".claude/skills/setup/SKILL.md",
+    "fang/cli.rb",
+    "fang/clients/whatsapp_client.rb",
+    "fang/whatsapp.rb",
+    "whatsapp/.gitignore",
+    "whatsapp/index.js",
+    "whatsapp/package.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/11/b64daf7c65/0/metadata.json",
+      "transcript": "/11/b64daf7c65/0/full.jsonl",
+      "context": "/11/b64daf7c65/0/context.md",
+      "content_hash": "/11/b64daf7c65/0/content_hash.txt",
+      "prompt": "/11/b64daf7c65/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 23,
+    "cache_creation_tokens": 27177,
+    "cache_read_tokens": 708319,
+    "output_tokens": 1587,
+    "api_call_count": 19
+  }
+}

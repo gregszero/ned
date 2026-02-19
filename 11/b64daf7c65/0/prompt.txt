@@ -1,0 +1,83 @@
+Implement the following plan:
+
+# WhatsApp Integration via Baileys Sidecar
+
+## Context
+
+You want to talk to your AI agent via WhatsApp, linked through the QR code / pairing code method (like WhatsApp Web). The Ruby side is already partially wired: webhook route, `Fang::WhatsApp` module, conversation routing, outbound delivery. What's missing is the actual bridge process that connects to WhatsApp.
+
+**Baileys** (`@whiskeysockets/baileys`) is the lightest option: pure WebSocket protocol, no Chrome/Puppeteer, single npm dependency, ~50MB RAM.
+
+## Files to Create
+
+### 1. `whatsapp/package.json`
+Single dependency: `@whiskeysockets/baileys`
+
+### 2. `whatsapp/index.js` (~130 lines)
+Minimal Node.js HTTP server + Baileys connection:
+
+- **Linking**: QR code printed to terminal (default), or pairing code via `WHATSAPP_PAIRING_CODE=true` + `WHATSAPP_PHONE_NUMBER`
+- **Session persistence**: `useMultiFileAuthState('./auth')` — link once, stay connected
+- **Inbound**: Forwards messages to `POST http://localhost:3000/webhooks/whatsapp` with HMAC signature
+- **Outbound**: Port 3001, exposes `POST /send/message` (accepts `{phone, message}`) and `GET /status`
+- Uses Node built-in `http` module — no Express needed
+
+### 3. `whatsapp/.gitignore`
+Ignore `node_modules/` and `auth/`
+
+### 4. `fang/clients/whatsapp_client.rb`
+Replace raw HTTParty with an `ApplicationClient` subclass (follows `fang/clients/gmail_client.rb` pattern):
+
+```ruby
+class WhatsAppClient < ApplicationClient
+  BASE_URI = ENV.fetch('WHATSAPP_BRIDGE_URL', 'http://localhost:3001')
+
+  def authorization_header = {}  # local sidecar, no auth needed
+
+  def send_message(phone:, message:)
+    post("/send/message", body: { phone: phone, message: message })
+  end
+
+  def status
+    get("/status")
+  end
+end
+```
+
+## Files to Modify
+
+### 5. `fang/whatsapp.rb`
+- Remove `require 'httparty'` and raw HTTParty calls
+- Use `Clients::WhatsAppClient` for `send_message` and add a `status` method
+- Update default URL from `http://whatsapp:3000` to `http://localhost:3001`
+
+### 6. `.claude/skills/setup/SKILL.md`
+Add WhatsApp onboarding section after core setup:
+- Ask user if they want WhatsApp integration
+- Check Node.js is installed
+- Run `npm install` in `whatsapp/`
+- Generate `WHATSAPP_WEBHOOK_SECRET`, set `WHATSAPP_ENABLED=true` in `.env`
+- Guide user to start bridge and scan QR / enter pairing code
+- Verify connection via `WhatsApp.status`
+
+### 7. `fang/cli.rb`
+Add `whatsapp` Thor command:
+- Checks Node.js availability
+- Runs `npm install` if needed
+- Execs `node whatsapp/index.js`
+
+## Verification
+
+1. `cd whatsapp && npm install` — installs Baileys only
+2. `./openfang.rb whatsapp` — starts bridge, shows QR in terminal
+3. Scan QR with WhatsApp > Linked Devices
+4. Send WhatsApp message → conversation appears in OpenFang
+5. Agent responds → reply arrives in WhatsApp
+6. Restart bridge → auto-reconnects without re-scanning
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
