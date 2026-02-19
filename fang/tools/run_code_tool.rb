@@ -4,18 +4,35 @@ module Fang
   module Tools
     class RunCodeTool < FastMcp::Tool
       tool_name 'run_code'
-      description 'Execute Ruby code directly in a safe context'
+      description 'Execute code directly. Supports Ruby (with ActiveRecord model access) and Python (with virtualenv packages).'
 
       arguments do
-        required(:ruby_code).filled(:string).description('Ruby code to execute')
+        required(:code).filled(:string).description('Code to execute')
+        optional(:language).filled(:string).description('Language: "ruby" (default) or "python"')
         optional(:description).filled(:string).description('Brief description of what this code does')
       end
 
-      def call(ruby_code:, description: nil)
-        Fang.logger.info "Executing Ruby code: #{description || 'No description'}"
+      def call(code:, language: 'ruby', description: nil)
+        Fang.logger.info "Executing #{language} code: #{description || 'No description'}"
 
+        case language.to_s.downcase
+        when 'ruby'
+          execute_ruby(code)
+        when 'python'
+          Fang::PythonRunner.run_code(code)
+        else
+          { success: false, error: "Unsupported language: #{language}. Use 'ruby' or 'python'." }
+        end
+      rescue => e
+        Fang.logger.error "Code execution failed: #{e.message}"
+        { success: false, error: e.message, backtrace: e.backtrace&.first(5) }
+      end
+
+      private
+
+      def execute_ruby(code)
         context = create_safe_context
-        result = context.eval(ruby_code)
+        result = context.eval(code)
 
         {
           success: true,
@@ -24,12 +41,7 @@ module Fang
         }
       rescue SyntaxError => e
         { success: false, error: "Syntax error: #{e.message}" }
-      rescue => e
-        Fang.logger.error "Code execution failed: #{e.message}"
-        { success: false, error: e.message, backtrace: e.backtrace.first(5) }
       end
-
-      private
 
       def create_safe_context
         ctx = Object.new

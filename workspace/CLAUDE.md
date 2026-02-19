@@ -49,8 +49,9 @@ These are the tools available to you. **Only use these — do not invent or hall
 
 | Tool | Purpose |
 |---|---|
-| `run_code` | Execute Ruby code directly (has access to all ActiveRecord models) |
-| `run_skill` | Execute a saved Ruby skill by name, with optional parameters |
+| `run_code` | Execute code directly — Ruby (default, with ActiveRecord models) or Python (with virtualenv packages). Pass `language: "python"` for Python. |
+| `run_skill` | Execute a saved skill by name (Ruby or Python), with optional parameters |
+| `manage_python` | Manage the Python virtualenv: `install` packages, `list` installed, or `setup` the venv |
 | `send_message` | Send a message back to the user (broadcasts in real-time) |
 | `schedule_task` | Schedule a task for future execution (reminders, timed tasks) |
 | `create_page` | Create a web page (Page) with title and HTML/markdown content |
@@ -289,7 +290,7 @@ Use these with `run_code` when you need direct database access:
 - `Message` — individual messages (belongs_to :conversation)
 - `Session` — agent execution sessions
 - `ScheduledTask` — future tasks/reminders (supports `cron_expression` and `recurring` for recurring tasks)
-- `SkillRecord` — saved Ruby skills
+- `SkillRecord` — saved skills (Ruby or Python, check `language` column)
 - `Page` — web pages (published appear in nav)
 - `Notification` — user notifications (info/success/warning/error)
 - `Config` — key/value configuration store
@@ -347,6 +348,43 @@ Use `create_workflow` to build pipelines that execute multiple steps in sequence
 ```
 
 Workflows can also auto-start on an event by setting `trigger_event` (e.g., `"heartbeat:escalated:monitoring"`).
+
+## Python Support
+
+You can run Python code and Python skills alongside Ruby. Python runs in a virtualenv at `workspace/python/venv/` (auto-created on first use).
+
+### Running Python code
+```
+run_code(language: "python", code: "import sys; result = sys.version")
+```
+
+Helpers available inside Python code:
+- `send_message(content)` — send a message back to the user
+- `create_notification(title, body, kind)` — create a notification
+- `context` — dict with any context passed from the framework
+
+For expressions, the return value is captured automatically. For statements, set a `result` variable.
+
+### Installing packages
+```
+manage_python(action: "install", packages: ["requests", "pandas"])
+manage_python(action: "list")
+```
+
+### Python skills
+Python skills are `.py` files in the `skills/` directory with a module-level `call(**params)` function:
+
+```python
+# skills/analyze_data.py
+import pandas as pd
+
+def call(csv_path=None, **kwargs):
+    df = pd.read_csv(csv_path)
+    send_message(f"Found {len(df)} rows")
+    return {"rows": len(df), "columns": list(df.columns)}
+```
+
+Python skills are auto-discovered and can be run with `run_skill` just like Ruby skills.
 
 ## Best Practices
 

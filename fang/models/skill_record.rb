@@ -22,12 +22,16 @@ module Fang
     end
 
     def load_and_execute(**params)
-      # Load the skill file if the class isn't already defined
-      load full_file_path unless Object.const_defined?(class_name)
+      if language == 'python'
+        Fang::PythonRunner.run_skill(full_file_path, params: params)
+      else
+        # Load the skill file if the class isn't already defined
+        load full_file_path unless Object.const_defined?(class_name)
 
-      # Execute the skill
-      klass = class_name.constantize
-      klass.new.execute(**params)
+        # Execute the skill
+        klass = class_name.constantize
+        klass.new.execute(**params)
+      end
     rescue => e
       Fang.logger.error "Failed to execute skill #{name}: #{e.message}"
       raise
@@ -50,6 +54,7 @@ module Fang
 
     def derive_class_name
       return if class_name.present?
+      return if language == 'python'
 
       # Convert skill name to class name (e.g., "send_email" -> "SendEmail")
       self.class_name = name.split('_').map(&:capitalize).join

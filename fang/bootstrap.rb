@@ -36,6 +36,7 @@ module Fang
       require_relative 'agent'
       require_relative 'scheduler'
       require_relative 'skill_loader'
+      require_relative 'python_runner'
       require_relative 'message_router'
       require_relative 'whatsapp'
       require_relative 'gmail'

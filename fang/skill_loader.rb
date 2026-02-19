@@ -8,6 +8,7 @@ module Fang
         skills_path = "#{Fang.root}/skills"
         return [] unless Dir.exist?(skills_path)
 
+        # Load Ruby skills
         skill_files = Dir["#{skills_path}/**/*.rb"].reject { |f| f.include?('/base.rb') }
 
         skill_files.each do |file|
@@ -15,7 +16,7 @@ module Fang
           Fang.logger.debug "Loaded skill: #{file}"
         end
 
-        # Auto-sync SkillRecord from loaded skill files
+        # Auto-sync Ruby SkillRecords from loaded skill files
         loaded_skills.each do |klass|
           name = skill_name_from_class(klass)
           file = skill_files.find { |f| f.include?("/#{name}.rb") }
@@ -24,7 +25,20 @@ module Fang
           SkillRecord.find_or_create_by(name: name) do |r|
             r.file_path = relative
             r.class_name = klass.name
+            r.language = 'ruby'
           end
+        end
+
+        # Discover and register Python skills
+        python_files = Dir["#{skills_path}/**/*.py"]
+        python_files.each do |file|
+          name = File.basename(file, '.py')
+          relative = file.sub("#{Fang.root}/", '')
+          SkillRecord.find_or_create_by(name: name) do |r|
+            r.file_path = relative
+            r.language = 'python'
+          end
+          Fang.logger.debug "Registered Python skill: #{name}"
         end
 
         # Return list of loaded skill classes

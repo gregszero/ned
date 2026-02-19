@@ -4,7 +4,7 @@ module Fang
   module Tools
     class RunSkillTool < FastMcp::Tool
       tool_name 'run_skill'
-      description 'Execute a Ruby skill by name'
+      description 'Execute a skill by name (Ruby or Python)'
 
       arguments do
         required(:skill_name).filled(:string).description('Name of the skill to run')
