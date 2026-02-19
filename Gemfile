@@ -42,3 +42,8 @@ group :development do
   gem 'overcommit'            # Git hooks (push to GitHub + entire.io)
   gem 'rack-unreloader'       # Auto-reload code changes
 end
+
+group :test do
+  gem 'webmock'                        # Stub HTTP for ApplicationClient tests
+  gem 'database_cleaner-active_record' # Clean DB between tests
+end

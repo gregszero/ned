@@ -1,6 +1,48 @@
 # frozen_string_literal: true
 
 require_relative 'fang/bootstrap'
+require 'rake/testtask'
+
+# Test tasks
+Rake::TestTask.new(:test) do |t|
+  t.libs << 'test'
+  t.test_files = FileList['test/**/*_test.rb']
+  t.warning = false
+end
+
+namespace :test do
+  Rake::TestTask.new(:models) do |t|
+    t.libs << 'test'
+    t.test_files = FileList['test/models/**/*_test.rb', 'test/concerns/**/*_test.rb']
+    t.warning = false
+  end
+
+  Rake::TestTask.new(:tools) do |t|
+    t.libs << 'test'
+    t.test_files = FileList['test/tools/**/*_test.rb']
+    t.warning = false
+  end
+
+  Rake::TestTask.new(:web) do |t|
+    t.libs << 'test'
+    t.test_files = FileList['test/web/**/*_test.rb']
+    t.warning = false
+  end
+
+  Rake::TestTask.new(:lib) do |t|
+    t.libs << 'test'
+    t.test_files = FileList['test/lib/**/*_test.rb']
+    t.warning = false
+  end
+
+  desc 'Run Python tests'
+  task :python do
+    sh 'python3 -m pytest test/python/ -v'
+  end
+
+  desc 'Run all tests (Ruby + Python)'
+  task :all => [:test, :python]
+end
 
 namespace :db do
   desc "Run database migrations"
