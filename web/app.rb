@@ -270,6 +270,53 @@ module Ai
 
         # API routes
         r.on 'api' do
+          # Data table pagination endpoint
+          r.on 'tables', Integer, 'rows' do |component_id|
+            r.get do
+              component = Ai::CanvasComponent.find(component_id)
+              widget = Ai::Widgets::DataTableWidget.new(component)
+
+              page     = (r.params['page'] || 1).to_i
+              sort_col = r.params['sort']
+              sort_dir = r.params['dir']
+
+              # Build filters from query params like filter[status]=pending
+              filters = []
+              (r.params['filter'] || {}).each do |col, val|
+                filters << { 'column' => col, 'operator' => '=', 'value' => val }
+              end
+              filters = nil if filters.empty?
+
+              rows_html, has_more = widget.render_page(page: page, sort_col: sort_col, sort_dir: sort_dir, filters: filters)
+              cid = component.id
+
+              sentinel = ''
+              if has_more
+                next_page = page + 1
+                src = "/api/tables/#{cid}/rows?page=#{next_page}"
+                src += "&sort=#{Rack::Utils.escape(sort_col)}" if sort_col
+                src += "&dir=#{Rack::Utils.escape(sort_dir)}" if sort_dir
+                (r.params['filter'] || {}).each { |k, v| src += "&filter[#{Rack::Utils.escape(k)}]=#{Rack::Utils.escape(v)}" }
+                sentinel = %(<tr class="data-table-next-page"><td colspan="999"><turbo-frame id="data-table-page-#{cid}-#{next_page}" loading="lazy" src="#{src}"></turbo-frame></td></tr>)
+              end
+
+              response['Content-Type'] = 'text/html'
+
+              # When frame=body, wrap in the body frame (used for sort reloads)
+              frame_id = if r.params['frame'] == 'body'
+                           "data-table-body-#{cid}"
+                         else
+                           "data-table-page-#{cid}-#{page}"
+                         end
+
+              <<~HTML
+                <turbo-frame id="#{frame_id}" tag="tbody">
+                  #{rows_html}
+                  #{sentinel}
+                </turbo-frame>
+              HTML
+            end
+          end
           r.on 'notifications' do
             r.is do
               r.get do
@@ -516,11 +563,15 @@ module Ai
                 end
 
                 r.patch do
+                  body = begin; JSON.parse(r.body.read); rescue; r.params; end
                   updates = {}
                   %w[x y width height z_index].each do |attr|
-                    updates[attr] = r.params[attr].to_f if r.params[attr]
+                    updates[attr] = (body[attr] || r.params[attr]).to_f if body[attr] || r.params[attr]
                   end
-                  updates[:content] = r.params['content'] if r.params.key?('content')
+                  updates[:content] = body['content'] if body.key?('content')
+                  if body.key?('metadata')
+                    updates[:metadata] = (component.metadata || {}).deep_merge(body['metadata'])
+                  end
                   component.update!(updates) if updates.any?
                   component.as_canvas_json
                 end
