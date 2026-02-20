@@ -1,0 +1,39 @@
+Implement the following plan:
+
+# Fix: AI messages not appearing via Turbo Streams
+
+## Context
+
+When a user creates a new conversation within an existing canvas and sends a message, the AI response never appears in real-time — only the local JS thinking dots show, and the actual message only appears on page refresh. The root cause is a parameter name mismatch that causes conversations to be created without a `page_id`, which breaks the SSE broadcast channel.
+
+## Root Cause
+
+**`chat_footer_controller.js:197`** sends `ai_page_id=...` but **`web/app.rb:350`** reads `r.params['page_id']`. Result: `page_id` is `nil` on the new conversation.
+
+When the agent runs, `conversation.broadcast_channel` calls `ensure_canvas!` (conversation.rb:48), which sees `page` is nil, creates a **brand new Page**, and broadcasts to `canvas:<new_page_id>`. But the browser's SSE is subscribed to the **original** canvas page ID — so broadcasts go to a channel with zero subscribers.
+
+## Fix
+
+### 1. Fix parameter name in JavaScript
+**File:** `web/public/js/controllers/chat_footer_controller.js:197`
+
+Change `ai_page_id` → `page_id`:
+```js
+body: `page_id=${canvas.pageId}`
+```
+
+This is the one-line fix that solves the core issue. The Ruby side already reads `page_id`, so aligning the JS is the correct fix.
+
+## Verification
+
+1. Start the server with `./openfang.rb server`
+2. Open a canvas, create a new conversation within it
+3. Send a message — the AI response should now appear in real-time via Turbo Streams
+4. Verify that the thinking dots are replaced by the actual message without needing a page refresh
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.claude/projects/-home-greg-Developer-openfang/a24eafea-cfee-42a1-8c03-ecfbd89f3527.jsonl
+
+---
+
+commit
