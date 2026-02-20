@@ -194,7 +194,7 @@ export default class extends Controller {
       const resp = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `ai_page_id=${canvas.pageId}`
+        body: `page_id=${canvas.pageId}`
       })
       const data = await resp.json()
       this.openConversation(data.id, data.title, data.slug, canvas.pageId)
