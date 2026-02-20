@@ -40,7 +40,7 @@ module Fang
       self.slug = base_slug
 
       counter = 1
-      while Page.exists?(slug: slug)
+      while Page.where.not(id: id).exists?(slug: slug)
         self.slug = "#{base_slug}-#{counter}"
         counter += 1
       end

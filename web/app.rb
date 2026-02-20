@@ -330,6 +330,16 @@ module Fang
           end
 
           r.on 'conversations' do
+            r.on Integer do |conv_id|
+              r.patch do
+                raw = r.body.read
+                body = begin; JSON.parse(raw); rescue; r.params; end
+                conv = Conversation.find(conv_id)
+                conv.update!(title: body['title'], slug: nil)
+                { id: conv.id, title: conv.title, slug: conv.slug }
+              end
+            end
+
             r.is do
               r.get do
                 conversations = Conversation.recent.limit(20).map do |c|
@@ -494,6 +504,15 @@ module Fang
           # Page canvas content by page ID
           r.on 'pages', Integer do |page_id|
             page = Page.find(page_id)
+
+            r.is do
+              r.patch do
+                raw = r.body.read
+                body = begin; JSON.parse(raw); rescue; r.params; end
+                page.update!(title: body['title'], slug: nil)
+                { id: page.id, title: page.title, slug: page.slug }
+              end
+            end
 
             # Canvas SSE stream — one per canvas
             r.on 'stream' do

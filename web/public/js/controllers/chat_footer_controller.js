@@ -426,6 +426,20 @@ export default class extends Controller {
     tab.addEventListener("click", () => {
       this.switchCanvas(canvas.pageId)
     })
+    this._makeTabEditable(tab.querySelector(".chat-tab-title"), {
+      onSave: async (newTitle) => {
+        const resp = await fetch(`/api/pages/${canvas.pageId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: newTitle })
+        })
+        const data = await resp.json()
+        canvas.title = data.title
+        canvas.slug = data.slug
+        this._saveState()
+        this._updateURL()
+      }
+    })
     this.canvasTabsTarget.appendChild(tab)
   }
 
@@ -462,6 +476,20 @@ export default class extends Controller {
       })
       tab.addEventListener("click", () => {
         this.switchConversation(conv.id)
+      })
+      this._makeTabEditable(tab.querySelector(".chat-tab-title"), {
+        onSave: async (newTitle) => {
+          const resp = await fetch(`/api/conversations/${conv.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: newTitle })
+          })
+          const data = await resp.json()
+          conv.title = data.title
+          conv.slug = data.slug
+          this._saveState()
+          this._updateURL()
+        }
       })
       this.conversationTabsTarget.appendChild(tab)
     }
@@ -634,6 +662,52 @@ export default class extends Controller {
   }
 
   // --- Utilities ---
+
+  _makeTabEditable(titleSpan, { onSave }) {
+    titleSpan.addEventListener("dblclick", (e) => {
+      e.stopPropagation()
+      const originalText = titleSpan.textContent
+      const input = document.createElement("input")
+      input.type = "text"
+      input.className = "chat-tab-edit"
+      input.value = originalText
+
+      titleSpan.replaceWith(input)
+      input.select()
+
+      const commit = async () => {
+        const newTitle = input.value.trim()
+        const span = document.createElement("span")
+        span.className = "chat-tab-title"
+        span.textContent = newTitle || originalText
+        input.replaceWith(span)
+        this._makeTabEditable(span, { onSave })
+
+        if (newTitle && newTitle !== originalText) {
+          try { await onSave(newTitle) } catch (err) {
+            console.error("[ChatFooter] Rename failed:", err)
+            span.textContent = originalText
+          }
+        }
+      }
+
+      const cancel = () => {
+        const span = document.createElement("span")
+        span.className = "chat-tab-title"
+        span.textContent = originalText
+        input.replaceWith(span)
+        this._makeTabEditable(span, { onSave })
+      }
+
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") { ev.preventDefault(); input.blur() }
+        if (ev.key === "Escape") { ev.preventDefault(); cancel() }
+      })
+      input.addEventListener("blur", () => {
+        if (input.parentNode) commit()
+      })
+    })
+  }
 
   escapeHtml(text) {
     const div = document.createElement("div")
