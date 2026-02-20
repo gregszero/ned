@@ -1,0 +1,60 @@
+Implement the following plan:
+
+# Double-click to Edit Tab Names
+
+## Context
+The footer terminal has two rows of tabs (canvas tabs and conversation tabs). Currently tab names are static — clicking switches tabs, but there's no way to rename them. The user wants to double-click a tab title to edit it inline.
+
+## Changes
+
+### 1. Add PATCH API endpoints for renaming (`web/app.rb`)
+
+**PATCH `/api/pages/:id`** — update page title (canvas tabs)
+- Inside the existing `r.on 'api' do` > `r.on 'pages' do` > `r.on Integer do |page_id|` block
+- Updates `page.title` and regenerates `page.slug`
+- Returns `{ id, title, slug }`
+
+**PATCH `/api/conversations/:id`** — update conversation title
+- Add inside `r.on 'conversations' do` > `r.on Integer do |id|` block (around line 90)
+- Updates `conversation.title` and regenerates `conversation.slug`
+- Returns `{ id, title, slug }`
+
+### 2. Add double-click rename in JS (`web/public/js/controllers/chat_footer_controller.js`)
+
+Add a shared `_makeTabEditable(titleSpan, { onSave })` helper that:
+- On `dblclick` of the `.chat-tab-title` span, replaces it with an `<input>` pre-filled with current text
+- Input auto-selects all text, styled to match tab appearance
+- Commits on Enter or blur, cancels on Escape (restores original text)
+- Calls `onSave(newTitle)` callback which PATCHes the API and updates in-memory state
+
+Wire it up in:
+- `_createCanvasTabButton()` — dblclick on title span calls PATCH `/api/pages/:pageId` and updates `canvas.title` + `canvas.slug`
+- `_renderConversationTabs()` — dblclick on title span calls PATCH `/api/conversations/:convId` and updates `conv.title` + `conv.slug`
+
+After rename, call `_saveState()` to persist to sessionStorage.
+
+### 3. CSS for inline edit input (`web/public/css/style.css`)
+
+Add `.chat-tab-edit` input style:
+- Match tab font size, no border, transparent background, same max-width as `.chat-tab-title`
+- Focus outline using `var(--ring)`
+
+## Files to modify
+- `web/app.rb` — add PATCH endpoints (~10 lines each)
+- `web/public/js/controllers/chat_footer_controller.js` — add `_makeTabEditable` helper + wire into tab creation (~40 lines)
+- `web/public/css/style.css` — add `.chat-tab-edit` style (~8 lines)
+
+## Verification
+1. Start the server, open a canvas
+2. Double-click a canvas tab title → should become editable input
+3. Type a new name, press Enter → tab updates, page refreshes show new name
+4. Double-click a conversation tab title → same behavior
+5. Press Escape during edit → reverts to original name
+6. Verify sessionStorage state updates with new title/slug
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
