@@ -19,7 +19,7 @@ You ──► Web UI ──► Conversation ──► Claude CLI subprocess
                                     │  schedule_task│
                                     │  create_page  │
                                     │  web_fetch    │
-                                    │  ...18 tools  │
+                                    │  ...38 tools  │
                                     └──────┬───────┘
                                            │
                                     ┌──────▼───────┐
@@ -36,7 +36,7 @@ You ──► Web UI ──► Conversation ──► Claude CLI subprocess
                                     Real-time UI update
 ```
 
-When you send a message, OpenFang spawns a `claude` CLI subprocess with access to 18 MCP tools. Claude can execute Ruby code, create pages, schedule tasks, build widgets, define skills, set up monitors — and every action streams back to your browser in real time via Server-Sent Events.
+When you send a message, OpenFang spawns a `claude` CLI subprocess with access to 38 MCP tools. Claude can execute Ruby code, create pages, schedule tasks, build widgets, define skills, set up monitors — and every action streams back to your browser in real time via Server-Sent Events.
 
 ---
 
@@ -48,7 +48,7 @@ Everything runs in a single Puma process. No Redis. No Sidekiq. No ActionCable.
 |---|---|---|
 | Web server | **Roda** + Puma | Lightweight routing, port 3000 |
 | Agent runtime | **Claude CLI** subprocess | One subprocess per conversation |
-| Tool protocol | **FastMCP** (SSE) | 18 tools + 6 resources exposed to Claude |
+| Tool protocol | **FastMCP** (SSE) | 38 tools + 6 resources exposed to Claude |
 | Database | **ActiveRecord 8** + SQLite | Models, migrations, the usual |
 | Background jobs | **ActiveJob** `:async` adapter | In-memory thread pool, no external deps |
 | Scheduler | **Rufus-Scheduler** | Polls for due tasks every 60s, heartbeats every 30s |
@@ -71,7 +71,13 @@ fang/
 ├── resources/              # MCP resources (auto-registered)
 ├── widgets/                # Canvas widget types
 ├── jobs/                   # ActiveJob classes
-└── concerns/               # Shared model behavior
+├── concerns/               # Shared model behavior
+├── clients/                # API client integrations
+├── computer_use/           # Browser automation (Playwright)
+├── document_parser.rb      # Multi-format text extraction
+├── python_runner.rb        # Python virtualenv and execution
+├── gmail.rb                # Gmail OAuth2 integration
+└── system_profile.rb       # Host system capability detection
 web/
 ├── app.rb                  # All Roda routes
 ├── views/                  # ERB templates
@@ -106,6 +112,12 @@ Widgets are self-rendering Ruby classes. Built-in types include:
 | `note` | Editable markdown |
 | `banner` | Colored alert bar |
 | `list` | Items with optional links, auto-refresh from data source |
+| `data_table` | Dynamic data table with full CRUD, backed by AI-created schemas |
+| `approval` | Pending approval display with approve/reject actions |
+| `computer_use` | Browser automation session viewer |
+| `scheduled_jobs` | Upcoming and recent scheduled task overview |
+| `settings` | Configuration key/value editor |
+| `website` | Embedded website iframe |
 
 Claude can also **define entirely new widget types at runtime** using the `define_widget` tool — writing the Ruby class to disk and hot-loading it without a restart.
 
@@ -231,6 +243,7 @@ Triggers auto-disable after 5 consecutive failures for safety.
 | `prompt` | Sends a message to Claude, gets a response |
 | `condition` | Evaluates an expression, optionally skips to a step |
 | `wait` | Pauses the workflow for a duration (creates a scheduled task to resume) |
+| `approval` | Pauses workflow until a human approves or rejects |
 | `notify` | Creates a notification |
 
 Steps pass data via a JSON context hash using `{{context.step_name}}` interpolation:
@@ -245,32 +258,97 @@ Workflows can auto-start on a trigger event or be kicked off immediately.
 
 ---
 
+### Documents — Upload, Parse, and Generate Files
+
+Documents let you attach files (PDF, CSV, Excel, plain text) to conversations. On upload, `DocumentParser` extracts the text content so the agent can read it without re-parsing. Token-efficient: parse once, read many times.
+
+The agent can also create documents programmatically — generating reports, exports, or formatted files and attaching them to the conversation for download.
+
+---
+
+### Dynamic Data Tables — AI-Created Structured Storage
+
+The agent can create real SQLite tables on the fly with custom schemas via `create_data_table`. Once created, full CRUD is available through `insert_data_record`, `update_data_record`, `delete_data_record`, and `query_data_table`.
+
+Use cases: tracking lists, inventories, logs, or any structured data the agent needs to persist and query. Tables are first-class database objects — they support filtering, sorting, and aggregation via SQL.
+
+---
+
+### Approvals — Human-in-the-Loop Gates
+
+Approvals pause automation until a human decides. They work standalone or as workflow steps (`approval` step type). Each approval has a title, description, and optional timeout with auto-expiry.
+
+Events are emitted on decision: `approval:approved:*`, `approval:rejected:*`, `approval:expired:*` — so downstream triggers and workflows can react.
+
+---
+
+### Gmail Integration
+
+Full OAuth2 Gmail integration with 6 dedicated tools: `gmail_search`, `gmail_read`, `gmail_send`, `gmail_draft`, `gmail_modify`, and `gmail_labels`. The agent can search your inbox, read messages, compose and send emails, manage drafts, and modify labels.
+
+---
+
+### Python Support
+
+Run Python code alongside Ruby via `manage_python`. Includes virtualenv management for dependency isolation. Python skills are auto-discovered from `skills/` alongside Ruby skills.
+
+---
+
 ### MCP Tools & Resources
 
-Claude interacts with OpenFang through 18 MCP tools and 6 resources, served over SSE at `/mcp/sse`.
+Claude interacts with OpenFang through 38 MCP tools and 6 resources, served over SSE at `/mcp/sse`.
 
 **Tools** (auto-discovered from `fang/tools/`):
 
 | Tool | Purpose |
 |---|---|
+| **Core** | |
 | `run_code` | Execute arbitrary Ruby with full model access |
 | `run_skill` | Execute a saved skill by name |
+| `manage_python` | Run Python code, manage virtualenv and dependencies |
 | `send_message` | Send a message to the conversation |
+| **Scheduling** | |
 | `schedule_task` | Schedule a one-shot or recurring task |
+| **Pages & Canvas** | |
 | `create_page` | Create a new canvas page |
-| `create_notification` | Push a real-time notification |
-| `create_trigger` | Set up an event-driven trigger |
-| `create_workflow` | Build a multi-step automation pipeline |
-| `create_heartbeat` | Set up a token-efficient monitor |
-| `update_heartbeat` | Modify a heartbeat's config |
-| `list_heartbeats` | View all heartbeats and their stats |
-| `web_fetch` | HTTP requests (GET/POST/PUT/PATCH/DELETE) |
 | `get_canvas` | Read current page's widget layout |
 | `update_canvas` | Set page HTML content |
 | `add_canvas_component` | Add a widget to the canvas |
 | `update_canvas_component` | Modify a widget's position/content/data |
 | `remove_canvas_component` | Remove a widget |
 | `define_widget` | Create a new widget type (writes Ruby to disk) |
+| **Documents** | |
+| `create_document` | Upload or generate a document |
+| `read_document` | Read extracted text from a document |
+| `list_documents` | List documents in a conversation |
+| **Data Tables** | |
+| `create_data_table` | Create a dynamic SQLite table with custom schema |
+| `list_data_tables` | List all dynamic data tables |
+| `query_data_table` | Query records with filtering and sorting |
+| `insert_data_record` | Insert a row into a data table |
+| `update_data_record` | Update a row in a data table |
+| `delete_data_record` | Delete a row from a data table |
+| **Approvals** | |
+| `create_approval` | Create a human-in-the-loop approval gate |
+| `list_approvals` | List pending and resolved approvals |
+| `resolve_approval` | Approve or reject a pending approval |
+| **Automation** | |
+| `create_notification` | Push a real-time notification |
+| `create_trigger` | Set up an event-driven trigger |
+| `create_workflow` | Build a multi-step automation pipeline |
+| `create_heartbeat` | Set up a token-efficient monitor |
+| `update_heartbeat` | Modify a heartbeat's config |
+| `list_heartbeats` | View all heartbeats and their stats |
+| **Web** | |
+| `web_fetch` | HTTP requests (GET/POST/PUT/PATCH/DELETE) |
+| `start_computer_use` | Launch a browser automation session |
+| **Gmail** | |
+| `gmail_search` | Search Gmail messages |
+| `gmail_read` | Read a Gmail message by ID |
+| `gmail_send` | Send an email via Gmail |
+| `gmail_draft` | Create a Gmail draft |
+| `gmail_modify` | Modify Gmail message labels (archive, star, etc.) |
+| `gmail_labels` | List available Gmail labels |
 
 **Resources** (context the agent can read):
 
