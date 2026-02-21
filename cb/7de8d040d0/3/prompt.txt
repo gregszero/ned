@@ -1,0 +1,48 @@
+Implement the following plan:
+
+# Plan: Sidebar Canvas Delete/Archive + Click-Outside-to-Close
+
+## Context
+Canvases listed in the sidebar have no way to be deleted or archived from the UI. The `Page` model already has an `archive!` method and status system (`draft`/`published`/`archived`), but there's no UI or API endpoint to trigger it. Additionally, clicking outside the sidebar (on the overlay backdrop) should close it — the JS listener exists but only matches `.sidebar-container > label`, which doesn't cover all click-outside scenarios.
+
+## Changes
+
+### 1. Add archive API endpoint (`web/app.rb`)
+- Inside the existing `r.on 'pages', Integer` block (~line 508), add a `r.delete` handler:
+  - Calls `page.archive!` to set status to `'archived'`
+  - Also closes any open chat footer tab for that canvas via response
+  - Returns `{ success: true, id: page.id }`
+
+### 2. Add archive button to sidebar canvas links (`web/views/layout.erb`)
+- Wrap each canvas link in a flex container with the link + a small archive/delete button
+- The button calls a JS function `archiveCanvas(pageId, event)` that:
+  - Calls `DELETE /api/pages/:id`
+  - On success, removes the sidebar entry from DOM
+  - If the canvas is open in chat footer, closes it via `chatFooter.closeCanvas(pageId)`
+  - Stops event propagation so the link isn't triggered
+
+### 3. Fix click-outside-to-close sidebar (`web/views/layout.erb`)
+- Update the existing click listener (~line 148) to also close when clicking the `::before` overlay pseudo-element area
+- The `.sidebar-container > label` selector already covers this — but the label element needs to fill the full overlay area. Check if it does; if not, add CSS to make it cover the full viewport when sidebar is open.
+
+### 4. CSS for archive button (`web/public/css/style.css`)
+- Add `.sidebar-archive-btn` style: small, muted, appears on hover of the sidebar link row
+- Hidden by default, visible on row hover (keeps UI clean)
+
+## Files to Modify
+- `web/app.rb` — Add `r.delete` inside `r.on 'pages', Integer` block (~line 508)
+- `web/views/layout.erb` — Add archive button per canvas, update close-on-click-outside JS
+- `web/public/css/style.css` — Add `.sidebar-archive-btn` hover styles
+
+## Verification
+- Open sidebar, hover a canvas → archive button appears
+- Click archive → canvas removed from sidebar, closed in chat footer if open
+- Click overlay area outside sidebar → sidebar closes
+- Archived canvases no longer appear in sidebar (already handled by `Page.published` scope)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit

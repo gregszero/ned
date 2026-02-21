@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "cb7de8d040d0",
+  "session_id": "fe5122bc-a467-4981-8633-f48759bde1b5",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-21T00:35:03.227628034Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "web/app.rb",
+    "web/public/css/style.css",
+    "web/views/layout.erb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 19,
+    "cache_creation_tokens": 18768,
+    "cache_read_tokens": 475263,
+    "output_tokens": 3107,
+    "api_call_count": 15
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-21T00:35:03.161297492Z",
+    "agent_lines": 53,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 53,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/fe5122bc-a467-4981-8633-f48759bde1b5.jsonl"
+}
