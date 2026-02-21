@@ -3,8 +3,9 @@
   "checkpoint_id": "ea2599d08850",
   "strategy": "manual-commit",
   "branch": "master",
-  "checkpoints_count": 0,
+  "checkpoints_count": 1,
   "files_touched": [
+    ".claude/settings.local.json",
     "Gemfile",
     "fang/bootstrap.rb",
     "fang/document_parser.rb",
@@ -27,6 +28,14 @@
     "fang/tools/resolve_approval_tool.rb",
     "fang/tools/update_data_record_tool.rb",
     "fang/widgets/approval_widget.rb",
+    "test/lib/document_parser_test.rb",
+    "test/models/approval_test.rb",
+    "test/models/data_table_test.rb",
+    "test/models/document_test.rb",
+    "test/tools/approval_tools_test.rb",
+    "test/tools/data_table_tools_test.rb",
+    "test/tools/document_tools_test.rb",
+    "test/web/new_routes_test.rb",
     "tmp_test.rb",
     "web/app.rb",
     "workspace/CLAUDE.md",
@@ -41,13 +50,20 @@
       "context": "/ea/2599d08850/0/context.md",
       "content_hash": "/ea/2599d08850/0/content_hash.txt",
       "prompt": "/ea/2599d08850/0/prompt.txt"
+    },
+    {
+      "metadata": "/ea/2599d08850/1/metadata.json",
+      "transcript": "/ea/2599d08850/1/full.jsonl",
+      "context": "/ea/2599d08850/1/context.md",
+      "content_hash": "/ea/2599d08850/1/content_hash.txt",
+      "prompt": "/ea/2599d08850/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 8,
-    "cache_creation_tokens": 11399,
-    "cache_read_tokens": 365518,
-    "output_tokens": 1454,
-    "api_call_count": 4
+    "input_tokens": 30,
+    "cache_creation_tokens": 54511,
+    "cache_read_tokens": 1286549,
+    "output_tokens": 15254,
+    "api_call_count": 22
   }
 }

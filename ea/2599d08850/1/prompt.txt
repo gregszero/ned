@@ -1,0 +1,95 @@
+Implement the following plan:
+
+# Plan: Tests for Documents, Dynamic Data Tables, and Approval Workflows
+
+## Context
+
+The three new features (documents, dynamic data tables, approvals) were just implemented and committed. Now we need comprehensive tests following the existing test patterns: `Fang::TestCase` for models, `Fang::ToolTestCase` for tools, `Fang::RouteTestCase` for routes.
+
+---
+
+## Test Files to Create (8 files)
+
+### 1. `test/models/document_test.rb`
+- Validations: name required, file_path required, status inclusion
+- Status predicates: `uploaded?`, `processing?`, `ready?`, `error?`
+- `parsed_metadata` returns hash (valid JSON, blank, invalid JSON)
+- `parse_content!` delegates to DocumentParser, updates status to ready/error
+- Associations: belongs_to page (optional), belongs_to conversation (optional)
+- Scopes: `recent`
+
+### 2. `test/models/data_table_test.rb`
+- Validations: name required, table_name required, uniqueness, `dt_` prefix format
+- Status predicates: `active?`, `archived?`
+- `parsed_schema` returns array
+- `column_names_from_schema` extracts names
+- `create_physical_table!` / `drop_physical_table!` — verify table exists/removed
+- `insert_record` with attribute whitelisting (ignores unknown columns)
+- `update_record` / `delete_record`
+- `query_records` with filters (`=`, `!=`, `>`, `<`, `like`), sorting, pagination
+- `record_count`
+
+### 3. `test/models/approval_test.rb`
+- Validations: title required, status inclusion
+- Status predicates: `pending?`, `approved?`, `rejected?`, `expired?`
+- `approve!` sets status/decided_at/notes, emits EventBus event
+- `reject!` sets status, emits event, fails linked workflow
+- `expire!` only works when pending, emits event
+- Workflow integration: `approve!` resumes paused workflow, `reject!` fails it
+- `parsed_metadata`
+
+### 4. `test/lib/document_parser_test.rb`
+- `parse` dispatches by content type
+- `parse_text` extracts text with character/line count metadata
+- `parse_csv` extracts rows with headers metadata
+- Unsupported content type returns nil text with error metadata
+- Error handling (file not found)
+
+### 5. `test/tools/document_tools_test.rb`
+- `ListDocumentsTool`: lists all, filters by status, filters by content_type
+- `ReadDocumentTool`: reads extracted text, auto-parses if blank, reparse flag, not found error
+- `CreateDocumentTool`: creates file + record, auto-parses, unique filename
+
+### 6. `test/tools/data_table_tools_test.rb`
+- `CreateDataTableTool`: creates table + physical table, invalid type rejected
+- `ListDataTablesTool`: lists with record counts
+- `QueryDataTableTool`: basic query, with filters, sorting, pagination, not found
+- `InsertDataRecordTool`: inserts with whitelisting
+- `UpdateDataRecordTool`: updates record
+- `DeleteDataRecordTool`: deletes record, not found error
+
+### 7. `test/tools/approval_tools_test.rb`
+- `CreateApprovalTool`: creates approval + notification, with timeout
+- `ListApprovalsTool`: lists all, filters by status
+- `ResolveApprovalTool`: approve, reject, already resolved error, not found
+
+### 8. `test/web/new_routes_test.rb`
+- `POST /documents` with multipart file upload
+- `POST /documents` without file returns 400
+- `GET /api/approvals` lists pending
+- `GET /api/approvals/:id` returns approval JSON
+- `POST /api/approvals/:id/decide` approve and reject
+- `resolve_approval` action type via `/api/actions`
+
+---
+
+## Key Patterns to Follow
+
+- **Base classes**: `Fang::TestCase` (models), `Fang::ToolTestCase` (tools — silences TurboBroadcast), `Fang::RouteTestCase` (routes — includes Rack::Test)
+- **Job stubbing**: `original = Class.method(:perform_later)` → `define_singleton_method` → restore in `ensure`
+- **Assertions**: minitest style — `assert`, `refute`, `assert_equal`, `refute_nil`, `assert_includes`
+- **DataTable cleanup**: Always `drop_physical_table!` in teardown to avoid leftover `dt_*` tables
+- **Temp files**: Create in `workspace/documents/`, clean up in teardown
+
+## Verification
+
+```bash
+rake test          # All tests pass
+```
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
