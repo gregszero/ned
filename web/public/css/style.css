@@ -763,6 +763,65 @@ button.icon.sm {
 
 .prose-bubble hr { border: none; border-top: 1px solid var(--border); margin: 0.6em 0; }
 
+/* --- Message Details Accordion --- */
+
+.msg-details {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.375rem;
+}
+.msg-details summary {
+  font-size: 0.6875rem;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  user-select: none;
+  padding: 0.125rem 0;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.msg-details summary::-webkit-details-marker { display: none; }
+.msg-details summary::before {
+  content: '\25B6';
+  font-size: 0.5rem;
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+.msg-details[open] summary::before {
+  transform: rotate(90deg);
+}
+.msg-details summary:hover {
+  color: var(--foreground);
+}
+.msg-details-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.125rem 0.75rem;
+  font-size: 0.6875rem;
+  padding: 0.375rem 0 0.125rem;
+}
+.msg-details-grid > span:nth-child(odd) {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+.msg-details-grid > span:nth-child(even) {
+  color: var(--foreground);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+/* Compact in footer panels */
+.chat-panel-messages .msg-details {
+  margin-top: 0.375rem;
+  padding-top: 0.25rem;
+}
+.chat-panel-messages .msg-details summary {
+  font-size: 0.625rem;
+}
+.chat-panel-messages .msg-details-grid {
+  font-size: 0.625rem;
+}
+
 /* --- Agent Steps (streaming progress) --- */
 
 .agent-steps {

@@ -40,6 +40,7 @@ module Fang
         label = is_user ? 'YOU' : 'AI'
         time = message.created_at.strftime('%I:%M %p')
         content = render_markdown(message.content)
+        details_html = is_user ? '' : render_message_metadata(message.metadata)
 
         <<~HTML
           <div class="#{msg_class}" id="message-#{message.id}">
@@ -50,8 +51,87 @@ module Fang
             <div class="prose-bubble">
               #{content}
             </div>
+            #{details_html}
           </div>
         HTML
+      end
+
+      def render_message_metadata(metadata)
+        return '' unless metadata.is_a?(Hash) && metadata.any?
+
+        rows = []
+
+        if metadata['model']
+          # Show short model name (e.g. "claude-sonnet-4-..." → "sonnet-4")
+          model_display = ERB::Util.html_escape(metadata['model'])
+          rows << "<span>Model</span><span>#{model_display}</span>"
+        end
+
+        if metadata['num_turns']
+          rows << "<span>Turns</span><span>#{metadata['num_turns']}</span>"
+        end
+
+        if metadata['total_cost_usd']
+          cost = "$#{'%.4f' % metadata['total_cost_usd']}"
+          rows << "<span>Cost</span><span>#{cost}</span>"
+        end
+
+        if (usage = metadata['usage']).is_a?(Hash)
+          input = usage['input_tokens'] || usage['input']
+          output = usage['output_tokens'] || usage['output']
+          if input || output
+            parts = []
+            parts << "#{format_tokens(input)} in" if input
+            parts << "#{format_tokens(output)} out" if output
+            rows << "<span>Tokens</span><span>#{parts.join(' / ')}</span>"
+          end
+
+          cache_read = usage['cache_read_input_tokens'] || usage['cache_read']
+          cache_create = usage['cache_creation_input_tokens'] || usage['cache_creation']
+          if cache_read || cache_create
+            cache_parts = []
+            cache_parts << "#{format_tokens(cache_read)} read" if cache_read
+            cache_parts << "#{format_tokens(cache_create)} created" if cache_create
+            rows << "<span>Cache</span><span>#{cache_parts.join(' / ')}</span>"
+          end
+        end
+
+        if metadata['thinking_steps'] && metadata['thinking_steps'] > 0
+          rows << "<span>Thinking</span><span>#{metadata['thinking_steps']} block#{'s' if metadata['thinking_steps'] != 1}</span>"
+        end
+
+        if metadata['tool_calls'].is_a?(Array) && metadata['tool_calls'].any?
+          names = metadata['tool_calls'].map { |t| t['name'] }.compact
+          unique = names.tally.map { |n, c| c > 1 ? "#{n} (#{c}x)" : n }
+          rows << "<span>Tools</span><span>#{ERB::Util.html_escape(unique.join(', '))}</span>"
+        end
+
+        if metadata['duration_ms']
+          secs = metadata['duration_ms'] / 1000.0
+          duration = secs >= 60 ? "#{(secs / 60).floor}m #{(secs % 60).round}s" : "#{'%.1f' % secs}s"
+          rows << "<span>Duration</span><span>#{duration}</span>"
+        end
+
+        if metadata['session_id']
+          short_id = metadata['session_id'].to_s[0..7]
+          rows << "<span>Session</span><span title=\"#{ERB::Util.html_escape(metadata['session_id'])}\">#{short_id}</span>"
+        end
+
+        return '' if rows.empty?
+
+        <<~HTML
+          <details class="msg-details">
+            <summary>Model info</summary>
+            <div class="msg-details-grid">
+              #{rows.join("\n              ")}
+            </div>
+          </details>
+        HTML
+      end
+
+      def format_tokens(count)
+        return '0' unless count
+        count >= 1000 ? "#{'%.1f' % (count / 1000.0)}k" : count.to_s
       end
 
       def render_notification_card_html(notification)

@@ -22,6 +22,9 @@ module Fang
         broadcast_step(channel, progress_id, 'Thinking...', 'thinking')
 
         accumulated_text = ""
+        tool_calls = []
+        thinking_count = 0
+        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 
         Agent.execute_streaming(
           prompt: message.content,
@@ -33,8 +36,10 @@ module Fang
             (event['content'] || []).each do |block|
               case block['type']
               when 'thinking'
+                thinking_count += 1
                 broadcast_step(channel, progress_id, 'Thinking...', 'thinking')
               when 'tool_use'
+                tool_calls << { 'name' => block['name'], 'id' => block['id'] }
                 broadcast_step(channel, progress_id, "Running #{block['name']}", 'tool')
               when 'text'
                 accumulated_text = block['text'].to_s
@@ -47,8 +52,11 @@ module Fang
             result_text = accumulated_text.strip if result_text.empty?
             result_text = summarize_result(event) if result_text.empty?
 
+            elapsed_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
+            metadata = build_result_metadata(event, tool_calls, thinking_count, elapsed_ms)
+
             role = event['subtype'] == 'success' ? 'assistant' : 'system'
-            response_message = conversation.add_message(role: role, content: result_text)
+            response_message = conversation.add_message(role: role, content: result_text, metadata: metadata)
             Fang.logger.info "Agent responded to message #{message_id}"
             broadcast_final(conversation, progress_id, response_message)
             deliver_to_whatsapp(conversation, response_message)
@@ -118,6 +126,20 @@ module Fang
         html = turbo_stream('remove', progress_id) {} +
                turbo_stream('append', "messages-#{conversation.id}") { render_message_html(message) }
         Web::TurboBroadcast.broadcast(conversation.broadcast_channel, html)
+      end
+
+      def build_result_metadata(event, tool_calls, thinking_count, elapsed_ms)
+        meta = {}
+        meta['model'] = event['model'] if event['model']
+        meta['num_turns'] = event['num_turns'] if event['num_turns']
+        meta['total_cost_usd'] = event['total_cost_usd'] if event['total_cost_usd']
+        meta['usage'] = event['usage'] if event['usage'].is_a?(Hash)
+        meta['session_id'] = event['session_id'] if event['session_id']
+        meta['tool_calls'] = tool_calls if tool_calls.any?
+        meta['thinking_steps'] = thinking_count if thinking_count > 0
+        meta['duration_ms'] = elapsed_ms
+        meta['is_error'] = true if event['subtype'] != 'success'
+        meta
       end
 
       def deliver_to_whatsapp(conversation, message)
