@@ -1,0 +1,17 @@
+In conversations we need all the information about the agents/model. for example, what is the model doing, token usage, everything that is output from. we need to add all that information with accordion, or use something to not render huge blocks of useles stuff.
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+Continue from where you left off.
+
+---
+
+implement in a new context
+
+---
+
+commit
