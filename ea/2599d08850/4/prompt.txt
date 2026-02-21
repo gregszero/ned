@@ -1,0 +1,80 @@
+Implement the following plan:
+
+# Add Tests for New Optimization Features
+
+## Context
+
+5 improvements were just implemented (modular system prompt, tool groups, build_canvas, run_code promotion, context compression). All 283 existing tests pass, but the 6 new features have **zero test coverage**. Need tests to prevent regressions.
+
+## Test Files to Create (5)
+
+### 1. `test/tools/build_canvas_tool_test.rb`
+Inherits `Fang::ToolTestCase`. Tests:
+- **Grid layout**: 4 components → 2x2 grid, verify positions (col 0/1, row 0/1)
+- **Stack layout**: 3 components → single column, verify y-spacing
+- **Freeform layout**: explicit x/y passed through
+- **Creates page**: no existing page → creates published Page, links to conversation
+- **Reuses page**: conversation with existing page → adds components to it
+- **Component count**: result has correct `components_created` count
+- **Default type**: component without `type` → defaults to `card`
+
+Uses `ENV['CONVERSATION_ID']` pattern from existing tool tests. Cleans up ENV in `ensure`.
+
+### 2. `test/concerns/tool_grouping_test.rb`
+Inherits `Fang::TestCase`. Tests:
+- **Default group**: tool without `tool_group` call → returns `:core`
+- **Custom group**: tool with `tool_group :gmail` → returns `:gmail`
+- **Actual tools**: spot-check that `GmailSearchTool.tool_group == :gmail`, `RunCodeTool.tool_group == :core`, `BuildCanvasTool.tool_group == :canvas`
+
+### 3. `test/lib/tool_classifier_test.rb`
+Inherits `Fang::TestCase`. Uses WebMock to stub Anthropic API. Tests:
+- **Classify returns groups**: stub API response `"gmail, canvas"` → returns `[:core, :gmail, :canvas]`
+- **Classify returns none**: stub API response `"none"` → returns `[:core]`
+- **Classify filters unknown groups**: stub response `"gmail, bogus"` → only `:gmail` kept
+- **Classify returns nil without API key**: clear `ENV['ANTHROPIC_API_KEY']` → returns `nil`
+- **Classify returns nil on API failure**: stub 500 response → returns `nil`
+- **groups_string**: `[:core, :gmail]` → `"core,gmail"`
+- **call_haiku success**: stub API response → returns text
+- **call_haiku returns nil without API key**: returns `nil`
+- **call_haiku returns nil on failure**: stub 500 → returns `nil`
+- **build_context with conversation**: conversation with messages → includes recent context
+
+### 4. `test/resources/guide_resource_test.rb`
+Inherits `Fang::TestCase`. Tests:
+- **Index content**: `GuideResource.new.content` includes all 8 topic URIs
+- **Topic resources exist**: each topic has a dynamically created resource class
+- **Gmail guide content**: instantiate gmail guide resource, verify content includes "gmail_search"
+- **Missing guide file**: if file doesn't exist, returns "Guide not found" (not an error)
+
+### 5. `test/models/conversation_context_test.rb`
+Inherits `Fang::TestCase`. Tests:
+- **needs_summary? false under threshold**: <15 messages → false
+- **needs_summary? true at threshold**: 15 messages, no summary → true
+- **needs_summary? false after recent summary**: 15 messages, summary at 15 → false
+- **needs_summary? true after interval**: 30 messages, summary at 15 → true
+- **compressed_prompt with summary**: returns prefixed prompt with context
+- **compressed_prompt without summary**: returns raw message
+- **generate_summary! calls Haiku**: stub `ToolClassifier.call_haiku` → updates `context_summary` and `summary_message_count`
+- **generate_summary! skips under threshold**: <15 messages → no-op
+- **generate_summary! no-op when Haiku returns nil**: doesn't update columns
+
+Stub `ToolClassifier.call_haiku` with `define_singleton_method`/`ensure` pattern (not `Object#stub` — Ruby 3.4).
+
+## Key Patterns to Follow
+- Inherit from `Fang::ToolTestCase` for tool tests, `Fang::TestCase` for models/lib
+- Stub TurboBroadcast already handled by `ToolTestCase`
+- Use `define_singleton_method` + `ensure` for stubbing module methods
+- Use `refute_nil` not `assert_not_nil`
+- WebMock for HTTP calls (already required in test_helper)
+- Clean up `ENV` vars in `ensure` blocks
+
+## Verification
+- `rake test` — all tests pass (283 existing + ~35 new = ~318 total)
+- No network calls (all API calls stubbed)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
