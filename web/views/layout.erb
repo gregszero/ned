@@ -65,10 +65,13 @@
       </div>
       <nav class="flex flex-col gap-0.5">
         <% Fang::Page.published.recent.each do |page| %>
-          <a href="/<%= page.slug %>" class="sidebar-link" onclick="if(window.chatFooter){chatFooter.openCanvas(<%= page.id %>, '<%= page.title.gsub("'", "\\\\'") %>', '<%= page.slug %>');return false}">
-            <span><%= page.title %></span>
-            <span class="sidebar-count"><%= page.canvas_components.count %></span>
-          </a>
+          <div class="sidebar-link-row" data-page-id="<%= page.id %>">
+            <a href="/<%= page.slug %>" class="sidebar-link" onclick="if(window.chatFooter){chatFooter.openCanvas(<%= page.id %>, '<%= page.title.gsub("'", "\\\\'") %>', '<%= page.slug %>');return false}">
+              <span><%= page.title %></span>
+              <span class="sidebar-count"><%= page.canvas_components.count %></span>
+            </a>
+            <button class="sidebar-archive-btn ghost xs" onclick="archiveCanvas(<%= page.id %>, event)" type="button" title="Archive canvas">&times;</button>
+          </div>
         <% end %>
       </nav>
     </aside>
@@ -148,10 +151,24 @@
     document.addEventListener('click', function(e) {
       var toggle = document.getElementById('sidebar-toggle');
       if (!toggle || !toggle.checked) return;
-      if (e.target.matches('.sidebar-container > label') || e.target.closest('.sidebar nav a')) {
+      if (e.target.matches('.sidebar-container > label, .sidebar-container') || e.target.closest('.sidebar nav a')) {
         toggle.checked = false;
       }
     });
+    // Archive a canvas from the sidebar
+    function archiveCanvas(pageId, event) {
+      event.stopPropagation();
+      event.preventDefault();
+      fetch('/api/pages/' + pageId, { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success) {
+            var row = document.querySelector('.sidebar-link-row[data-page-id="' + pageId + '"]');
+            if (row) row.remove();
+            if (window.chatFooter && chatFooter.closeCanvas) chatFooter.closeCanvas(pageId);
+          }
+        });
+    }
     // Hide canvas overlays when turbo-frame content loads (non-canvas pages like jobs, settings)
     document.addEventListener('turbo:frame-load', function(e) {
       if (e.target.id === 'canvas-content') {

@@ -506,6 +506,11 @@ module Fang
             page = Page.find(page_id)
 
             r.is do
+              r.delete do
+                page.archive!
+                { success: true, id: page.id }
+              end
+
               r.patch do
                 raw = r.body.read
                 body = begin; JSON.parse(raw); rescue; r.params; end

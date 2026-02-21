@@ -468,6 +468,32 @@ button.icon.sm {
   min-width: 1.5rem;
   text-align: right;
 }
+.sidebar-link-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: var(--radius-md);
+}
+.sidebar-link-row .sidebar-link {
+  flex: 1;
+  min-width: 0;
+}
+.sidebar-archive-btn {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-size: 1rem;
+  padding: 0;
+  color: var(--muted-foreground);
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.sidebar-link-row:hover .sidebar-archive-btn {
+  opacity: 1;
+}
+.sidebar-archive-btn:hover {
+  color: var(--destructive);
+}
 
 /* --- Utility Classes --- */
 
