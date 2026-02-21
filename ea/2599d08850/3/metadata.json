@@ -1,0 +1,50 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "ea2599d08850",
+  "session_id": "7385eb24-65bf-4dd6-b18a-e11444da151d",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-21T15:22:29.158808323Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "fang/agent.rb",
+    "fang/bootstrap.rb",
+    "fang/concerns/tool_grouping.rb",
+    "fang/mcp_server.rb",
+    "fang/models/conversation.rb",
+    "fang/resources/guide_resource.rb",
+    "fang/tool_classifier.rb",
+    "fang/tools/build_canvas_tool.rb",
+    "fang/tools/run_code_tool.rb",
+    "test/tools/run_code_tool_test.rb",
+    "workspace/CLAUDE.md",
+    "workspace/guides/approvals.md",
+    "workspace/guides/automation.md",
+    "workspace/guides/canvas.md",
+    "workspace/guides/data-tables.md",
+    "workspace/guides/design-system.md",
+    "workspace/guides/documents.md",
+    "workspace/guides/gmail.md",
+    "workspace/guides/python.md",
+    "workspace/migrations/20260221000001_add_context_summary_to_conversations.rb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 61,
+    "cache_creation_tokens": 285525,
+    "cache_read_tokens": 4867838,
+    "output_tokens": 20340,
+    "api_call_count": 55
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-21T15:22:28.563249543Z",
+    "agent_lines": 0,
+    "human_added": 47,
+    "human_modified": 864,
+    "human_removed": 0,
+    "total_committed": 911,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/7385eb24-65bf-4dd6-b18a-e11444da151d.jsonl"
+}

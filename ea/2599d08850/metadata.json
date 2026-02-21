@@ -3,20 +3,27 @@
   "checkpoint_id": "ea2599d08850",
   "strategy": "manual-commit",
   "branch": "master",
-  "checkpoints_count": 2,
+  "checkpoints_count": 3,
   "files_touched": [
     ".claude/settings.local.json",
     "CLAUDE.md",
     "Gemfile",
     "README.md",
+    "fang/agent.rb",
     "fang/bootstrap.rb",
+    "fang/concerns/tool_grouping.rb",
     "fang/document_parser.rb",
     "fang/jobs/scheduled_task_runner_job.rb",
+    "fang/mcp_server.rb",
     "fang/models/approval.rb",
+    "fang/models/conversation.rb",
     "fang/models/data_table.rb",
     "fang/models/document.rb",
     "fang/models/workflow.rb",
     "fang/models/workflow_step.rb",
+    "fang/resources/guide_resource.rb",
+    "fang/tool_classifier.rb",
+    "fang/tools/build_canvas_tool.rb",
     "fang/tools/create_approval_tool.rb",
     "fang/tools/create_data_table_tool.rb",
     "fang/tools/create_document_tool.rb",
@@ -28,6 +35,7 @@
     "fang/tools/query_data_table_tool.rb",
     "fang/tools/read_document_tool.rb",
     "fang/tools/resolve_approval_tool.rb",
+    "fang/tools/run_code_tool.rb",
     "fang/tools/update_data_record_tool.rb",
     "fang/widgets/approval_widget.rb",
     "test/lib/document_parser_test.rb",
@@ -37,13 +45,23 @@
     "test/tools/approval_tools_test.rb",
     "test/tools/data_table_tools_test.rb",
     "test/tools/document_tools_test.rb",
+    "test/tools/run_code_tool_test.rb",
     "test/web/new_routes_test.rb",
     "tmp_test.rb",
     "web/app.rb",
     "workspace/CLAUDE.md",
+    "workspace/guides/approvals.md",
+    "workspace/guides/automation.md",
+    "workspace/guides/canvas.md",
+    "workspace/guides/data-tables.md",
+    "workspace/guides/design-system.md",
+    "workspace/guides/documents.md",
+    "workspace/guides/gmail.md",
+    "workspace/guides/python.md",
     "workspace/migrations/20260220000001_create_documents.rb",
     "workspace/migrations/20260220000002_create_data_tables.rb",
-    "workspace/migrations/20260220000003_create_approvals.rb"
+    "workspace/migrations/20260220000003_create_approvals.rb",
+    "workspace/migrations/20260221000001_add_context_summary_to_conversations.rb"
   ],
   "sessions": [
     {
@@ -66,13 +84,20 @@
       "context": "/ea/2599d08850/2/context.md",
       "content_hash": "/ea/2599d08850/2/content_hash.txt",
       "prompt": "/ea/2599d08850/2/prompt.txt"
+    },
+    {
+      "metadata": "/ea/2599d08850/3/metadata.json",
+      "transcript": "/ea/2599d08850/3/full.jsonl",
+      "context": "/ea/2599d08850/3/context.md",
+      "content_hash": "/ea/2599d08850/3/content_hash.txt",
+      "prompt": "/ea/2599d08850/3/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 62,
-    "cache_creation_tokens": 84595,
-    "cache_read_tokens": 2455916,
-    "output_tokens": 23349,
-    "api_call_count": 50
+    "input_tokens": 123,
+    "cache_creation_tokens": 370120,
+    "cache_read_tokens": 7323754,
+    "output_tokens": 43689,
+    "api_call_count": 105
   }
 }

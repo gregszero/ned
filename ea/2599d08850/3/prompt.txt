@@ -1,0 +1,216 @@
+Implement the following plan:
+
+# Make OpenFang More Powerful for AI
+
+## Context
+
+Every agent invocation currently pays ~22K+ tokens of overhead before the AI even reads the user's message: ~15K for the monolithic system prompt (`workspace/CLAUDE.md`) + ~7K for 38 tool schemas. A simple "remind me at 5pm" loads Gmail patterns, canvas widget JSON examples, data table schemas, workflow pipeline docs, and 31 tools it will never use. Multi-widget dashboards require 5-6 sequential LLM turns for what should be 1. Long conversations accumulate unbounded context.
+
+The goal: make the framework faster, more reliable, and more token-efficient so the AI can do more with less.
+
+---
+
+## Improvement 1: Modular System Prompt via MCP Resources
+
+**~7-11K tokens saved per invocation (47-73% reduction) | Low complexity**
+
+Split `workspace/CLAUDE.md` into a lean core (~150 lines, ~4K tokens) plus on-demand guide resources the agent reads only when needed.
+
+**Keep in CLAUDE.md (core):**
+- Persona, philosophy, critical rules (lines 1-45)
+- Condensed tool table — name + one-liner only, no examples (lines 48-87)
+- Available models list (lines 387-405)
+- New "Reference Guides" section listing resource URIs
+
+**Extract to `workspace/guides/*.md`, served as MCP resources:**
+
+| Resource URI | Content | When read |
+|---|---|---|
+| `guide://gmail` | Gmail patterns, query syntax | Email requests |
+| `guide://canvas` | Canvas components, widgets, JSON examples, data binding, action buttons | Page/dashboard/widget requests |
+| `guide://data-tables` | Table creation, CRUD, column types | Data/table requests |
+| `guide://documents` | Upload, parsing, creation | File/document requests |
+| `guide://approvals` | Approval gates, workflow integration | Approval requests |
+| `guide://automation` | Triggers, workflows, step types | Automation requests |
+| `guide://design-system` | CSS tokens, component classes, Tailwind | Building HTML |
+| `guide://python` | Python execution, virtualenv, skills | Python requests |
+
+**Files:**
+- `workspace/CLAUDE.md` — trim to core
+- `fang/resources/guide_resource.rb` — new templated `FastMcp::Resource` serving `guide://{topic}`
+- `workspace/guides/*.md` — 8 extracted guide files
+
+---
+
+## Improvement 2: Tool Context Groups with Pre-Classification
+
+**~4-5K tokens saved per invocation (60-70% tool schema reduction) | Medium complexity**
+
+Filter which tools are available per conversation based on context. Most conversations need only 7-13 tools, not 38. Use a cheap/fast model call to classify intent before spawning the full agent.
+
+**Tool groups:**
+- **core** (always loaded, 7 tools): `run_code`, `run_skill`, `send_message`, `schedule_task`, `create_page`, `create_notification`, `web_fetch`
+- **gmail** (6): all `gmail_*` tools
+- **canvas** (6): `get_canvas`, `update_canvas`, `add_canvas_component`, `update_canvas_component`, `remove_canvas_component`, `define_widget`
+- **data** (6): all data table CRUD tools
+- **documents** (3): `create_document`, `read_document`, `list_documents`
+- **automation** (8): triggers, workflows, heartbeats, approvals
+- **system** (2): `manage_python`, `start_computer_use`
+
+**Pre-classification step:**
+
+Before spawning the Claude agent subprocess, make a fast Haiku call (~200ms, ~200 tokens) to classify which tool groups the message needs:
+
+```ruby
+# fang/tool_classifier.rb
+module Fang
+  module ToolClassifier
+    GROUPS = %w[gmail canvas data documents automation system].freeze
+
+    def self.classify(message, conversation: nil)
+      # Include recent conversation context for better classification
+      context = if conversation && conversation.messages.count > 1
+        recent = conversation.messages.order(created_at: :desc).limit(3).map { |m| "#{m.role}: #{m.truncated_content(100)}" }.reverse.join("\n")
+        "Recent conversation:\n#{recent}\n\nNew message: #{message}"
+      else
+        message
+      end
+
+      response = Anthropic::Client.new.messages(
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 50,
+        system: "You classify user messages for an AI assistant. Return ONLY a comma-separated list of needed tool groups from: #{GROUPS.join(', ')}. Return 'none' if only basic tools are needed. Be conservative — only include groups clearly needed.",
+        messages: [{ role: "user", content: context }]
+      )
+
+      groups = response.dig("content", 0, "text").to_s.strip.split(",").map(&:strip)
+      groups = groups & GROUPS  # only allow known groups
+      [:core] + groups.map(&:to_sym)
+    rescue => e
+      Fang.logger.warn "Tool classification failed: #{e.message}, loading all tools"
+      nil  # nil = no filtering, load everything (safe fallback)
+    end
+  end
+end
+```
+
+**Implementation:**
+1. Add `tool_group` class-level DSL to each tool (one line per tool file)
+2. Create `fang/tool_classifier.rb` — Haiku-based pre-classification
+3. In `fang/agent.rb`, call `ToolClassifier.classify` before spawning subprocess
+4. Generate per-conversation `.mcp.json` with group params in the SSE URL: `http://localhost:3000/mcp/sse?groups=core,gmail`
+5. Add `filter_tools` block in `fang/mcp_server.rb` that reads groups from the SSE connection URL
+6. Store classified groups in conversation metadata so resumed sessions keep their groups (and can expand if new groups detected)
+
+**Cost of pre-classification:** ~200 tokens of Haiku input/output ≈ $0.0002 per call. Saves ~4-5K tokens of Sonnet/Opus tool schemas ≈ $0.03-0.08. ROI is ~100-400x.
+
+**Files:**
+- `fang/tool_classifier.rb` — new classifier module
+- `fang/concerns/tool_grouping.rb` — new concern with `tool_group` DSL
+- All `fang/tools/*.rb` — add `tool_group :group_name` (one line each)
+- `fang/mcp_server.rb` — add `filter_tools` block
+- `fang/agent.rb` — call classifier, generate per-conversation `.mcp.json`
+
+---
+
+## Improvement 3: Batch Canvas Operations
+
+**Saves 4-5 LLM turns per dashboard build | Low-medium complexity**
+
+New `build_canvas` tool that creates a page with multiple components in a single call, with auto-positioning.
+
+```ruby
+build_canvas(
+  title: "Dashboard",
+  layout: "grid",  # auto-positions in 2-column grid
+  components: [
+    { type: "metric", metadata: { label: "Users", data_source: "User.count" } },
+    { type: "chart", metadata: { chart_type: "bar", ... } },
+    { type: "data_table", metadata: { model: "Message", ... } }
+  ]
+)
+```
+
+**Auto-positioning layouts:**
+- `grid` — 2-column, 400px spacing
+- `stack` — single column, vertical
+- `freeform` — explicit x/y per component
+
+**Files:**
+- `fang/tools/build_canvas_tool.rb` — new compound tool
+- `workspace/guides/canvas.md` — document the tool
+
+---
+
+## Improvement 4: Promote `run_code` as First-Class Meta-Tool
+
+**~2-8K tokens saved per complex operation | Low complexity**
+
+Rewrite system prompt guidance to encourage `run_code` for batch/simple operations instead of multiple dedicated tool calls.
+
+**When to use `run_code`:**
+- Simple CRUD (creating/querying records)
+- Multiple related DB operations in one shot
+- Querying data for context before acting
+
+**When to use dedicated tools:**
+- Operations with side effects beyond DB (gmail_send, web_fetch)
+- Operations needing complex rendering/broadcasting (send_message with Turbo Streams)
+
+**Also:** Slim down `run_code_tool.rb` return values — return just `{result: "..."}` on success instead of redundant `result` + `output` + `success` fields.
+
+**Files:**
+- `workspace/CLAUDE.md` — rewrite best practices section
+- `fang/tools/run_code_tool.rb` — simplify return value
+
+---
+
+## Improvement 5: Conversation Context Compression
+
+**~20-60K tokens saved per long conversation | Medium-high complexity**
+
+For conversations exceeding 15 messages, start fresh Claude sessions with an injected summary instead of resuming with full history.
+
+1. Add `context_summary` column to `conversations` table
+2. After crossing message thresholds (15, 30, 50), generate a summary via a cheap Haiku call
+3. When starting a new agent turn on a long conversation, build prompt as: `CONVERSATION CONTEXT:\n{summary}\n\nUSER REQUEST:\n{message}`
+4. Start a new session instead of resuming (gives us context window control)
+
+**Files:**
+- New migration: `add_context_summary_to_conversations`
+- `fang/models/conversation.rb` — summarization methods
+- `fang/agent.rb` — modify prompt building and session logic
+- `fang/jobs/agent_executor_job.rb` — trigger summary regeneration
+
+---
+
+## Implementation Order
+
+| Priority | Improvement | Savings | Complexity |
+|---|---|---|---|
+| 1st | Modular system prompt (MCP resources) | ~7-11K tokens/invocation | Low |
+| 2nd | Promote run_code (prompt rewrite) | ~2-8K tokens/complex ops | Low |
+| 3rd | Batch canvas operations | ~5 LLM turns/dashboard | Low-medium |
+| 4th | Tool context groups | ~4-5K tokens/invocation | Medium |
+| 5th | Conversation context compression | ~20-60K tokens/long convos | Medium-high |
+
+**Cumulative effect of 1+2+4:** A simple request goes from ~22K overhead tokens to ~5.5K. That's a **75% reduction** in per-invocation baseline cost.
+
+## Verification
+
+- Run `rake test` after each improvement
+- Compare token usage before/after via message metadata (`total_cost_usd`, `usage`)
+- Test a "remind me at 5pm" request — should use only core tools, no guides loaded
+- Test a "build me a dashboard" request — should load canvas guide, use `build_canvas` tool
+- Test a 20+ message conversation — should see context compression kick in
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+any test to add?
+
+---
+
+[Request interrupted by user for tool use]
