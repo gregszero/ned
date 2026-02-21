@@ -1,0 +1,9 @@
+does the project uses kamal or docker in any way?
+
+---
+
+we can remove kamal and docker too. because this project is made to run barebones
+
+---
+
+commit this

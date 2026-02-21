@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "9511bb3f037b",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    ".claude/skills/deploy/SKILL.md",
+    ".claude/skills/server/SKILL.md",
+    ".claude/skills/setup/SKILL.md",
+    "Dockerfile.web",
+    "FINAL_STATUS.md",
+    "Gemfile",
+    "IMPLEMENTATION_STATUS.md",
+    "config/deploy.yml",
+    "container/Dockerfile",
+    "docker-compose.yml",
+    "docs/MCP_ARCHITECTURE.md",
+    "fang/resources/system_profile_resource.rb",
+    "fang/system_profile.rb",
+    "workspace/CLAUDE.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/95/11bb3f037b/0/metadata.json",
+      "transcript": "/95/11bb3f037b/0/full.jsonl",
+      "context": "/95/11bb3f037b/0/context.md",
+      "content_hash": "/95/11bb3f037b/0/content_hash.txt",
+      "prompt": "/95/11bb3f037b/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 41,
+    "cache_creation_tokens": 33724,
+    "cache_read_tokens": 1465526,
+    "output_tokens": 5010,
+    "api_call_count": 35
+  }
+}
