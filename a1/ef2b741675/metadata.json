@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "a1ef2b741675",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "Gemfile",
+    "config.ru",
+    "fang/bootstrap.rb",
+    "fang/database.rb",
+    "fang/queue.rb",
+    "workspace/migrations/20260222000001_create_delayed_jobs.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/a1/ef2b741675/0/metadata.json",
+      "transcript": "/a1/ef2b741675/0/full.jsonl",
+      "context": "/a1/ef2b741675/0/context.md",
+      "content_hash": "/a1/ef2b741675/0/content_hash.txt",
+      "prompt": "/a1/ef2b741675/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 16,
+    "cache_creation_tokens": 40710,
+    "cache_read_tokens": 373950,
+    "output_tokens": 2417,
+    "api_call_count": 12
+  }
+}

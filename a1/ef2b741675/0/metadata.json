@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "a1ef2b741675",
+  "session_id": "c21c1424-74b3-4e6b-bfd3-df66da717a40",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-21T22:47:34.086336306Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "Gemfile",
+    "config.ru",
+    "fang/bootstrap.rb",
+    "fang/database.rb",
+    "fang/queue.rb",
+    "workspace/migrations/20260222000001_create_delayed_jobs.rb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 16,
+    "cache_creation_tokens": 40710,
+    "cache_read_tokens": 373950,
+    "output_tokens": 2417,
+    "api_call_count": 12
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-21T22:47:34.036018328Z",
+    "agent_lines": 60,
+    "human_added": 10,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 70,
+    "agent_percentage": 85.71428571428571
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/c21c1424-74b3-4e6b-bfd3-df66da717a40.jsonl"
+}

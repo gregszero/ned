@@ -1,0 +1,101 @@
+Implement the following plan:
+
+# Plan: SQLite WAL Mode + Persistent Job Queue
+
+## Context
+
+OpenFang runs Puma with 16-32 threads, all hitting SQLite. Without WAL mode, concurrent reads/writes can cause "database is locked" errors. Additionally, the ActiveJob `:async` adapter stores jobs in memory — any queued jobs (scheduled tasks, workflows, triggers) are lost on server restart. These two changes improve reliability with minimal complexity.
+
+## Part 1: Enable SQLite WAL Mode
+
+**File:** `fang/database.rb`
+
+After `ActiveRecord::Base.establish_connection(config)`, add:
+
+```ruby
+if config.is_a?(Hash) && config[:adapter] == 'sqlite3'
+  ActiveRecord::Base.connection.execute("PRAGMA journal_mode=WAL")
+  ActiveRecord::Base.connection.execute("PRAGMA synchronous=NORMAL")
+end
+```
+
+- `journal_mode=WAL` — allows concurrent readers during writes
+- `synchronous=NORMAL` — safe with WAL, better performance than FULL (the WAL default)
+- Only runs for SQLite connections (not PostgreSQL)
+
+## Part 2: Persistent Job Queue with delayed_job
+
+**Why delayed_job:** It's the only mature ActiveJob-compatible queue that works with SQLite via ActiveRecord. solid_queue and good_job require Rails or PostgreSQL. delayed_job_active_record is battle-tested, works standalone, and supports in-process workers.
+
+### Step 1: Add gems
+
+**File:** `Gemfile`
+
+```ruby
+gem 'delayed_job'               # Persistent job queue
+gem 'delayed_job_active_record' # ActiveRecord backend for delayed_job
+```
+
+Then `bundle install`.
+
+### Step 2: Create migration
+
+**File:** `workspace/migrations/20260222000001_create_delayed_jobs.rb`
+
+Standard delayed_job migration — creates the `delayed_jobs` table with priority, attempts, handler, run_at, etc.
+
+### Step 3: Rewrite queue adapter
+
+**File:** `fang/queue.rb`
+
+- Switch adapter: `ActiveJob::Base.queue_adapter = :delayed_job`
+- Add `start!` method that spawns `Delayed::Worker` in a background thread (in-process, no separate worker)
+- Add `stop!` method for clean shutdown
+- Configure: `max_attempts: 3`, `destroy_failed_jobs: false`, `sleep_delay: 3`
+
+### Step 4: Fix load order in bootstrap
+
+**File:** `fang/bootstrap.rb`
+
+Move `require_relative 'queue'` to **after** `Fang::Database.connect!` (line 71), since delayed_job needs the DB connection to configure its adapter.
+
+### Step 5: Start/stop worker in config.ru
+
+**File:** `config.ru`
+
+```ruby
+Fang::Queue.start!    # after Fang::Scheduler.start!
+at_exit { Fang::Queue.stop! }
+```
+
+## Files Modified
+
+| File | Change |
+|---|---|
+| `fang/database.rb` | Add WAL + synchronous PRAGMAs after connect |
+| `Gemfile` | Add delayed_job, delayed_job_active_record |
+| `workspace/migrations/20260222000001_create_delayed_jobs.rb` | New migration |
+| `fang/queue.rb` | Rewrite: delayed_job adapter + in-process worker thread |
+| `fang/bootstrap.rb` | Move queue require after DB connect |
+| `config.ru` | Add Queue.start! and at_exit shutdown |
+
+No changes to any job classes, tools, models, or tests.
+
+## Verification
+
+1. `bundle install`
+2. `./openfang.rb db:migrate` — creates `delayed_jobs` table
+3. `./openfang.rb server` — start server, check logs for:
+   - "PRAGMA journal_mode=WAL" confirmation
+   - "Queue adapter: ActiveJob::QueueAdapters::DelayedJobAdapter"
+   - Delayed::Worker starting
+4. Send a message in the web UI — verify `AgentExecutorJob` runs via delayed_job
+5. Check `delayed_jobs` table: jobs should appear briefly then be processed
+6. `rake test` — all existing tests pass (test env uses `:async` or `:inline` adapter, unaffected)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
