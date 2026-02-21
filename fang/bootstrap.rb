@@ -64,11 +64,11 @@ module Fang
       require_relative 'jobs/application_job'
       Dir[root.join('fang/jobs/**/*.rb')].sort.each { |f| require f unless f.include?('application_job') }
 
-      # Configure ActiveJob queue adapter
-      require_relative 'queue'
-
       # Connect to database if configured
       Fang::Database.connect! if Fang::Database.configured?
+
+      # Configure ActiveJob queue adapter (after DB connect — delayed_job needs it)
+      require_relative 'queue'
 
       # Detect host system capabilities
       Fang::SystemProfile.detect!

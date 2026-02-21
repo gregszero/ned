@@ -9,6 +9,8 @@ gem 'activerecord', '~> 8.0'
 gem 'pg'                      # Database (PostgreSQL)
 gem 'sqlite3'                 # SQLite option for development
 gem 'rufus-scheduler'         # Cron-like recurring jobs
+gem 'delayed_job'             # Persistent job queue
+gem 'delayed_job_active_record' # ActiveRecord backend for delayed_job
 gem 'solid_cable'             # WebSockets (for web UI)
 gem 'solid_cache'             # Caching
 

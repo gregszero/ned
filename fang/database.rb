@@ -13,6 +13,13 @@ module Fang
         config = load_config
         ActiveRecord::Base.establish_connection(config)
         ActiveRecord::Base.logger = Fang.logger
+
+        if config.is_a?(Hash) && config[:adapter] == 'sqlite3'
+          ActiveRecord::Base.connection.execute("PRAGMA journal_mode=WAL")
+          ActiveRecord::Base.connection.execute("PRAGMA synchronous=NORMAL")
+          Fang.logger.info "SQLite WAL mode enabled"
+        end
+
         Fang.logger.info "Connected to database: #{config[:database]}"
       rescue => e
         Fang.logger.error "Failed to connect to database: #{e.message}"

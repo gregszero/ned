@@ -5,6 +5,10 @@ require_relative 'fang/bootstrap'
 # Start the scheduler for recurring tasks
 Fang::Scheduler.start!
 
+# Start persistent job queue worker
+Fang::Queue.start!
+at_exit { Fang::Queue.stop! }
+
 # Configure MCP server (tools for the AI agent)
 Fang::McpServer.configure!
 
