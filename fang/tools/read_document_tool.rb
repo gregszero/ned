@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class ReadDocumentTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'read_document'
       description 'Read the extracted text content of a document. Parses on first read if needed.'
+      tool_group :documents
 
       arguments do
         required(:document_id).filled(:integer).description('Document ID')

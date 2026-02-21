@@ -20,6 +20,17 @@ module Fang
         ObjectSpace.each_object(Class).select { |c| c < FastMcp::Tool }.each { |t| @server.register_tool(t) }
         ObjectSpace.each_object(Class).select { |c| c < FastMcp::Resource }.each { |r| @server.register_resource(r) }
 
+        # Filter tools based on groups query param (set by ToolClassifier)
+        @server.filter_tools do |request, tools|
+          groups_param = request.params['groups'].to_s.strip
+          if groups_param.empty?
+            tools # no filtering — load all tools
+          else
+            allowed = groups_param.split(',').map(&:strip).map(&:to_sym)
+            tools.select { |t| t.respond_to?(:tool_group) && allowed.include?(t.tool_group) }
+          end
+        end
+
         Fang.logger.info "MCP Server configured with #{@server.tools.count} tools and #{@server.resources.count} resources"
       end
 

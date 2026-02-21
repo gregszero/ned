@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class QueryDataTableTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'query_data_table'
       description 'Query records from a dynamic data table with filtering, sorting, and pagination'
+      tool_group :data
 
       arguments do
         required(:data_table_id).filled(:integer).description('Data table ID')

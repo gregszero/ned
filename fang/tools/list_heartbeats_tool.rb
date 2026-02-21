@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class ListHeartbeatsTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'list_heartbeats'
       description 'List all heartbeats with their status and stats'
+      tool_group :automation
 
       arguments do
         optional(:enabled_only).filled(:bool).description('Only show enabled heartbeats')

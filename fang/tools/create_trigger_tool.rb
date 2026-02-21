@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class CreateTriggerTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'create_trigger'
       description 'Create an event trigger that fires a skill or prompt when a matching event occurs'
+      tool_group :automation
 
       arguments do
         required(:name).filled(:string).description('Trigger name')

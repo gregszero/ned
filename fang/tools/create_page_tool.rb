@@ -3,6 +3,8 @@
 module Fang
   module Tools
     class CreatePageTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'create_page'
       description 'Create a web page that appears in the sidebar navigation'
 

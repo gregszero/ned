@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class UpdateCanvasComponentTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'update_canvas_component'
       description 'Update an existing canvas component (content, position, or size)'
+      tool_group :canvas
 
       arguments do
         required(:component_id).filled(:integer).description('ID of the component to update')

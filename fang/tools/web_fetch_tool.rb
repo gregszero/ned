@@ -6,6 +6,8 @@ require 'json'
 module Fang
   module Tools
     class WebFetchTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'web_fetch'
       description 'Fetch content from a URL. Returns the response body, status code, and content type. Supports JSON auto-parsing.'
 

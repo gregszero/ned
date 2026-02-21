@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class CreateWorkflowTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'create_workflow'
       description 'Create a multi-step workflow pipeline that executes steps in sequence'
+      tool_group :automation
 
       arguments do
         required(:name).filled(:string).description('Workflow name')

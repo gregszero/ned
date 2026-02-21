@@ -5,6 +5,8 @@ require 'redcarpet'
 module Fang
   module Tools
     class SendMessageTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'send_message'
       description 'Send a message back to the user'
 

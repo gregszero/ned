@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class CreateDataTableTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'create_data_table'
       description 'Create a dynamic data table with a custom schema. Creates a real SQLite table for full SQL queryability.'
+      tool_group :data
 
       arguments do
         required(:name).filled(:string).description('Human-readable table name (e.g. "Customers")')

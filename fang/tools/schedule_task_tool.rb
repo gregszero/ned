@@ -3,6 +3,8 @@
 module Fang
   module Tools
     class ScheduleTaskTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'schedule_task'
       description 'Schedule a task to run at a specific time in the future'
 

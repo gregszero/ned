@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class AddCanvasComponentTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'add_canvas_component'
       description 'Add a component/widget to the current canvas page'
+      tool_group :canvas
 
       arguments do
         optional(:content).filled(:string).description('HTML content (auto-rendered from widget type if blank)')

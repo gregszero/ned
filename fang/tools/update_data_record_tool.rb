@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class UpdateDataRecordTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'update_data_record'
       description 'Update a record in a dynamic data table by record ID'
+      tool_group :data
 
       arguments do
         required(:data_table_id).filled(:integer).description('Data table ID')

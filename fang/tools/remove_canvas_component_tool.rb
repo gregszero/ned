@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class RemoveCanvasComponentTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'remove_canvas_component'
       description 'Remove a component from the canvas'
+      tool_group :canvas
 
       arguments do
         required(:component_id).filled(:integer).description('ID of the component to remove')

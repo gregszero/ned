@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class ListDocumentsTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'list_documents'
       description 'List uploaded documents, optionally filtered by status or content type'
+      tool_group :documents
 
       arguments do
         optional(:status).filled(:string).description('Filter by status: uploaded, processing, ready, error')

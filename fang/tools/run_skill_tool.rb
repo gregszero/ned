@@ -3,6 +3,8 @@
 module Fang
   module Tools
     class RunSkillTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'run_skill'
       description 'Execute a skill by name (Ruby or Python)'
 

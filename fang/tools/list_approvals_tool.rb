@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class ListApprovalsTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'list_approvals'
       description 'List approvals, optionally filtered by status'
+      tool_group :automation
 
       arguments do
         optional(:status).filled(:string).description('Filter by status: pending, approved, rejected, expired')

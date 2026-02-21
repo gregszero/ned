@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class GetCanvasTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'get_canvas'
       description 'Get all components on the current canvas page'
+      tool_group :canvas
 
       arguments do
         optional(:page_id).filled(:integer).description('Page ID (defaults to current conversation page)')

@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class CreateHeartbeatTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'create_heartbeat'
       description 'Create a new heartbeat that periodically runs a skill and escalates to AI when data is returned'
+      tool_group :automation
 
       arguments do
         required(:name).filled(:string).description('Unique name for the heartbeat')

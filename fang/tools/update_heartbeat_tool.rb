@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class UpdateHeartbeatTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'update_heartbeat'
       description 'Update an existing heartbeat configuration'
+      tool_group :automation
 
       arguments do
         required(:name).filled(:string).description('Name of the heartbeat to update')

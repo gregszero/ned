@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class CreateApprovalTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'create_approval'
       description 'Create a standalone approval request. Sends a notification and optionally schedules an expiry timeout.'
+      tool_group :automation
 
       arguments do
         required(:title).filled(:string).description('Approval title')

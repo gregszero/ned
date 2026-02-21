@@ -6,6 +6,8 @@ require 'digest'
 
 module Fang
   module Agent
+    MCP_CONFIGS_DIR = File.join(Fang.root, 'tmp', 'mcp_configs')
+
     class << self
       # Execute a prompt via claude subprocess and return parsed response
       def execute(prompt:, session_id:, conversation: nil)
@@ -14,19 +16,21 @@ module Fang
         resumable = session.stopped?
 
         session.start!
+        effective_prompt = build_prompt(prompt, conversation)
+        mcp_config = mcp_config_for(prompt, conversation)
 
-        result = run_claude(prompt: prompt, uuid: uuid, resuming: resumable, env: build_env(conversation))
+        result = run_claude(prompt: effective_prompt, uuid: uuid, resuming: resumable, env: build_env(conversation), mcp_config: mcp_config)
 
         # If resume failed, retry as a new session
         if result[:failed] && resumable
           Fang.logger.warn "Resume failed, starting fresh session"
-          result = run_claude(prompt: prompt, uuid: uuid, resuming: false, env: build_env(conversation))
+          result = run_claude(prompt: effective_prompt, uuid: uuid, resuming: false, env: build_env(conversation), mcp_config: mcp_config)
         end
 
         # If session ID is "already in use", retry with --resume
         if result[:failed] && result[:error]&.include?('already in use')
           Fang.logger.warn "Session in use, retrying with --resume"
-          result = run_claude(prompt: prompt, uuid: uuid, resuming: true, env: build_env(conversation))
+          result = run_claude(prompt: effective_prompt, uuid: uuid, resuming: true, env: build_env(conversation), mcp_config: mcp_config)
         end
 
         if result[:failed]
@@ -53,10 +57,12 @@ module Fang
         resumable = session.stopped?
 
         session.start!
+        effective_prompt = build_prompt(prompt, conversation)
+        mcp_config = mcp_config_for(prompt, conversation)
 
         success = run_claude_streaming(
-          prompt: prompt, uuid: uuid, resuming: resumable,
-          env: build_env(conversation), &block
+          prompt: effective_prompt, uuid: uuid, resuming: resumable,
+          env: build_env(conversation), mcp_config: mcp_config, &block
         )
 
         # If resume failed, retry as new session
@@ -64,8 +70,8 @@ module Fang
           if resumable
             Fang.logger.warn "Resume failed (streaming), starting fresh session"
             success = run_claude_streaming(
-              prompt: prompt, uuid: uuid, resuming: false,
-              env: build_env(conversation), &block
+              prompt: effective_prompt, uuid: uuid, resuming: false,
+              env: build_env(conversation), mcp_config: mcp_config, &block
             )
           end
         end
@@ -91,9 +97,7 @@ module Fang
 
       private
 
-      def run_claude(prompt:, uuid:, resuming:, env:)
-        mcp_config = File.join(Fang.root, 'workspace', '.mcp.json')
-
+      def run_claude(prompt:, uuid:, resuming:, env:, mcp_config:)
         cmd = [
           'claude',
           '-p', prompt,
@@ -125,9 +129,7 @@ module Fang
         end
       end
 
-      def run_claude_streaming(prompt:, uuid:, resuming:, env:, &block)
-        mcp_config = File.join(Fang.root, 'workspace', '.mcp.json')
-
+      def run_claude_streaming(prompt:, uuid:, resuming:, env:, mcp_config:, &block)
         cmd = [
           'claude',
           '-p', prompt,
@@ -181,6 +183,58 @@ module Fang
         end
 
         success
+      end
+
+      # Build the prompt, applying context compression for long conversations
+      def build_prompt(raw_prompt, conversation)
+        return raw_prompt unless conversation
+
+        # Generate summary if needed (async-safe: updates DB directly)
+        conversation.generate_summary! if conversation.needs_summary?
+
+        # Use compressed prompt if we have a summary
+        if conversation.context_summary.present?
+          Fang.logger.info "Using compressed context (#{conversation.summary_message_count} msgs summarized)"
+          conversation.compressed_prompt(raw_prompt)
+        else
+          raw_prompt
+        end
+      end
+
+      # Classify the message and generate a per-conversation .mcp.json with group filtering
+      def mcp_config_for(prompt, conversation)
+        default_config = File.join(Fang.root, 'workspace', '.mcp.json')
+
+        groups = ToolClassifier.classify(prompt, conversation: conversation)
+
+        # nil means classification failed — use default (all tools)
+        return default_config unless groups
+
+        groups_str = ToolClassifier.groups_string(groups)
+        Fang.logger.info "Tool groups for message: #{groups_str}"
+
+        # Store groups in conversation context for visibility
+        if conversation
+          ctx = conversation.context || {}
+          ctx['tool_groups'] = groups.map(&:to_s)
+          conversation.update_column(:context, ctx.to_json)
+        end
+
+        # Write a per-conversation .mcp.json with groups in the SSE URL
+        FileUtils.mkdir_p(MCP_CONFIGS_DIR)
+        config_path = File.join(MCP_CONFIGS_DIR, "mcp_#{conversation&.id || 'default'}.json")
+
+        config = {
+          mcpServers: {
+            openfang: {
+              type: 'sse',
+              url: "http://localhost:3000/mcp/sse?groups=#{groups_str}"
+            }
+          }
+        }
+
+        File.write(config_path, JSON.pretty_generate(config))
+        config_path
       end
 
       def find_or_create_session(conversation, uuid)

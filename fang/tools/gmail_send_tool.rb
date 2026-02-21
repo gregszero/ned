@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class GmailSendTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'gmail_send'
       description 'Send an email'
+      tool_group :gmail
 
       arguments do
         required(:to).filled(:string).description('Recipient email address')

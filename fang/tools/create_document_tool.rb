@@ -5,8 +5,11 @@ require 'base64'
 module Fang
   module Tools
     class CreateDocumentTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'create_document'
       description 'Create a document file programmatically from text or base64 content'
+      tool_group :documents
 
       arguments do
         required(:name).filled(:string).description('Filename (e.g. "report.csv", "data.json")')

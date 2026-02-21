@@ -3,6 +3,8 @@
 module Fang
   module Tools
     class RunCodeTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'run_code'
       description 'Execute code directly. Supports Ruby (with ActiveRecord model access) and Python (with virtualenv packages).'
 
@@ -34,11 +36,7 @@ module Fang
         context = create_safe_context
         result = context.eval(code)
 
-        {
-          success: true,
-          result: result.inspect,
-          output: result.to_s
-        }
+        { result: result.inspect }
       rescue SyntaxError => e
         { success: false, error: "Syntax error: #{e.message}" }
       end

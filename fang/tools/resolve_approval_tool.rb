@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class ResolveApprovalTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'resolve_approval'
       description 'Approve or reject a pending approval'
+      tool_group :automation
 
       arguments do
         required(:approval_id).filled(:integer).description('Approval ID')

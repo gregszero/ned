@@ -7,7 +7,6 @@ class RunCodeToolTest < Fang::ToolTestCase
     tool = Fang::Tools::RunCodeTool.new
     result = tool.call(code: '2 + 2')
 
-    assert result[:success]
     assert_equal '4', result[:result]
   end
 
@@ -16,7 +15,6 @@ class RunCodeToolTest < Fang::ToolTestCase
     tool = Fang::Tools::RunCodeTool.new
     result = tool.call(code: 'Conversation.count')
 
-    assert result[:success]
     assert result[:result].to_i >= 1
   end
 

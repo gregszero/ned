@@ -43,6 +43,7 @@ module Fang
       require_relative 'mcp_server'
       require_relative 'event_bus'
       require_relative 'document_parser'
+      require_relative 'tool_classifier'
 
       # Load computer use subsystem
       require_relative 'computer_use/display_server'

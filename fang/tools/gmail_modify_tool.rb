@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class GmailModifyTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'gmail_modify'
       description 'Add or remove labels on an email (mark read, archive, star, etc). Common labels: UNREAD, STARRED, INBOX, SPAM, TRASH'
+      tool_group :gmail
 
       arguments do
         required(:message_id).filled(:string).description('Gmail message ID')

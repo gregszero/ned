@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class DefineWidgetTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'define_widget'
       description 'Define a new widget type at runtime (Ruby class + optional JS behavior)'
+      tool_group :canvas
 
       arguments do
         required(:widget_type).filled(:string).description('Unique type key (snake_case, e.g. "countdown_timer")')

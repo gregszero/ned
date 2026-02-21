@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class InsertDataRecordTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'insert_data_record'
       description 'Insert a record into a dynamic data table'
+      tool_group :data
 
       arguments do
         required(:data_table_id).filled(:integer).description('Data table ID')

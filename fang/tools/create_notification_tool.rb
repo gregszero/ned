@@ -3,6 +3,8 @@
 module Fang
   module Tools
     class CreateNotificationTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'create_notification'
       description 'Create a notification for the user'
 

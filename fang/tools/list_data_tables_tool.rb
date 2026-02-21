@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class ListDataTablesTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'list_data_tables'
       description 'List all dynamic data tables with record counts'
+      tool_group :data
 
       arguments do
         optional(:status).filled(:string).description('Filter by status: active (default), archived')

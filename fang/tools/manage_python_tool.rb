@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class ManagePythonTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'manage_python'
       description 'Manage the Python virtualenv: install packages, list installed packages, or set up the venv'
+      tool_group :system
 
       arguments do
         required(:action).filled(:string).description('Action: "install", "list", or "setup"')

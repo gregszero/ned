@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class StartComputerUseTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'start_computer_use'
       description 'Launch a computer use session to visually interact with a desktop and browser. Use when you need to browse websites, fill forms, click buttons, or interact with any GUI application.'
+      tool_group :system
 
       arguments do
         required(:task).filled(:string).description('What to accomplish on the computer')

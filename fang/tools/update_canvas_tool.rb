@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class UpdateCanvasTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'update_canvas'
       description 'Update the canvas area for the current conversation with HTML content. The canvas is a large display area above the chat that can show rich content like dashboards, reports, or interactive pages. Creates a named Page if none exists.'
+      tool_group :canvas
 
       arguments do
         required(:html).filled(:string).description('HTML content to display in the canvas')

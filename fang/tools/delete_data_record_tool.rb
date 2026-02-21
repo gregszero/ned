@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class DeleteDataRecordTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'delete_data_record'
       description 'Delete a record from a dynamic data table by record ID'
+      tool_group :data
 
       arguments do
         required(:data_table_id).filled(:integer).description('Data table ID')

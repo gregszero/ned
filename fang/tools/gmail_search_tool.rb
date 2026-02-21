@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class GmailSearchTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'gmail_search'
       description 'Search emails using Gmail query syntax (e.g. "is:unread", "from:alice", "newer_than:1d subject:meeting")'
+      tool_group :gmail
 
       arguments do
         required(:query).filled(:string).description('Gmail search query')

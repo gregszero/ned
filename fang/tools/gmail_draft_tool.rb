@@ -3,8 +3,11 @@
 module Fang
   module Tools
     class GmailDraftTool < FastMcp::Tool
+      include Fang::Concerns::ToolGrouping
+
       tool_name 'gmail_draft'
       description 'Create an email draft without sending it'
+      tool_group :gmail
 
       arguments do
         required(:to).filled(:string).description('Recipient email address')
