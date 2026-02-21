@@ -1,0 +1,85 @@
+Implement the following plan:
+
+# Plan: Update README.md and CLAUDE.md
+
+## Context
+
+The codebase has grown significantly beyond what README.md and CLAUDE.md document. The inner agent prompt (`workspace/CLAUDE.md`) is well-maintained and comprehensive, but the developer-facing docs are stale. The framework now has ~38 MCP tools (docs say 18), 18 models, documents/data tables/approvals/Gmail/Python support — none reflected in README or CLAUDE.md.
+
+The goal: these files should accurately describe the framework as a platform where AI builds its own automation — skills, workflows, triggers, heartbeats, data tables, documents, approvals — all token-efficiently.
+
+## Changes
+
+### 1. Update `README.md`
+
+**Tool count fixes** (appears in 5 places):
+- Diagram: "...18 tools" → "...38 tools"
+- Paragraph below diagram: "18 MCP tools" → "38 MCP tools"
+- Architecture table: "18 tools + 6 resources" → "38 tools + 6 resources"
+- MCP Tools heading/intro: "18 MCP tools" → "38 MCP tools"
+
+**Add missing features sections** (after Workflows section, before MCP Tools):
+
+- **Documents** — Upload/parse/generate files (PDF, CSV, Excel, text). Extracted text available to agent. Token-efficient: parse once, read many times.
+- **Dynamic Data Tables** — AI creates real SQLite tables on the fly with custom schemas. Full CRUD via tools. Used for structured data the agent needs to track.
+- **Approvals** — Human-in-the-loop gates. Standalone or as workflow steps. Optional timeout with auto-expiry. Events emitted on decision.
+- **Gmail Integration** — Full OAuth2 Gmail: search, read, send, draft, modify labels. 6 dedicated tools.
+- **Python Support** — Run Python code alongside Ruby. Virtualenv management. Python skills auto-discovered from `skills/`.
+
+**Update MCP Tools table** — Add all missing tools:
+- `manage_python`, `update_canvas`, document tools (3), data table tools (5), approval tools (3), Gmail tools (6)
+
+**Update Workflows section** — Add `approval` step type to the table.
+
+**Update Widgets table** — Add: `data_table` (dynamic), `approval`, `computer_use`, `scheduled_jobs`, `settings`, `website`.
+
+### 2. Update `CLAUDE.md`
+
+**Update Existing MCP Tools table** — Currently lists only 8 tools. Replace with complete list of all ~38 tools grouped by category:
+- Core (run_code, run_skill, manage_python, send_message)
+- Scheduling (schedule_task)
+- Pages & Canvas (create_page, get_canvas, update_canvas, add/update/remove_canvas_component, define_widget)
+- Documents (create_document, read_document, list_documents)
+- Data Tables (create_data_table, list_data_tables, query_data_table, insert/update/delete_data_record)
+- Approvals (create_approval, list_approvals, resolve_approval)
+- Automation (create_notification, create_trigger, create_workflow, create/update/list_heartbeats)
+- Web (web_fetch, start_computer_use)
+- Gmail (gmail_search, gmail_read, gmail_send, gmail_draft, gmail_modify, gmail_labels)
+
+**Update Event System** — Add missing event types:
+- `workflow:completed:*` / `workflow:failed:*`
+- `approval:approved:*` / `approval:rejected:*` / `approval:expired:*`
+
+**Update Workflow step types** — Add `approval` step type.
+
+**Add missing concern** — `HasJsonDefaults` alongside `HasStatus`.
+
+**Update Key Files table** — Add:
+- `fang/skill_loader.rb` — Skill discovery and execution
+- `fang/python_runner.rb` — Python virtualenv and code execution
+- `fang/document_parser.rb` — Multi-format document text extraction
+- `fang/gmail.rb` — Gmail OAuth2 integration
+- `fang/whatsapp.rb` — WhatsApp message routing
+- `fang/system_profile.rb` — Host system capability detection
+
+**Update CSS tokens** — Current values in CLAUDE.md don't match actual `style.css`. Update light/dark values to match reality.
+
+**Update Architecture section** — Add `fang/computer_use/` to the tree.
+
+### 3. Files to modify
+
+- `/home/greg/Developer/openfang/README.md`
+- `/home/greg/Developer/openfang/CLAUDE.md`
+
+### 4. Verification
+
+- Read both files after editing to confirm accuracy
+- Cross-reference tool counts against `fang/tools/` directory listing
+- Ensure no stale references remain (e.g., "18 tools")
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
