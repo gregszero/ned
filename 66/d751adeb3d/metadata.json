@@ -1,0 +1,55 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "66d751adeb3d",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "Gemfile",
+    "fang/bootstrap.rb",
+    "fang/document_parser.rb",
+    "fang/jobs/scheduled_task_runner_job.rb",
+    "fang/models/approval.rb",
+    "fang/models/data_table.rb",
+    "fang/models/document.rb",
+    "fang/models/workflow.rb",
+    "fang/models/workflow_step.rb",
+    "fang/tools/create_approval_tool.rb",
+    "fang/tools/create_data_table_tool.rb",
+    "fang/tools/create_document_tool.rb",
+    "fang/tools/delete_data_record_tool.rb",
+    "fang/tools/insert_data_record_tool.rb",
+    "fang/tools/list_approvals_tool.rb",
+    "fang/tools/list_data_tables_tool.rb",
+    "fang/tools/list_documents_tool.rb",
+    "fang/tools/query_data_table_tool.rb",
+    "fang/tools/read_document_tool.rb",
+    "fang/tools/resolve_approval_tool.rb",
+    "fang/tools/update_data_record_tool.rb",
+    "fang/widgets/approval_widget.rb",
+    "tmp_test.rb",
+    "web/app.rb",
+    "workspace/CLAUDE.md",
+    "workspace/documents/.gitkeep",
+    "workspace/migrations/20260220000001_create_documents.rb",
+    "workspace/migrations/20260220000002_create_data_tables.rb",
+    "workspace/migrations/20260220000003_create_approvals.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/66/d751adeb3d/0/metadata.json",
+      "transcript": "/66/d751adeb3d/0/full.jsonl",
+      "context": "/66/d751adeb3d/0/context.md",
+      "content_hash": "/66/d751adeb3d/0/content_hash.txt",
+      "prompt": "/66/d751adeb3d/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 42,
+    "cache_creation_tokens": 67664,
+    "cache_read_tokens": 2559969,
+    "output_tokens": 16642,
+    "api_call_count": 38
+  }
+}

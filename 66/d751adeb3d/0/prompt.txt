@@ -1,0 +1,174 @@
+Implement the following plan:
+
+# Plan: Documents, Dynamic Data Tables, and Approval Workflows
+
+## Context
+
+OpenFang's chart shows 50% of agent deployments are software engineering — the other 50% (back-office, sales, finance, marketing, etc.) are underserved because frameworks lack document handling, dynamic data management, and human-in-the-loop approval flows. These three features unlock those markets by letting the AI agent build business apps on the fly.
+
+---
+
+## Feature 1: Document/File Processing Pipeline
+
+### Gems to add to `Gemfile`
+```ruby
+gem 'pdf-reader'    # PDF text extraction
+gem 'roo'           # Excel/ODS parsing
+gem 'marcel'        # MIME type detection
+```
+
+### Migration: `workspace/migrations/20260220000001_create_documents.rb`
+| Column | Type | Notes |
+|---|---|---|
+| name | string | Original filename, not null |
+| content_type | string | MIME type |
+| file_size | integer | Bytes |
+| file_path | string | Relative path under `workspace/documents/`, not null |
+| status | string | uploaded → processing → ready / error |
+| description | text | |
+| extracted_text | text | Parsed content for agent use |
+| metadata | text | JSON (page count, row count, etc.) |
+| page_id | reference | Optional link to page |
+| conversation_id | reference | Optional link to conversation |
+
+### New files
+| File | Purpose |
+|---|---|
+| `fang/models/document.rb` | Model with `HasStatus`, `parse_content!` method |
+| `fang/document_parser.rb` | Stateless module: dispatches PDF→`pdf-reader`, CSV→stdlib, Excel→`roo`, text→`File.read` |
+| `fang/tools/list_documents_tool.rb` | Filter by status/content_type, return metadata |
+| `fang/tools/read_document_tool.rb` | Parse + return extracted text (lazy parsing, optional reparse) |
+| `fang/tools/create_document_tool.rb` | Generate files programmatically (text or base64 encoding) |
+| `workspace/documents/.gitkeep` | Storage directory |
+
+### Modify `web/app.rb`
+Add `POST /documents` route for multipart file upload (before catch-all). Saves file to `workspace/documents/`, creates Document record, auto-parses.
+
+### Modify `fang/bootstrap.rb`
+Add `require_relative 'document_parser'` after the `event_bus` require (line 44).
+
+---
+
+## Feature 2: Dynamic Data Tables
+
+### Migration: `workspace/migrations/20260220000002_create_data_tables.rb`
+| Column | Type | Notes |
+|---|---|---|
+| name | string | Human name ("Customers"), not null |
+| table_name | string | SQLite table name (`dt_customers`), not null, unique |
+| schema_definition | text | JSON array: `[{"name":"email","type":"string","required":true}]` |
+| description | text | |
+| status | string | active / archived |
+| page_id | reference | Optional |
+
+### New files
+| File | Purpose |
+|---|---|
+| `fang/models/data_table.rb` | Model that creates/drops real SQLite tables, builds anonymous AR classes for CRUD, validates `dt_` prefix |
+| `fang/tools/create_data_table_tool.rb` | Define schema + create physical table. Types: string, text, integer, decimal, boolean, date, datetime, json |
+| `fang/tools/list_data_tables_tool.rb` | List tables with record counts |
+| `fang/tools/query_data_table_tool.rb` | Filter/sort/paginate records. Operators: `=`, `!=`, `>`, `<`, `like` |
+| `fang/tools/insert_data_record_tool.rb` | Insert with attribute whitelisting against schema |
+| `fang/tools/update_data_record_tool.rb` | Update by record ID |
+| `fang/tools/delete_data_record_tool.rb` | Delete by record ID |
+
+### Key design decisions
+- Real SQLite tables (not JSON blobs) for full SQL queryability
+- `dt_` prefix prevents conflicts with framework tables
+- Anonymous `Class.new(ActiveRecord::Base)` for querying — no code generation needed
+- Agent can always use `run_code` for complex joins/aggregations beyond the CRUD tools
+
+---
+
+## Feature 3: Approval Workflows
+
+### Migration: `workspace/migrations/20260220000003_create_approvals.rb`
+| Column | Type | Notes |
+|---|---|---|
+| title | string | Not null |
+| description | text | Context for approver |
+| status | string | pending → approved / rejected / expired |
+| decision_notes | string | Approver's reasoning |
+| decided_at | datetime | |
+| expires_at | datetime | Optional timeout |
+| workflow_id | reference | Optional (standalone approvals allowed) |
+| workflow_step_id | reference | Optional |
+| notification_id | reference | Links to the notification sent |
+| page_id | reference | Optional |
+| metadata | text | JSON |
+
+### New files
+| File | Purpose |
+|---|---|
+| `fang/models/approval.rb` | Model with `approve!`, `reject!`, `expire!`. Emits `approval:approved:*`, `approval:rejected:*`, `approval:expired:*` via EventBus. Resumes/fails linked workflow automatically. |
+| `fang/tools/create_approval_tool.rb` | Standalone approval + notification + optional timeout |
+| `fang/tools/list_approvals_tool.rb` | Filter by status |
+| `fang/tools/resolve_approval_tool.rb` | Approve or reject with notes |
+| `fang/widgets/approval_widget.rb` | Refreshable widget showing pending approvals with approve/reject buttons |
+
+### Modify `fang/models/workflow_step.rb`
+- Add `'approval'` to step_type validation (line 12)
+- Add `when 'approval'` case in `execute!` that creates an Approval, sends notification, schedules expiry, and pauses workflow
+
+### Modify `fang/models/workflow.rb`
+- Line 39: change `%w[prompt wait]` to `%w[prompt wait approval]` in `advance!`
+
+### Modify `fang/jobs/scheduled_task_runner_job.rb`
+- Add early return at top of `perform` for approval expiry tasks: if `task.description` starts with `approval_expire:`, extract ID, call `approval.expire!`, mark task completed, and return
+
+### Modify `web/app.rb`
+- Add `POST /approvals/:id/decide` route (approve/reject via JSON body)
+- Add `GET /approvals/:id` and `GET /approvals` (list pending) as JSON API
+
+---
+
+## Feature 4: Agent System Prompt Update
+
+### Modify `workspace/CLAUDE.md`
+Add documentation for all 13 new MCP tools in the tools table, plus:
+- **Documents section**: how to upload, parse, and generate files
+- **Dynamic Data Tables section**: how to create tables, CRUD records, build mini-apps
+- **Approvals section**: standalone approvals vs workflow approval steps, timeout support
+- **Updated workflow step types**: add `approval` row
+
+---
+
+## Implementation Order
+
+1. Add gems to `Gemfile` → `bundle install`
+2. Create all 3 migrations → `./openfang.rb db:migrate`
+3. Create `fang/document_parser.rb`
+4. Create all 3 models: `document.rb`, `data_table.rb`, `approval.rb`
+5. Modify `workflow_step.rb` and `workflow.rb` (approval step support)
+6. Modify `scheduled_task_runner_job.rb` (approval expiry handling)
+7. Create all 13 MCP tools
+8. Create `approval_widget.rb`
+9. Modify `bootstrap.rb` (require document_parser)
+10. Modify `web/app.rb` (document upload + approval routes)
+11. Create `workspace/documents/.gitkeep`
+12. Update `workspace/CLAUDE.md`
+
+## Verification
+
+1. `bundle install` — gems resolve
+2. `./openfang.rb db:migrate` — all 3 migrations run
+3. `./openfang.rb console` — `Document`, `DataTable`, `Approval` all load
+4. Upload test: `curl -F "file=@some.csv" http://localhost:3000/documents`
+5. Data table test: create table via console, insert/query records
+6. Approval test: create approval, verify notification, approve via API
+7. Workflow test: create workflow with approval step, verify pause + resume
+8. MCP tool check: all 13 new tools appear in tool listing
+
+## File Summary
+
+**22 new files** | **6 files modified**
+
+New: 3 migrations, 3 models, 1 service module, 13 MCP tools, 1 widget, 1 .gitkeep
+Modified: `Gemfile`, `bootstrap.rb`, `workflow_step.rb`, `workflow.rb`, `scheduled_task_runner_job.rb`, `web/app.rb`, `workspace/CLAUDE.md`
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
