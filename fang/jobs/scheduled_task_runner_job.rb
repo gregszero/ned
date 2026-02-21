@@ -9,6 +9,15 @@ module Fang
       def perform(task_id)
         task = ScheduledTask.find(task_id)
 
+        # Handle approval expiry tasks
+        if task.description&.start_with?('approval_expire:')
+          approval_id = task.description.split(':').last.to_i
+          approval = Approval.find_by(id: approval_id)
+          approval&.expire! if approval&.pending?
+          task.mark_completed!({ expired: approval_id }.to_json)
+          return
+        end
+
         Fang.logger.info "Running scheduled task: #{task.title}"
 
         task.mark_running!

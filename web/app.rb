@@ -263,6 +263,55 @@ module Fang
           end
         end
 
+        # Document upload
+        r.on 'documents' do
+          r.post do
+            file = r.params['file']
+            unless file && file[:tempfile]
+              r.halt 400, { error: 'No file uploaded' }
+            end
+
+            require 'marcel'
+
+            original_name = file[:filename]
+            content_type = Marcel::MimeType.for(file[:tempfile], name: original_name)
+
+            dir = File.join(Fang.root, 'workspace', 'documents')
+            FileUtils.mkdir_p(dir)
+
+            # Ensure unique filename
+            base = File.basename(original_name, File.extname(original_name))
+            ext = File.extname(original_name)
+            file_name = original_name
+            counter = 1
+            while File.exist?(File.join(dir, file_name))
+              file_name = "#{base}_#{counter}#{ext}"
+              counter += 1
+            end
+
+            full_path = File.join(dir, file_name)
+            File.binwrite(full_path, file[:tempfile].read)
+
+            doc = Fang::Document.create!(
+              name: file_name,
+              content_type: content_type,
+              file_size: File.size(full_path),
+              file_path: "workspace/documents/#{file_name}",
+              status: 'uploaded'
+            )
+
+            doc.parse_content!
+
+            {
+              id: doc.id,
+              name: doc.name,
+              content_type: doc.content_type,
+              file_size: doc.file_size,
+              status: doc.reload.status
+            }
+          end
+        end
+
         # Health check
         r.on 'health' do
           { status: 'ok', timestamp: Time.now.iso8601 }
@@ -438,6 +487,18 @@ module Fang
                   { success: false, error: 'Unknown widget type' }
                 end
 
+              when 'resolve_approval'
+                approval = Fang::Approval.find(body['approval_id'])
+                unless approval.pending?
+                  r.halt 400, { success: false, error: "Approval is already #{approval.status}" }
+                end
+                case body['decision']
+                when 'approve' then approval.approve!(notes: body['notes'])
+                when 'reject' then approval.reject!(notes: body['notes'])
+                else r.halt 400, { success: false, error: "Invalid decision" }
+                end
+                { success: true, approval_id: approval.id, status: approval.status }
+
               when 'toggle_heartbeat'
                 heartbeat = Fang::Heartbeat.find(body['heartbeat_id'])
                 if heartbeat.enabled?
@@ -486,6 +547,49 @@ module Fang
               end
 
               { success: true, enabled: heartbeat.enabled?, status: heartbeat.status }
+            end
+          end
+
+          # Approvals API
+          r.on 'approvals' do
+            r.on Integer do |approval_id|
+              approval = Fang::Approval.find(approval_id)
+
+              r.on 'decide' do
+                r.post do
+                  body = JSON.parse(r.body.read) rescue r.params
+                  unless approval.pending?
+                    r.halt 400, { error: "Approval is already #{approval.status}" }
+                  end
+                  case body['decision']
+                  when 'approve' then approval.approve!(notes: body['notes'])
+                  when 'reject' then approval.reject!(notes: body['notes'])
+                  else r.halt 400, { error: "Invalid decision" }
+                  end
+                  { id: approval.id, status: approval.status, decision_notes: approval.decision_notes }
+                end
+              end
+
+              r.is do
+                r.get do
+                  {
+                    id: approval.id, title: approval.title, description: approval.description,
+                    status: approval.status, decision_notes: approval.decision_notes,
+                    decided_at: approval.decided_at&.iso8601, expires_at: approval.expires_at&.iso8601,
+                    workflow_id: approval.workflow_id, created_at: approval.created_at.iso8601
+                  }
+                end
+              end
+            end
+
+            r.is do
+              r.get do
+                status = r.params['status'] || 'pending'
+                approvals = Fang::Approval.where(status: status).recent.limit(20).map do |a|
+                  { id: a.id, title: a.title, status: a.status, created_at: a.created_at.iso8601 }
+                end
+                { approvals: approvals }
+              end
             end
           end
 

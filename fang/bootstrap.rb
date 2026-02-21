@@ -42,6 +42,7 @@ module Fang
       require_relative 'gmail'
       require_relative 'mcp_server'
       require_relative 'event_bus'
+      require_relative 'document_parser'
 
       # Load computer use subsystem
       require_relative 'computer_use/display_server'

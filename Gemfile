@@ -35,6 +35,9 @@ gem 'httparty'                # HTTP client
 gem 'nokogiri'                # HTML/XML parsing
 gem 'dotenv'                  # Environment variables
 gem 'json'                    # JSON support
+gem 'pdf-reader'              # PDF text extraction
+gem 'roo'                     # Excel/ODS parsing
+gem 'marcel'                  # MIME type detection
 
 group :development do
   gem 'pry'                   # Better console

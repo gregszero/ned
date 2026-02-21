@@ -67,6 +67,18 @@ These are the tools available to you. **Only use these — do not invent or hall
 | `list_heartbeats` | List all heartbeats with status, stats, and due_now flag |
 | `create_trigger` | Create an event trigger that fires a skill or prompt when a matching event occurs |
 | `create_workflow` | Create a multi-step workflow pipeline that executes steps in sequence |
+| `list_documents` | List uploaded documents, filter by status or content type |
+| `read_document` | Read extracted text from a document (auto-parses on first read) |
+| `create_document` | Generate a document file programmatically (text or base64) |
+| `create_data_table` | Create a dynamic data table with custom schema (real SQLite table) |
+| `list_data_tables` | List all dynamic data tables with record counts |
+| `query_data_table` | Query records with filtering, sorting, and pagination |
+| `insert_data_record` | Insert a record into a dynamic data table |
+| `update_data_record` | Update a record by ID in a dynamic data table |
+| `delete_data_record` | Delete a record by ID from a dynamic data table |
+| `create_approval` | Create a standalone approval request with optional timeout |
+| `list_approvals` | List approvals filtered by status |
+| `resolve_approval` | Approve or reject a pending approval |
 | `gmail_search` | Search emails with Gmail query syntax (returns summaries) |
 | `gmail_read` | Read full email content by message ID |
 | `gmail_send` | Send an email (plain text or HTML) |
@@ -88,6 +100,96 @@ Use the `gmail_*` tools to manage the user's email. Common patterns:
 - **Get label IDs**: Use `gmail_labels` to look up custom label IDs before modifying
 
 Always use `gmail_search` first to find message IDs, then operate on them with other tools.
+
+## Documents
+
+Upload, parse, and generate files. Documents are stored in `workspace/documents/` and their text is extracted for agent use.
+
+**Supported formats:** PDF, CSV, Excel (xlsx/xls/ods), plain text, JSON, and other text-based formats.
+
+### Uploading documents
+Users can upload files via `POST /documents` (multipart form). Documents are auto-parsed on upload.
+
+### Reading document content
+Use `read_document` to get the extracted text. If the document hasn't been parsed yet, it auto-parses on first read. Pass `reparse: true` to force re-extraction.
+
+### Creating documents programmatically
+Use `create_document` to generate files:
+- **Text files**: Pass content directly (CSV, JSON, markdown, etc.)
+- **Binary files**: Pass base64-encoded content with `encoding: "base64"`
+
+### Example — generate a CSV report
+```json
+{
+  "name": "sales_report.csv",
+  "content": "Name,Amount,Date\nAcme Corp,5000,2026-02-20\nGlobex,3200,2026-02-19",
+  "description": "Weekly sales report"
+}
+```
+
+## Dynamic Data Tables
+
+Create real SQLite tables on the fly for structured data. Tables use a `dt_` prefix to avoid conflicts with framework tables.
+
+### Creating a table
+```json
+{
+  "name": "Customers",
+  "columns": [
+    {"name": "email", "type": "string", "required": true},
+    {"name": "company", "type": "string"},
+    {"name": "revenue", "type": "decimal"},
+    {"name": "active", "type": "boolean"}
+  ]
+}
+```
+**Column types:** string, text, integer, decimal, boolean, date, datetime, json
+
+### CRUD operations
+- `insert_data_record` — insert a row with attributes matching the schema
+- `query_data_table` — filter (`=`, `!=`, `>`, `<`, `like`), sort, and paginate
+- `update_data_record` — update a row by record ID
+- `delete_data_record` — delete a row by record ID
+
+### Advanced queries
+For complex joins, aggregations, or cross-table queries beyond the CRUD tools, use `run_code` directly. The physical table name is in the `table_name` field (e.g., `dt_customers`).
+
+## Approvals
+
+Human-in-the-loop approval gates — standalone or as workflow steps. The approver sees a notification and can approve/reject via the UI or API.
+
+### Standalone approvals
+Use `create_approval` to pause and wait for human input:
+```json
+{
+  "title": "Deploy to production",
+  "description": "Version 2.3.1 is ready. 47 tests passing.",
+  "timeout": "2 hours"
+}
+```
+A notification is sent immediately. If `timeout` is set, the approval auto-expires after the duration.
+
+### Workflow approval steps
+Add an `approval` step to a workflow:
+```json
+{
+  "name": "deploy_pipeline",
+  "steps": [
+    {"name": "tests", "type": "skill", "config": {"skill_name": "run_tests"}},
+    {"name": "approve", "type": "approval", "config": {"title": "Deploy to production?", "timeout": "1 hour"}},
+    {"name": "deploy", "type": "skill", "config": {"skill_name": "deploy"}}
+  ]
+}
+```
+The workflow pauses at the approval step. On approve, it continues. On reject or expire, the workflow fails.
+
+### Resolving approvals
+Use `resolve_approval` with `decision: "approve"` or `decision: "reject"` and optional `notes`.
+
+### Events
+- `approval:approved:{title-slug}` — fired when approved
+- `approval:rejected:{title-slug}` — fired when rejected
+- `approval:expired:{title-slug}` — fired when expired
 
 ## Creating Pages
 
@@ -297,7 +399,10 @@ Use these with `run_code` when you need direct database access:
 - `McpConnection` — external MCP server connections
 - `Trigger` — event triggers (matches event patterns, fires skills or prompts)
 - `Workflow` — multi-step workflow pipelines (has_many :workflow_steps)
-- `WorkflowStep` — individual step in a workflow (skill, prompt, condition, wait, notify)
+- `WorkflowStep` — individual step in a workflow (skill, prompt, condition, wait, notify, approval)
+- `Document` — uploaded/generated files with extracted text (PDF, CSV, Excel, text)
+- `DataTable` — dynamic data tables with custom schemas (creates real SQLite tables with `dt_` prefix)
+- `Approval` — human-in-the-loop approval gates (standalone or within workflows)
 
 ## Event Triggers
 
@@ -333,6 +438,7 @@ Use `create_workflow` to build pipelines that execute multiple steps in sequence
 | `condition` | Branch logic | `expression`, optional `skip_to` |
 | `wait` | Pause for duration | `duration` (e.g., "5 minutes", "1 hour") |
 | `notify` | Send notification | `title`, `body`, `kind` |
+| `approval` | Wait for human approval | `title`, `description`, `timeout` |
 
 **Example — morning briefing workflow:**
 ```json

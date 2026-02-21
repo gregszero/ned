@@ -36,7 +36,7 @@ module Fang
       update!(current_step_index: current_step_index + 1)
       next_step = current_step
       if next_step
-        Jobs::WorkflowRunnerJob.perform_later(id) unless %w[prompt wait].include?(next_step.step_type)
+        Jobs::WorkflowRunnerJob.perform_later(id) unless %w[prompt wait approval].include?(next_step.step_type)
       else
         complete!
       end

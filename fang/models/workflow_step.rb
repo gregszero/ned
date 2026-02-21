@@ -9,7 +9,7 @@ module Fang
 
     # Validations
     validates :position, presence: true
-    validates :step_type, presence: true, inclusion: { in: %w[skill prompt condition wait notify] }
+    validates :step_type, presence: true, inclusion: { in: %w[skill prompt condition wait notify approval] }
     validates :status, inclusion: { in: %w[pending running completed failed skipped] }
 
     def parsed_config
@@ -66,6 +66,40 @@ module Fang
         )
         notification.broadcast!
         { notification_id: notification.id }
+      when 'approval'
+        title = interpolate_string(cfg['title'] || "Approval needed: #{workflow.name}", workflow_context)
+        description = interpolate_string(cfg['description'] || '', workflow_context)
+
+        notification = Notification.create!(
+          title: title,
+          body: description,
+          kind: 'warning'
+        )
+        notification.broadcast!
+
+        approval = Approval.create!(
+          title: title,
+          description: description,
+          workflow: workflow,
+          workflow_step: self,
+          notification: notification,
+          metadata: cfg.to_json
+        )
+
+        # Schedule expiry if configured
+        if cfg['timeout']
+          duration = parse_duration(cfg['timeout'])
+          if duration
+            ScheduledTask.create!(
+              title: "Expire approval: #{title}",
+              scheduled_for: duration.from_now,
+              description: "approval_expire:#{approval.id}"
+            )
+          end
+        end
+
+        workflow.pause!
+        { approval_id: approval.id, notification_id: notification.id, status: 'awaiting_approval' }
       end
     end
 
