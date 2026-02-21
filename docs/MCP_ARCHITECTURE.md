@@ -137,12 +137,3 @@ Returns: All gems, Gemfile content, Ruby version.
 ./openfang.rb mcp --host 0.0.0.0     # Bind to all interfaces
 ```
 
-## Container Integration
-
-The agent container connects to the MCP server via:
-
-```
-MCP_URL=http://host.docker.internal:9292/mcp
-```
-
-Claude Code running in the container can then access all tools and resources.

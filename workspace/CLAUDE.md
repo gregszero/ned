@@ -131,7 +131,7 @@ For detailed usage patterns, read the relevant MCP resource guide before acting:
 - Ruby 3.3+ with ActiveRecord (SQLite)
 - Roda web framework with ERB templates
 - In-memory pub/sub (TurboBroadcast) over SSE for real-time updates
-- Claude Code CLI subprocess for agent execution (NOT Docker)
+- Claude Code CLI subprocess for agent execution
 - FastMCP for tool communication
 - Solid Queue for background jobs
 - Rufus-scheduler for recurring tasks

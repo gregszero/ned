@@ -34,7 +34,7 @@ module Fang
 
         tools = profile[:cli_tools]
         if tools&.any?
-          notable = %w[git ruby python3 node docker claude curl].select { |t| tools.key?(t) }
+          notable = %w[git ruby python3 node claude curl].select { |t| tools.key?(t) }
           parts << "#{tools.size} CLI tools (#{notable.join(', ')})"
         end
 

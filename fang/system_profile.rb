@@ -174,7 +174,7 @@ module Fang
       TOOL_LIST = %w[
         git ruby python3 python node npm bun deno
         gcc g++ make cmake
-        docker podman kubectl helm
+        podman kubectl helm
         curl wget rsync ssh scp
         vim nvim nano emacs
         tmux screen

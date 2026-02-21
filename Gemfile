@@ -26,9 +26,6 @@ gem 'tilt'                    # Template rendering
 gem 'erubi'                   # ERB template engine
 gem 'redcarpet'               # Markdown rendering
 
-# Deployment
-gem 'kamal', require: false   # Deployment
-
 # Pagination
 gem 'pagy'                    # Fast pagination
 
