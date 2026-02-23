@@ -61,6 +61,7 @@ module Fang
           Fang.logger.info "[SSE] Connection closed for #{channel}"
           TurboBroadcast.unsubscribe(channel, subscriber)
         }) do |out|
+          ActiveRecord::Base.connection_pool.release_connection
           html = queue.pop(timeout: 30)
           if html
             Fang.logger.info "[SSE] Sending event to #{channel} (#{html.length} bytes)"

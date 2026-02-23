@@ -55,6 +55,8 @@ module Fang
         end
       rescue => e
         Fang.logger.error "Scheduler error: #{e.message}"
+      ensure
+        ActiveRecord::Base.connection_pool.release_connection
       end
 
       def run_due_heartbeats
@@ -68,12 +70,16 @@ module Fang
         end
       rescue => e
         Fang.logger.error "Heartbeat scheduler error: #{e.message}"
+      ensure
+        ActiveRecord::Base.connection_pool.release_connection
       end
 
       def refresh_widgets
         Jobs::WidgetRefreshJob.perform_later
       rescue => e
         Fang.logger.error "Widget refresh scheduling error: #{e.message}"
+      ensure
+        ActiveRecord::Base.connection_pool.release_connection
       end
     end
   end
