@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Deploy OpenFang to the Ned server
+# Usage: bin/deploy
+
+SERVER="ned@100.99.225.5"
+DEPLOY_PATH="/home/ned/openfang"
+
+echo "==> Pushing to origin..."
+git push origin master
+
+echo "==> Deploying to Ned..."
+ssh "$SERVER" bash -l <<REMOTE
+  set -euo pipefail
+  eval "\$(mise activate bash)"
+  cd $DEPLOY_PATH
+
+  echo "--- Pulling latest code..."
+  git pull origin master
+
+  echo "--- Installing dependencies..."
+  bundle install --quiet
+
+  echo "--- Running migrations..."
+  ./openfang.rb db:migrate
+
+  echo "--- Restarting service..."
+  systemctl --user restart openfang
+
+  echo "--- Checking status..."
+  sleep 2
+  systemctl --user status openfang --no-pager
+REMOTE
+
+echo "==> Deploy complete!"

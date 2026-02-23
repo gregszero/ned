@@ -20,7 +20,8 @@ module Fang
           Fang.logger.info "SQLite WAL mode enabled"
         end
 
-        Fang.logger.info "Connected to database: #{config[:database]}"
+        db_name = config.is_a?(Hash) ? config[:database] : config
+        Fang.logger.info "Connected to database: #{db_name}"
       rescue => e
         Fang.logger.error "Failed to connect to database: #{e.message}"
         raise
