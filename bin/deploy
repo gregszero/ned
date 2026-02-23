@@ -16,8 +16,14 @@ ssh "$SERVER" bash -l <<REMOTE
   eval "\$(mise activate bash)"
   cd $DEPLOY_PATH
 
-  echo "--- Pulling latest code..."
-  git pull origin master
+  echo "--- Fetching upstream (openfang)..."
+  git fetch upstream
+
+  echo "--- Merging upstream/master..."
+  git merge upstream/master --no-edit
+
+  echo "--- Pushing to origin (ned-openfang backup)..."
+  git push origin master
 
   echo "--- Installing dependencies..."
   bundle install --quiet
