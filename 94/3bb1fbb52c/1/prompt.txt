@@ -1,0 +1,44 @@
+Implement the following plan:
+
+# Plan: Test for `scrape_website` MCP Tool
+
+## Context
+
+The `scrape_website` tool (`fang/tools/scrape_website_tool.rb`) was just implemented. It delegates to `PythonRunner` to run scrapling-based Python code. We need a test file covering the key behaviors, stubbing `PythonRunner` to avoid real network/Python calls.
+
+## File to Create
+
+**`test/tools/scrape_website_tool_test.rb`**
+
+## Test Cases
+
+Following the existing `ToolTestCase` pattern (see `test/tools/run_code_tool_test.rb`):
+
+1. **`test_basic_scrape_with_defaults`** — no selectors → builds default title+body extraction, returns structured data from stubbed PythonRunner
+2. **`test_scrape_with_custom_selectors`** — passes selectors array → verifies they're forwarded correctly and result is parsed
+3. **`test_invalid_fetcher_type`** — passing `fetcher_type: "invalid"` → returns error without calling PythonRunner
+4. **`test_auto_installs_scrapling`** — first `run_code` (import check) returns failure, then `pip_install` is called, then `run_code` succeeds
+5. **`test_python_execution_failure`** — PythonRunner returns `success: false` → tool returns error
+6. **`test_tool_group_is_web`** — verifies `tool_group` is `:web`
+7. **`test_playwright_fetcher_with_wait_for`** — verifies `wait_for` param is included in the python code for playwright fetcher
+
+## Stubbing Pattern
+
+Use `define_singleton_method` / `ensure` restore pattern per MEMORY.md:
+- Stub `PythonRunner.run_code` to return canned JSON results
+- Stub `PythonRunner.pip_install` to return success
+- Track calls via arrays to assert correct arguments
+
+## Verification
+
+```bash
+ruby -Itest test/tools/scrape_website_tool_test.rb
+rake test  # full suite still green
+```
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
