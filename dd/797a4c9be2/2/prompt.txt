@@ -1,0 +1,81 @@
+Implement the following plan:
+
+# Make Canvas Context Menu More Compact — Grouped Submenus
+
+## Context
+The canvas right-click context menu lists ~20 widget items in a flat list, making it too tall. We'll group widgets into categories with hover submenus (like OS context menus) to keep the top-level menu short.
+
+## Categories
+- **Content** — Note, Banner, List, Table
+- **Data** — Chart, Metric, Data Table, Website, HN Feed
+- **System** — Settings, Jobs & Skills, Clock, Computer Use, Approvals, Heartbeat Monitor, Weather
+- Dynamically-defined widgets (BRL/USD, EUR/USD, etc.) that don't have a category → go into a **Custom** group (or stay top-level if few)
+
+## Changes
+
+### 1. `fang/widgets/base_widget.rb` — Add `menu_category` class method
+- Add `attr_reader :menu_category_text` and `def menu_category(cat) = @menu_category_text = cat`
+- Include `category` in the `registry` output (default: `nil`)
+
+### 2. Each widget file in `fang/widgets/` — Add `menu_category` declarations
+- `note_widget.rb`, `banner_widget.rb`, `list_widget.rb`, `table_widget.rb` → `menu_category 'Content'`
+- `chart_widget.rb`, `metric_widget.rb`, `data_table_widget.rb`, `website_widget.rb`, `hacker_news_widget.rb` → `menu_category 'Data'`
+- `settings_widget.rb`, `scheduled_jobs_widget.rb`, `clock_widget.rb`, `computer_use_widget.rb`, `approval_widget.rb`, `heartbeat_monitor_widget.rb`, `weather_widget.rb` → `menu_category 'System'`
+
+### 3. `web/app.rb` — Include category in `/api/widget_types` response (line ~601)
+- Add `category: klass.menu_category_text` to the hash
+
+### 4. `web/public/js/controllers/canvas_controller.js` — Render grouped submenus
+In `_loadWidgetTypes()` (line 338):
+- Group widget types by `category`
+- Build `canvasMenuItems` as: category items (with `submenu` array) + separator + utility items
+
+In `showCanvasMenu()` (line 242):
+- For items with a `submenu` array, render a button with a right-arrow indicator (`›`)
+- On hover, show a submenu panel positioned to the right of the parent item
+- Submenu is another `canvas-context-menu` div, positioned absolutely relative to the hovered item
+- For items without a category (dynamically defined widgets), either group under "Custom" or keep at top level
+
+### 5. `web/public/css/style.css` — Add submenu styles (after line 1419)
+```css
+.canvas-context-menu-item.has-submenu::after {
+  content: '›';
+  margin-left: auto;
+  font-size: 1rem;
+  opacity: 0.5;
+}
+
+.canvas-context-submenu {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 4px;
+  /* inherits .canvas-context-menu styles */
+}
+```
+
+## Result
+Top-level menu becomes ~6 items:
+- Content ›
+- Data ›
+- System ›
+- (separator)
+- Scroll Lock: Off
+- Edit Lock: Off
+- Reset View
+
+Hovering a category shows its widgets in a submenu to the right.
+
+## Verification
+- Right-click canvas → see 3 category items + 3 utility items
+- Hover a category → submenu appears to the right with widget items
+- Click a widget → submenu closes, widget is placed at cursor position
+- Submenu stays visible while mouse moves from parent to submenu
+- Menu doesn't overflow viewport (existing positioning logic + submenu aware)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
