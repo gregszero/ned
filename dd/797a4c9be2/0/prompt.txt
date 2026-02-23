@@ -1,0 +1,59 @@
+Implement the following plan:
+
+# Fix: MutationObserver TypeError in fang-components.js
+
+## Context
+
+`fang-components.js:198` throws `Uncaught TypeError: Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'` because `document.body` is `null` when the script executes (e.g., script in `<head>` before body is parsed).
+
+## Change
+
+**File:** `web/public/js/fang-components.js` (line 198)
+
+Move the `fangObserver.observe(...)` call inside the existing `DOMContentLoaded` listener where `document.body` is guaranteed to exist.
+
+**Before (lines 186-198):**
+```js
+document.addEventListener('DOMContentLoaded', () => initFangElements(document))
+
+const fangObserver = new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        initFangElements(node)
+      }
+    }
+  }
+})
+fangObserver.observe(document.body, { childList: true, subtree: true })
+```
+
+**After:**
+```js
+const fangObserver = new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        initFangElements(node)
+      }
+    }
+  }
+})
+
+document.addEventListener('DOMContentLoaded', () => {
+  initFangElements(document)
+  fangObserver.observe(document.body, { childList: true, subtree: true })
+})
+```
+
+## Verification
+
+1. Load any canvas page in the browser — no console error
+2. Verify Turbo Stream inserts still trigger `initFangElements` (send a message, check dynamic components initialize)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this

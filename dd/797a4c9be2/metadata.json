@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "dd797a4c9be2",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "web/public/js/fang-components.js"
+  ],
+  "sessions": [
+    {
+      "metadata": "/dd/797a4c9be2/0/metadata.json",
+      "transcript": "/dd/797a4c9be2/0/full.jsonl",
+      "context": "/dd/797a4c9be2/0/context.md",
+      "content_hash": "/dd/797a4c9be2/0/content_hash.txt",
+      "prompt": "/dd/797a4c9be2/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 10,
+    "cache_creation_tokens": 7890,
+    "cache_read_tokens": 148763,
+    "output_tokens": 487,
+    "api_call_count": 6
+  }
+}
