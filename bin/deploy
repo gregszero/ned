@@ -23,7 +23,7 @@ ssh "$SERVER" bash -l <<REMOTE
   bundle install --quiet
 
   echo "--- Running migrations..."
-  ./openfang.rb db:migrate
+  ./openfang.rb db_migrate
 
   echo "--- Restarting service..."
   systemctl --user restart openfang
