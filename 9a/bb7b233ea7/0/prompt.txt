@@ -1,0 +1,119 @@
+Implement the following plan:
+
+# Deploy OpenFang to Ned Server
+
+## Context
+OpenFang runs only on the local dev machine. We want it running permanently on the Ned server (Arch Linux, `100.99.225.5` via Tailscale) with PostgreSQL as the production database. We'll also add a deploy script to the codebase.
+
+## Server Setup (on Ned via SSH)
+
+### 1. Install system dependencies
+```bash
+sudo pacman -S --noconfirm base-devel postgresql postgresql-libs
+gem install bundler
+```
+
+### 2. Setup PostgreSQL
+```bash
+sudo -u postgres initdb -D /var/lib/postgres/data   # if fresh install
+sudo systemctl enable --now postgresql
+sudo -u postgres createuser ned
+sudo -u postgres createdb openfang_production --owner=ned
+```
+
+### 3. Install Claude CLI
+```bash
+curl -fsSL https://cli.claude.ai/install.sh | sh
+claude login   # prints URL — open in local browser to complete OAuth
+```
+
+### 4. Clone repo and setup
+```bash
+cd /home/ned
+git clone git@github.com:gregszero/ned.git openfang
+cd openfang
+bundle install --without development test
+mkdir -p storage/data storage/sessions
+cp .env.example .env
+```
+
+Edit `.env`:
+```
+FANG_ENV=production
+RACK_ENV=production
+DATABASE_URL=postgresql://ned@localhost/openfang_production
+WEB_HOST=0.0.0.0
+WEB_PORT=3000
+MCP_PORT=9292
+MCP_HOST=0.0.0.0
+LOG_LEVEL=info
+```
+
+Then migrate:
+```bash
+./openfang.rb db:migrate
+```
+
+### 5. Create systemd user service
+
+File: `~/.config/systemd/user/openfang.service`
+```ini
+[Unit]
+Description=OpenFang AI Assistant
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=exec
+WorkingDirectory=/home/ned/openfang
+ExecStart=/usr/bin/bundle exec puma config.ru -b tcp://0.0.0.0:3000 -w 0 -t 16:32
+Restart=on-failure
+RestartSec=5
+Environment=FANG_ENV=production
+Environment=RACK_ENV=production
+Environment=PATH=/home/ned/.local/bin:/usr/local/bin:/usr/bin:/bin
+EnvironmentFile=/home/ned/openfang/.env
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=openfang
+
+[Install]
+WantedBy=default.target
+```
+
+### 6. Enable and start
+```bash
+sudo loginctl enable-linger ned
+systemctl --user daemon-reload
+systemctl --user enable openfang
+systemctl --user start openfang
+```
+
+## Codebase Changes
+
+### 7. Add `bin/deploy` script
+One-command deploy for future updates: pushes code, pulls on Ned, bundles, migrates, restarts service.
+
+## Files Modified
+- `bin/deploy` — new deploy script (the only codebase change)
+
+## Verification
+1. `systemctl --user status openfang` — active/running
+2. `curl http://100.99.225.5:3000` — returns HTML
+3. `journalctl --user -u openfang -f` — no errors
+4. Open `http://100.99.225.5:3000` in browser (over Tailscale)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+shouldnt we run postgres with docker?
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+why dont we use mise or smth else to handle versions?

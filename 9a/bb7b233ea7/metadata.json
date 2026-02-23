@@ -1,0 +1,32 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "9abb7b233ea7",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 2,
+  "files_touched": [
+    ".claude/settings.local.json",
+    ".tool-versions",
+    "bin/deploy",
+    "fang/database.rb",
+    "workspace/migrations/20260217000003_seed_daily_briefing_skill.rb",
+    "workspace/migrations/20260218000004_create_settings_and_jobs_pages.rb",
+    "workspace/migrations/20260219000002_create_heartbeat_canvas_page.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/9a/bb7b233ea7/0/metadata.json",
+      "transcript": "/9a/bb7b233ea7/0/full.jsonl",
+      "context": "/9a/bb7b233ea7/0/context.md",
+      "content_hash": "/9a/bb7b233ea7/0/content_hash.txt",
+      "prompt": "/9a/bb7b233ea7/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 74,
+    "cache_creation_tokens": 45853,
+    "cache_read_tokens": 2870692,
+    "output_tokens": 5522,
+    "api_call_count": 68
+  }
+}
