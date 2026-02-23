@@ -1,0 +1,50 @@
+Implement the following plan:
+
+# Fix: Auto-load widgets without server restart
+
+## Context
+
+When the `define_widget` MCP tool creates a new widget, it requires a server restart to take effect. The root cause is a **wrong file path** in the tool — it tries to write to `{root}/widgets/` (which doesn't exist) instead of `{root}/fang/widgets/`. The `File.write` fails, the exception is silently rescued, and the widget never loads.
+
+## Changes
+
+### 1. Fix the Ruby widget path in `define_widget_tool.rb`
+
+**File:** `fang/tools/define_widget_tool.rb` (line 27)
+
+Change:
+```ruby
+ruby_path = File.expand_path("../../widgets/#{widget_type}_widget.rb", __dir__)
+```
+To:
+```ruby
+ruby_path = File.expand_path("../widgets/#{widget_type}_widget.rb", __dir__)
+```
+
+`../widgets/` from `fang/tools/` correctly resolves to `fang/widgets/`. The JS path (`../../web/public/js/widgets/`) is already correct since `web/` sits at the project root.
+
+### 2. Add widget directory to Rack::Unreloader in `config.ru`
+
+**File:** `config.ru` (after line 24)
+
+Add:
+```ruby
+Dir[File.expand_path('fang/widgets/**/*.rb', __dir__)].each { |f| Unreloader.require f }
+```
+
+This ensures that if a widget file is manually added or edited on disk (outside the MCP tool), the Unreloader picks it up in development mode without a restart.
+
+## Verification
+
+1. Start the server: `./openfang.rb server`
+2. Use the `define_widget` MCP tool to create a test widget
+3. Confirm the file appears at `fang/widgets/test_widget.rb` (not `widgets/test_widget.rb`)
+4. Confirm the widget is immediately usable in the canvas without restart
+5. Restart the server and confirm the widget persists
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
