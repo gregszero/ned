@@ -1,0 +1,49 @@
+Implement the following plan:
+
+# Expand Jobs & Skills Page to Show All Running Systems
+
+## Context
+The Jobs & Skills page currently shows scheduled tasks, skills, and scheduler timers. It's missing visibility into triggers, workflows, and active widgets — the other key systems that are "running" or "will run." Goal: make this page a comprehensive operations dashboard.
+
+## Plan
+
+### Expand `ScheduledJobsWidget` with 3 new sections
+**File:** `fang/widgets/scheduled_jobs_widget.rb`
+
+Add three new sections after the existing Scheduled Jobs and Skills tables, following the same card+table pattern:
+
+**1. Triggers section**
+- Data: `Fang::Trigger.order(:name)`
+- Columns: Name, Event Pattern, Action (skill/prompt), Enabled (badge), Fire Count, Last Fired
+- Empty state: "No triggers configured yet."
+
+**2. Workflows section**
+- Data: `Fang::Workflow.order(created_at: :desc)`
+- Columns: Name, Status (badge), Current Step, Trigger Event, Steps (count), Created
+- Empty state: "No workflows yet."
+
+**3. Active Widgets section**
+- Data: All `CanvasComponent` records whose `component_type` maps to a refreshable widget class (via `BaseWidget.registry`)
+- Columns: Widget Type, Page, Refresh Interval, Last Updated
+- Empty state: "No active widgets."
+
+### Render order
+1. Scheduled Jobs (existing)
+2. Skills (existing)
+3. Triggers (new)
+4. Workflows (new)
+5. Active Widgets (new)
+
+## Files Modified
+- `fang/widgets/scheduled_jobs_widget.rb` — add triggers, workflows, active widgets sections
+
+## Verification
+1. `rake test` — no regressions
+2. `./openfang.rb server` → `/pages/jobs` — verify all 5 sections render
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.claude/projects/-home-greg-Developer-openfang/694b149a-ca85-44bc-bf47-48fa3ffbcafa.jsonl
+
+---
+
+commit this
