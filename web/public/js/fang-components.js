@@ -182,9 +182,6 @@ function initFangElements(root) {
   })
 }
 
-// Init on page load
-document.addEventListener('DOMContentLoaded', () => initFangElements(document))
-
 // MutationObserver for Turbo Stream inserts
 const fangObserver = new MutationObserver((mutations) => {
   for (const mutation of mutations) {
@@ -195,4 +192,9 @@ const fangObserver = new MutationObserver((mutations) => {
     }
   }
 })
-fangObserver.observe(document.body, { childList: true, subtree: true })
+
+// Init on page load and start observing once body exists
+document.addEventListener('DOMContentLoaded', () => {
+  initFangElements(document)
+  fangObserver.observe(document.body, { childList: true, subtree: true })
+})
