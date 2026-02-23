@@ -6,6 +6,7 @@ module Fang
       widget_type 'chart'
       menu_label 'Add Chart'
       menu_icon "\u{1F4CA}"
+      menu_category 'Data'
 
       def self.header_title = 'Chart'
       def self.header_color = '#f97316'

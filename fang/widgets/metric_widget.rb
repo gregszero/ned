@@ -6,6 +6,7 @@ module Fang
       widget_type 'metric'
       menu_label 'Add Metric'
       menu_icon "\u{1F4C8}"
+      menu_category 'Data'
 
       def self.header_title = 'Metric'
       def self.header_color = '#22d3ee'

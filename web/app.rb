@@ -599,8 +599,8 @@ module Fang
             r.get do
               types = Fang::Widgets::BaseWidget.registry.map do |type, klass|
                 { type: type, label: klass.menu_label_text || type.tr('_', ' ').capitalize,
-                  icon: klass.menu_icon_text, defaults: klass.default_metadata,
-                  refreshable: klass.refreshable? }
+                  icon: klass.menu_icon_text, category: klass.menu_category_text,
+                  defaults: klass.default_metadata, refreshable: klass.refreshable? }
               end
               { widget_types: types }
             end

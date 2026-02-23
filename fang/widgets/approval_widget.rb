@@ -6,6 +6,7 @@ module Fang
       widget_type 'approval'
       menu_label 'Approvals'
       menu_icon "\u2705"
+      menu_category 'System'
 
       def self.refreshable?     = true
       def self.refresh_interval = 30

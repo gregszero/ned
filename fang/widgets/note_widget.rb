@@ -6,6 +6,7 @@ module Fang
       widget_type 'card'
       menu_label 'Add Note'
       menu_icon "\u{1F4DD}"
+      menu_category 'Content'
 
       def self.header_title = 'Note'
       def self.header_color = '#a1a1aa'

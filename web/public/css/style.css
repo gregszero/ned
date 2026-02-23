@@ -1418,6 +1418,32 @@ button.icon.sm {
   margin: 0.25rem 0;
 }
 
+.canvas-context-menu-item-wrapper {
+  position: relative;
+}
+.canvas-context-menu-item.has-submenu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.canvas-context-menu-item.has-submenu::after {
+  content: '\203A';
+  margin-left: auto;
+  padding-left: 1rem;
+  font-size: 1rem;
+  opacity: 0.5;
+}
+.canvas-context-submenu {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 4px;
+}
+.canvas-context-menu-item-wrapper:hover > .canvas-context-submenu {
+  display: block;
+}
+
 /* Zoom indicator */
 .canvas-zoom-indicator {
   position: absolute;

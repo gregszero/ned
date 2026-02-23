@@ -244,6 +244,25 @@ export default class extends Controller {
     for (const item of this.canvasMenuItems) {
       if (item.separator) {
         this.menuItems.appendChild(Object.assign(document.createElement("div"), { className: "canvas-context-menu-separator" }))
+      } else if (item.submenu) {
+        const wrapper = document.createElement("div")
+        wrapper.className = "canvas-context-menu-item-wrapper"
+        const btn = document.createElement("button")
+        btn.className = "canvas-context-menu-item has-submenu"
+        btn.textContent = item.label
+        wrapper.appendChild(btn)
+
+        const sub = document.createElement("div")
+        sub.className = "canvas-context-menu canvas-context-submenu"
+        for (const subItem of item.submenu) {
+          const subBtn = document.createElement("button")
+          subBtn.className = "canvas-context-menu-item"
+          subBtn.textContent = typeof subItem.label === "function" ? subItem.label() : subItem.label
+          subBtn.addEventListener("click", () => { this.hideMenu(); subItem.action(worldX, worldY) })
+          sub.appendChild(subBtn)
+        }
+        wrapper.appendChild(sub)
+        this.menuItems.appendChild(wrapper)
       } else {
         const label = typeof item.label === "function" ? item.label() : item.label
         const btn = document.createElement("button")
@@ -335,11 +354,27 @@ export default class extends Controller {
       const data = await resp.json()
       this._widgetTypes = data.widget_types || []
 
-      // Rebuild canvas menu: widget items + separator + utility items
-      const widgetItems = this._widgetTypes.map(w => ({
-        label: w.label,
-        action: (wx, wy) => this.addWidget(w.type, wx, wy)
-      }))
+      // Group widget types by category for submenu rendering
+      const groups = {}
+      const ungrouped = []
+      for (const w of this._widgetTypes) {
+        if (w.category) {
+          if (!groups[w.category]) groups[w.category] = []
+          groups[w.category].push({ label: w.label, action: (wx, wy) => this.addWidget(w.type, wx, wy) })
+        } else {
+          ungrouped.push({ label: w.label, action: (wx, wy) => this.addWidget(w.type, wx, wy) })
+        }
+      }
+
+      const categoryOrder = ['Content', 'Data', 'System']
+      const categoryItems = categoryOrder
+        .filter(cat => groups[cat])
+        .map(cat => ({ label: cat, submenu: groups[cat] }))
+
+      // Any uncategorized widgets go into a "Custom" group if there are several, otherwise top-level
+      if (ungrouped.length > 3) {
+        categoryItems.push({ label: 'Custom', submenu: ungrouped })
+      }
 
       const utilityItems = [
         { label: () => this.scrollLock ? "Scroll Lock: On" : "Scroll Lock: Off", action: () => this.toggleScrollLock() },
@@ -347,7 +382,8 @@ export default class extends Controller {
         { label: "Reset View", action: () => this.resetView() },
       ]
 
-      this.canvasMenuItems = [...widgetItems, { separator: true }, ...utilityItems]
+      const topLevel = ungrouped.length <= 3 ? ungrouped : []
+      this.canvasMenuItems = [...categoryItems, ...topLevel, { separator: true }, ...utilityItems]
     } catch (e) {
       console.warn("[Canvas] Failed to load widget types, using defaults:", e)
     }

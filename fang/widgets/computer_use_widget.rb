@@ -4,6 +4,7 @@ module Fang
   module Widgets
     class ComputerUseWidget < BaseWidget
       widget_type :computer_use
+      menu_category 'System'
 
       def self.header_title = 'Computer Use'
       def self.header_color = '#60a5fa'

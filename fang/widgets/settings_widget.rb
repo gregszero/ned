@@ -6,6 +6,7 @@ module Fang
       widget_type 'settings'
       menu_label 'Settings'
       menu_icon "\u2699\uFE0F"
+      menu_category 'System'
 
       def self.refreshable?     = true
       def self.refresh_interval  = 60

@@ -6,6 +6,7 @@ module Fang
       widget_type 'table'
       menu_label 'Add Table'
       menu_icon "\u{1F5C2}"
+      menu_category 'Content'
 
       def self.refreshable?     = true
       def self.refresh_interval  = 300

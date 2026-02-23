@@ -6,6 +6,7 @@ module Fang
       widget_type 'banner'
       menu_label 'Add Banner'
       menu_icon "\u{1F4E2}"
+      menu_category 'Content'
 
       def self.default_metadata
         { 'message' => 'Banner message', 'banner_type' => 'info' }

@@ -6,6 +6,7 @@ module Fang
       widget_type 'list'
       menu_label 'Add List'
       menu_icon "\u{1F4CB}"
+      menu_category 'Content'
 
       def self.header_title = 'List'
       def self.header_color = '#a78bfa'

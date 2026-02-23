@@ -6,6 +6,7 @@ module Fang
       widget_type 'clock'
       menu_label 'Add Clock'
       menu_icon "\u{1F550}"
+      menu_category 'System'
 
       def self.header_title = 'Clock'
       def self.header_color = '#c084fc'

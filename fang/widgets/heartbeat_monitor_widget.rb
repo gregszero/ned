@@ -6,6 +6,7 @@ module Fang
       widget_type 'heartbeat_monitor'
       menu_label 'Heartbeat Monitor'
       menu_icon "\u{1F49A}"
+      menu_category 'System'
 
       def self.refreshable?     = true
       def self.refresh_interval  = 30

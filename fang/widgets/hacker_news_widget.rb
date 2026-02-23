@@ -9,6 +9,7 @@ module Fang
       widget_type 'hacker_news'
       menu_label 'Add HN Feed'
       menu_icon "\u{1F4F0}"
+      menu_category 'Data'
 
       def self.header_title = 'News'
       def self.header_color = '#f97316'

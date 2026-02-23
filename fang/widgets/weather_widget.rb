@@ -9,6 +9,7 @@ module Fang
       widget_type 'weather'
       menu_label 'Add Weather'
       menu_icon "\u{2600}\u{FE0F}"
+      menu_category 'System'
 
       def self.header_title = 'Weather'
       def self.header_color = '#38bdf8'

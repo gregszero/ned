@@ -6,6 +6,7 @@ module Fang
       widget_type 'scheduled_jobs'
       menu_label 'Jobs & Skills'
       menu_icon "\u{1F4CB}"
+      menu_category 'System'
 
       def self.refreshable?     = true
       def self.refresh_interval  = 30

@@ -6,6 +6,7 @@ module Fang
       widget_type 'data_table'
       menu_label 'Data Table'
       menu_icon "\u{1F4CB}"
+      menu_category 'Data'
 
       def self.refreshable?     = true
       def self.refresh_interval = 30

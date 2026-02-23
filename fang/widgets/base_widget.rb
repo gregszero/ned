@@ -6,11 +6,12 @@ module Fang
       DRAG_HANDLE = '<div class="canvas-drag-handle"><svg width="12" height="14" viewBox="0 0 12 14" fill="currentColor"><circle cx="3" cy="2" r="1.5"/><circle cx="9" cy="2" r="1.5"/><circle cx="3" cy="7" r="1.5"/><circle cx="9" cy="7" r="1.5"/><circle cx="3" cy="12" r="1.5"/><circle cx="9" cy="12" r="1.5"/></svg></div>'
 
       class << self
-        attr_reader :widget_type_name, :menu_label_text, :menu_icon_text
+        attr_reader :widget_type_name, :menu_label_text, :menu_icon_text, :menu_category_text
 
         def widget_type(name)  = @widget_type_name = name.to_s
         def menu_label(label)  = @menu_label_text = label
         def menu_icon(icon)    = @menu_icon_text = icon
+        def menu_category(cat) = @menu_category_text = cat
         def refreshable?       = false
         def refresh_interval   = nil
         def default_metadata   = {}
