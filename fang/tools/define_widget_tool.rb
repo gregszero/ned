@@ -24,7 +24,7 @@ module Fang
         end
 
         # Write Ruby widget class
-        ruby_path = File.expand_path("../../widgets/#{widget_type}_widget.rb", __dir__)
+        ruby_path = File.expand_path("../widgets/#{widget_type}_widget.rb", __dir__)
         File.write(ruby_path, ruby_code)
 
         # Load the new class

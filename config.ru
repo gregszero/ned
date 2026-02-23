@@ -23,6 +23,9 @@ if Fang.env == 'development'
   # Watch models for new ones created by the agent
   Dir[File.expand_path('fang/models/**/*.rb', __dir__)].each { |f| Unreloader.require f }
 
+  # Watch widgets for new ones created by the define_widget tool
+  Dir[File.expand_path('fang/widgets/**/*.rb', __dir__)].each { |f| Unreloader.require f }
+
   # Mount MCP server as middleware, then the web app
   run Fang::McpServer.server.start_rack(Unreloader)
 else
