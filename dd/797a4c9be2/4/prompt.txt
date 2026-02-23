@@ -82,3 +82,11 @@ If you need specific details from before exiting plan mode (like exact code snip
 ---
 
 commit this
+
+---
+
+we also need to list the widgets, and everything that is running, the Jobs and Skills page should show everything that is running/will run etc
+
+---
+
+[Request interrupted by user for tool use]

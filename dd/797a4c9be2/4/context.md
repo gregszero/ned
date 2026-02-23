@@ -22,3 +22,11 @@ Add a public ...
 
 commit this
 
+### Prompt 3
+
+we also need to list the widgets, and everything that is running, the Jobs and Skills page should show everything that is running/will run etc
+
+### Prompt 4
+
+[Request interrupted by user for tool use]
+
