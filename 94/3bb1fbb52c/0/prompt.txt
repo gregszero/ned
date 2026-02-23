@@ -1,0 +1,78 @@
+Implement the following plan:
+
+# Plan: Add `scrape_website` MCP Tool using Scrapling
+
+## Context
+
+The existing `web_fetch` tool is a simple HTTP client (Net::HTTP) that returns raw responses — no HTML parsing, no JS rendering, no anti-bot handling. The `website_widget` uses Nokogiri for static HTML extraction but can't handle JS-rendered or bot-protected sites. Scrapling is a Python web scraping library that handles adaptive element tracking, anti-bot bypass, and JS rendering. Adding it as a dedicated tool gives the inner agent a powerful scraping capability without touching existing tools.
+
+## What to Create
+
+**One file:** `fang/tools/scrape_website_tool.rb`
+
+### Tool Design
+
+```
+tool_name: scrape_website
+tool_group: :web
+
+Arguments:
+  required  url           - URL to scrape
+  optional  selectors     - Array of extraction rules (see below)
+  optional  fetcher_type  - "basic" (default), "stealth", or "playwright"
+  optional  wait_for      - CSS selector to wait for (playwright only)
+```
+
+Each selector object:
+- `name` — label for the result key
+- `selector` — CSS or XPath expression
+- `type` — `"css"` (default) or `"xpath"`
+- `extract` — `"text"` (default), `"html"`, or an attribute name like `"href"`
+- `multiple` — boolean, return all matches or just first (default false)
+
+Default when no selectors given: extract page title + body text.
+
+### How It Works
+
+1. **Auto-install**: Tries `import scrapling` via PythonRunner. If missing, calls `PythonRunner.pip_install('scrapling')`.
+2. **Build Python code**: Constructs a Python script string that imports the right fetcher, fetches the URL, and extracts data per selectors.
+3. **Execute via PythonRunner.run_code**: The bridge.py picks up the `result` variable (JSON string) and returns it.
+4. **Parse and return**: Ruby side parses the JSON result into structured data.
+
+### Fetcher mapping
+- `"basic"` → `scrapling.Fetcher` — simple HTTP, no JS
+- `"stealth"` → `scrapling.StealthyFetcher` — anti-bot evasion, TLS fingerprinting
+- `"playwright"` → `scrapling.PlayWrightFetcher` — full browser, JS rendering
+
+### Key implementation details
+
+- Python bridge contract: set `result = json.dumps(data)` for the bridge to pick it up as `result['result']`
+- PythonRunner has 30s timeout — sufficient for basic/stealth, may be tight for playwright on slow sites. Document this as a known limitation.
+- Playwright browsers need separate install (`scrapling install`). The tool won't auto-install browsers — if playwright fetcher fails, the error message will guide the user to install them via `manage_python`.
+
+## Files to Modify
+
+| File | Action |
+|---|---|
+| `fang/tools/scrape_website_tool.rb` | **Create** — the new MCP tool |
+
+No other files need changes. Auto-discovery handles registration.
+
+## Verification
+
+1. Start server: `./openfang.rb server`
+2. In a conversation, test basic fetch: `scrape_website(url: "https://example.com")`
+3. Test with selectors: `scrape_website(url: "https://news.ycombinator.com", selectors: [{name: "headlines", selector: ".titleline > a", extract: "text", multiple: true}])`
+4. Verify scrapling auto-installs on first use
+5. Verify error handling when URL is unreachable
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+write a test for the scrape_website tool
+
+---
+
+[Request interrupted by user for tool use]
