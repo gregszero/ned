@@ -1,0 +1,66 @@
+Implement the following plan:
+
+# Separate Ned repo with OpenFang as upstream
+
+## Context
+Ned currently clones the OpenFang repo directly. Agent-generated files on Ned (skills, pages, workspace data) will conflict with pulls from master. We want Ned to have its own GitHub repo (`gregszero/ned-openfang`) with the OpenFang repo as an upstream remote for pulling code updates.
+
+## Steps
+
+### 1. Create `gregszero/ned-openfang` repo on GitHub
+```bash
+gh repo create gregszero/ned-openfang --private --source /home/ned/openfang
+```
+
+### 2. Reconfigure remotes on Ned
+On Ned's existing clone:
+```bash
+cd /home/ned/openfang
+git remote rename origin upstream    # openfang repo becomes "upstream"
+git remote add origin git@github.com:gregszero/ned-openfang.git
+git push -u origin master            # push current state to ned's repo
+```
+
+Now: `origin` = Ned's repo, `upstream` = OpenFang source.
+
+### 3. Update `bin/deploy`
+The deploy script changes to:
+- Push `master` to **upstream** (the OpenFang repo) from local dev
+- On Ned: fetch upstream, merge `upstream/master`, push to origin (backup), bundle, migrate, restart
+
+```bash
+# Local:
+git push upstream master   # or just "origin" from dev machine
+
+# On Ned:
+git fetch upstream
+git merge upstream/master --no-edit
+git push origin master     # backup to ned-openfang
+bundle install --quiet
+./openfang.rb db_migrate
+systemctl --user restart openfang
+```
+
+### 4. Update local dev remote (optional)
+Dev machine keeps `origin` pointing to OpenFang. No change needed — deploy script already pushes to `origin` which is OpenFang.
+
+## Files Modified
+- `bin/deploy` — updated remote names and merge flow
+
+## Server Changes
+- Rename remote `origin` → `upstream` on Ned
+- Add new `origin` pointing to `gregszero/ned-openfang`
+- Push existing code to new repo
+
+## Verification
+1. `ssh ned "cd /home/ned/openfang && git remote -v"` — shows both remotes
+2. Run `bin/deploy` — merges upstream into Ned, pushes to ned-openfang, restarts
+3. Check `github.com/gregszero/ned-openfang` has the code
+4. `ssh ned "systemctl --user status openfang"` — active/running
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
