@@ -9,7 +9,9 @@ export default class extends Controller {
     this.panY = 0
     this.isPanning = false
     this.isDragging = false
+    this.isResizing = false
     this.dragTarget = null
+    this.resizeTarget = null
     this.startX = 0
     this.startY = 0
     this.startElX = 0
@@ -731,6 +733,18 @@ export default class extends Controller {
     if (component) {
       // Select component + show toolbar
       this.selectComponent(component)
+      // Check for resize handle
+      const resizeHandle = e.target.closest(".canvas-resize-handle")
+      if (resizeHandle) {
+        this.isResizing = true
+        this.resizeTarget = component
+        this.startX = e.clientX
+        this.startY = e.clientY
+        this.startWidth = component.offsetWidth
+        this.startHeight = component.offsetHeight
+        e.preventDefault()
+        return
+      }
       // Only start dragging if mousedown is on the drag handle
       const dragHandle = e.target.closest(".canvas-drag-handle")
       if (dragHandle) {
@@ -762,6 +776,11 @@ export default class extends Controller {
       this.panX = this.startPanX + (e.clientX - this.startX)
       this.panY = this.startPanY + (e.clientY - this.startY)
       this.updateTransform()
+    } else if (this.isResizing && this.resizeTarget) {
+      const dx = (e.clientX - this.startX) / this.scale
+      const dy = (e.clientY - this.startY) / this.scale
+      this.resizeTarget.style.width = Math.max(120, this.startWidth + dx) + "px"
+      this.resizeTarget.style.height = Math.max(60, this.startHeight + dy) + "px"
     } else if (this.isDragging && this.dragTarget) {
       const dx = (e.clientX - this.startX) / this.scale
       const dy = (e.clientY - this.startY) / this.scale
@@ -774,6 +793,12 @@ export default class extends Controller {
     if (this.isPanning) {
       this.isPanning = false
       this.element.style.cursor = ""
+    }
+    if (this.isResizing && this.resizeTarget) {
+      this.saveComponentSize(this.resizeTarget)
+      if (this.selectedComponent === this.resizeTarget) this.positionToolbar(this.resizeTarget)
+      this.isResizing = false
+      this.resizeTarget = null
     }
     if (this.isDragging && this.dragTarget) {
       this.dragTarget.classList.remove("dragging")
@@ -796,6 +821,18 @@ export default class extends Controller {
       return
     }
     if (component) {
+      // Check for resize handle
+      const resizeHandle = touch.target.closest(".canvas-resize-handle")
+      if (resizeHandle) {
+        this.isResizing = true
+        this.resizeTarget = component
+        this.startX = touch.clientX
+        this.startY = touch.clientY
+        this.startWidth = component.offsetWidth
+        this.startHeight = component.offsetHeight
+        e.preventDefault()
+        return
+      }
       // Only start dragging if touch is on the drag handle
       const dragHandle = touch.target.closest(".canvas-drag-handle")
       if (dragHandle) {
@@ -825,6 +862,12 @@ export default class extends Controller {
       this.panX = this.startPanX + (touch.clientX - this.startX)
       this.panY = this.startPanY + (touch.clientY - this.startY)
       this.updateTransform()
+    } else if (this.isResizing && this.resizeTarget) {
+      const dx = (touch.clientX - this.startX) / this.scale
+      const dy = (touch.clientY - this.startY) / this.scale
+      this.resizeTarget.style.width = Math.max(120, this.startWidth + dx) + "px"
+      this.resizeTarget.style.height = Math.max(60, this.startHeight + dy) + "px"
+      e.preventDefault()
     } else if (this.isDragging && this.dragTarget) {
       const dx = (touch.clientX - this.startX) / this.scale
       const dy = (touch.clientY - this.startY) / this.scale
@@ -836,6 +879,12 @@ export default class extends Controller {
 
   onTouchEnd() {
     if (this.isPanning) this.isPanning = false
+    if (this.isResizing && this.resizeTarget) {
+      this.saveComponentSize(this.resizeTarget)
+      if (this.selectedComponent === this.resizeTarget) this.positionToolbar(this.resizeTarget)
+      this.isResizing = false
+      this.resizeTarget = null
+    }
     if (this.isDragging && this.dragTarget) {
       this.dragTarget.classList.remove("dragging")
       this.saveComponentPosition(this.dragTarget)
@@ -919,6 +968,24 @@ export default class extends Controller {
     } catch (e) {
       console.error("[Canvas] Failed to save position:", e)
     }
+  }
 
+  async saveComponentSize(el) {
+    const componentId = el.dataset.componentId
+    const pageId = this.pageIdValue
+    if (!componentId || !pageId) return
+
+    const width = Math.round(parseFloat(el.style.width) || el.offsetWidth)
+    const height = Math.round(parseFloat(el.style.height) || el.offsetHeight)
+
+    try {
+      await fetch(`/api/pages/${pageId}/components/${componentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `width=${width}&height=${height}`
+      })
+    } catch (e) {
+      console.error("[Canvas] Failed to save size:", e)
+    }
   }
 }
