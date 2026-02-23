@@ -1,0 +1,62 @@
+Implement the following plan:
+
+# Add Resize Handle to Canvas Widgets
+
+## Context
+Canvas widgets can be dragged (via the 6-dot handle at top-right) but cannot be resized by the user. Adding a bottom-right resize grip with the classic diagonal lines (`///`) pattern lets users drag to resize widgets directly on the canvas.
+
+## Files to Modify
+
+1. **`fang/widgets/base_widget.rb`** — Add resize handle HTML to `render_component_html`
+2. **`web/public/css/style.css`** — Style the resize handle (position, grip icon, hover states)
+3. **`web/public/js/controllers/canvas_controller.js`** — Add resize drag logic + persist size on release
+
+## Implementation
+
+### 1. Add resize handle HTML (`base_widget.rb`)
+
+Add a `RESIZE_HANDLE` constant with an SVG of diagonal lines (the `///` grip pattern), similar to how `DRAG_HANDLE` works. Insert it inside the component div, after the content div:
+
+```ruby
+RESIZE_HANDLE = '<div class="canvas-resize-handle"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M9 1L1 9M9 4L4 9M9 7L7 9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></div>'
+```
+
+In `render_component_html`, append `RESIZE_HANDLE` after the content div (line 72).
+
+### 2. Style the resize handle (`style.css`)
+
+Add after the existing `.canvas-drag-handle` styles (~line 1229):
+
+- Position: `absolute; bottom: 0; right: 0`
+- Small padding, `cursor: nwse-resize`
+- Hidden by default (`opacity: 0`), shown on component hover (like drag handle)
+- Color: `var(--muted-foreground)`
+- The SVG diagonal lines provide the `///` visual
+
+### 3. Add resize logic (`canvas_controller.js`)
+
+**Mouse events** — extend `onMouseDown`, `onMouseMove`, `onMouseUp`:
+
+- In `onMouseDown`: detect clicks on `.canvas-resize-handle`, set `isResizing = true`, capture `startWidth`/`startHeight` from the component's current computed size
+- In `onMouseMove`: if `isResizing`, calculate new width/height from mouse delta (divided by scale for zoom-awareness), apply as inline styles with a minimum size (e.g., 120x60)
+- In `onMouseUp`: if `isResizing`, save the new size via the existing PATCH endpoint (`/api/pages/:pageId/components/:componentId`) adding `width` and `height` params alongside the existing `x`/`y` pattern
+
+**Touch events** — mirror the same logic in `onTouchStart`, `onTouchMove`, `onTouchEnd`.
+
+**Save method** — extend `saveComponentPosition` to also send `width` and `height`, or create a parallel `saveComponentSize` method. The PATCH endpoint already accepts `width` and `height` params.
+
+## Verification
+1. Start the server with `./openfang.rb server`
+2. Open a canvas page with widgets
+3. Hover a widget — the `///` grip should appear at bottom-right
+4. Drag the grip — widget should resize live, respecting minimum size
+5. Release — size should persist (reload to confirm)
+6. Test at different zoom levels to ensure resize delta scales correctly
+7. Test on touch (if applicable)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
