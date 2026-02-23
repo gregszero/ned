@@ -3,10 +3,11 @@
   "checkpoint_id": "dd797a4c9be2",
   "strategy": "manual-commit",
   "branch": "master",
-  "checkpoints_count": 4,
+  "checkpoints_count": 5,
   "files_touched": [
     ".claude/settings.local.json",
     "config.ru",
+    "fang/scheduler.rb",
     "fang/tools/define_widget_tool.rb",
     "fang/widgets/approval_widget.rb",
     "fang/widgets/banner_widget.rb",
@@ -21,6 +22,7 @@
     "fang/widgets/metric_widget.rb",
     "fang/widgets/note_widget.rb",
     "fang/widgets/scheduled_jobs_widget.rb",
+    "fang/widgets/scheduler_widget.rb",
     "fang/widgets/settings_widget.rb",
     "fang/widgets/table_widget.rb",
     "fang/widgets/test_broadcast_widget.rb",
@@ -30,7 +32,8 @@
     "web/app.rb",
     "web/public/css/style.css",
     "web/public/js/controllers/canvas_controller.js",
-    "web/public/js/fang-components.js"
+    "web/public/js/fang-components.js",
+    "workspace/migrations/20260223000001_add_scheduler_widget_to_jobs_page.rb"
   ],
   "sessions": [
     {
@@ -60,13 +63,20 @@
       "context": "/dd/797a4c9be2/3/context.md",
       "content_hash": "/dd/797a4c9be2/3/content_hash.txt",
       "prompt": "/dd/797a4c9be2/3/prompt.txt"
+    },
+    {
+      "metadata": "/dd/797a4c9be2/4/metadata.json",
+      "transcript": "/dd/797a4c9be2/4/full.jsonl",
+      "context": "/dd/797a4c9be2/4/context.md",
+      "content_hash": "/dd/797a4c9be2/4/content_hash.txt",
+      "prompt": "/dd/797a4c9be2/4/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 54,
-    "cache_creation_tokens": 95220,
-    "cache_read_tokens": 1515076,
-    "output_tokens": 3357,
-    "api_call_count": 38
+    "input_tokens": 75,
+    "cache_creation_tokens": 124785,
+    "cache_read_tokens": 2158164,
+    "output_tokens": 4131,
+    "api_call_count": 55
   }
 }

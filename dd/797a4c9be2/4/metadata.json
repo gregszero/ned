@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "dd797a4c9be2",
+  "session_id": "694b149a-ca85-44bc-bf47-48fa3ffbcafa",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-23T23:08:57.989082719Z",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".claude/settings.local.json",
+    "fang/scheduler.rb",
+    "fang/widgets/scheduler_widget.rb",
+    "fang/widgets/test_broadcast_widget.rb",
+    "fang/widgets/test_nojs_widget.rb",
+    "workspace/migrations/20260223000001_add_scheduler_widget_to_jobs_page.rb"
+  ],
+  "agent": "Claude Code",
+  "token_usage": {
+    "input_tokens": 21,
+    "cache_creation_tokens": 29565,
+    "cache_read_tokens": 643088,
+    "output_tokens": 774,
+    "api_call_count": 17
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-23T23:08:57.936554471Z",
+    "agent_lines": 91,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 20,
+    "total_committed": 91,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/694b149a-ca85-44bc-bf47-48fa3ffbcafa.jsonl"
+}

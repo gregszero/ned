@@ -1,0 +1,84 @@
+Implement the following plan:
+
+# Add Scheduler Widget to Jobs & Skills Page
+
+## Context
+The Jobs & Skills canvas page currently shows scheduled tasks and skills but has no visibility into the Rufus scheduler's internal timers (the polling loops that drive the system). This widget will expose those timers so the user can see at a glance what's running, when it last fired, and when it fires next.
+
+## Plan
+
+### 1. Add `Fang::Scheduler.jobs` public method
+**File:** `fang/scheduler.rb`
+
+Add a public `jobs` method that introspects `@instance.jobs` (Rufus::Scheduler exposes this). Each Rufus job object has:
+- `#original` — the interval string (e.g. `'60s'`, `'5m'`, `'30s'`)
+- `#last_time` — Time of last fire (nil if never fired)
+- `#next_time` — EtTime of next scheduled fire
+- `#paused?` — whether the job is paused
+- `#tags` — array of string tags
+
+We'll also tag each job when registering it so we get human-readable names. Change the `start!` method to pass `tag:` to each `.every` call:
+
+```ruby
+@instance.every '60s', first: :now, tag: 'Scheduled Tasks Poll' do ...
+@instance.every '5m', tag: 'Widget Refresh' do ...
+@instance.every '30s', first: :now, tag: 'Heartbeat Poll' do ...
+```
+
+Then the public method:
+
+```ruby
+def jobs
+  return [] unless @instance
+  @instance.jobs.map do |job|
+    {
+      name: job.tags.first || job.id,
+      interval: format_interval(job.original),
+      last_fired_at: job.last_time,
+      next_fire_at: job.next_time&.to_t,
+      status: job.paused? ? 'paused' : 'running'
+    }
+  end
+end
+```
+
+Plus a small `format_interval` helper to produce "every 60s" / "every 5m" from the raw string.
+
+### 2. Create `SchedulerWidget`
+**File:** `fang/widgets/scheduler_widget.rb`
+
+New widget following existing patterns (modeled on `ScheduledJobsWidget`):
+- `widget_type 'scheduler'`
+- `menu_label 'Scheduler Timers'`
+- `menu_category 'System'`
+- `refreshable?` = true, `refresh_interval` = 60
+- `header_title` = 'Scheduler'
+- `render_content` calls `Fang::Scheduler.jobs` and renders an HTML table with columns: Name, Interval, Last Fired, Next Fire, Status
+- `refresh_data!` re-renders and updates if content changed
+
+### 3. Add widget to Jobs & Skills page via migration
+**File:** `workspace/migrations/YYYYMMDDNNNNNN_add_scheduler_widget_to_jobs_page.rb`
+
+Insert a new `canvas_component` on the Jobs page:
+- `component_type: 'scheduler'`
+- Position below the existing widget (y offset ~600 or similar)
+- `width: 1200` to match existing widget
+
+## Files Modified
+- `fang/scheduler.rb` — add tags + public `jobs` method
+- `fang/widgets/scheduler_widget.rb` — new file
+- `workspace/migrations/` — new migration
+
+## Verification
+1. `./openfang.rb db:migrate` to apply the migration
+2. `./openfang.rb server` and navigate to `/jobs`
+3. Verify the Scheduler widget appears with 3 timer rows
+4. Wait 60s or click refresh — content should update with fresh timestamps
+5. `rake test` to ensure no regressions
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
