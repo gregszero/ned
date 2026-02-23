@@ -13,17 +13,17 @@ module Fang
         @instance = Rufus::Scheduler.new
 
         # Poll for due scheduled tasks every 60 seconds
-        @instance.every '60s', first: :now do
+        @instance.every '60s', first: :now, tag: 'Scheduled Tasks Poll' do
           run_due_tasks
         end
 
         # Refresh widgets every 5 minutes
-        @instance.every '5m' do
+        @instance.every '5m', tag: 'Widget Refresh' do
           refresh_widgets
         end
 
         # Poll for due heartbeats every 30 seconds
-        @instance.every '30s', first: :now do
+        @instance.every '30s', first: :now, tag: 'Heartbeat Poll' do
           run_due_heartbeats
         end
 
@@ -40,6 +40,20 @@ module Fang
 
       def running?
         @instance&.up?
+      end
+
+      def jobs
+        return [] unless @instance
+
+        @instance.jobs.map do |job|
+          {
+            name: job.tags.first || job.id,
+            interval: "every #{job.original}",
+            last_fired_at: job.last_time,
+            next_fire_at: job.next_time&.to_t,
+            status: job.paused? ? 'paused' : 'running'
+          }
+        end
       end
 
       private
