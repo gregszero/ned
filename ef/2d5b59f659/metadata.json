@@ -1,0 +1,28 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "ef2d5b59f659",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "config/database.yml",
+    "fang/scheduler.rb",
+    "web/app.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/ef/2d5b59f659/0/metadata.json",
+      "transcript": "/ef/2d5b59f659/0/full.jsonl",
+      "context": "/ef/2d5b59f659/0/context.md",
+      "content_hash": "/ef/2d5b59f659/0/content_hash.txt",
+      "prompt": "/ef/2d5b59f659/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 17,
+    "cache_creation_tokens": 47198,
+    "cache_read_tokens": 448887,
+    "output_tokens": 1564,
+    "api_call_count": 13
+  }
+}
