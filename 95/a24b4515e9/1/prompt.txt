@@ -1,0 +1,40 @@
+Implement the following plan:
+
+# Clean Up Canvas Skills — Keep Only Settings + Showcase
+
+## Context
+The codebase has accumulated multiple canvas setup skills (`command_center_setup.rb`, `daily_briefing.rb`, `showcase_setup.rb`). The user wants to start fresh with just the settings infrastructure page and the showcase as the main canvas demo.
+
+## Changes
+
+### 1. Delete old skill files
+- `skills/command_center_setup.rb` — remove
+- `skills/daily_briefing.rb` — remove
+
+### 2. Delete old canvas pages from the database
+Run a migration to clean up the dynamic pages created by those skills:
+- `workspace/migrations/YYYYMMDDNNNNNN_remove_old_canvas_pages.rb`
+- Destroys pages with slugs `command-center` and `daily-briefing` (plus their canvas_components via dependent destroy)
+- Leaves infrastructure pages (`jobs`, `heartbeats`, `settings`) and the `showcase` page untouched
+
+### Files kept as-is
+- `skills/showcase_setup.rb` — the new showcase skill (just committed)
+- `fang/widgets/docker_containers_widget.rb` — new widget (just committed)
+- `skills/base.rb` — template/base class
+
+## Verification
+1. `./openfang.rb db:migrate` — migration runs, old pages removed
+2. Restart server — no errors from missing skills
+3. `run_skill showcase_setup` — still works, creates showcase page
+4. Sidebar nav no longer shows "Command Center" or "Daily Briefing" pages
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+sorry, revert all this. i wanted that a freshinstall of open fang started only with the canvas of settings and command center.
+
+---
+
+[Request interrupted by user for tool use]
