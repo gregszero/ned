@@ -3,7 +3,7 @@
   "checkpoint_id": "dd797a4c9be2",
   "strategy": "manual-commit",
   "branch": "master",
-  "checkpoints_count": 5,
+  "checkpoints_count": 6,
   "files_touched": [
     ".claude/settings.local.json",
     "config.ru",
@@ -16,6 +16,7 @@
     "fang/widgets/clock_widget.rb",
     "fang/widgets/computer_use_widget.rb",
     "fang/widgets/data_table_widget.rb",
+    "fang/widgets/docker_containers_widget.rb",
     "fang/widgets/gmail_inbox_widget.rb",
     "fang/widgets/hacker_news_widget.rb",
     "fang/widgets/heartbeat_monitor_widget.rb",
@@ -34,6 +35,7 @@
     "fang/widgets/website_widget.rb",
     "fang/widgets/workflow_monitor_widget.rb",
     "skills/command_center_setup.rb",
+    "skills/showcase_setup.rb",
     "web/app.rb",
     "web/public/css/style.css",
     "web/public/js/controllers/canvas_controller.js",
@@ -89,13 +91,20 @@
       "context": "/dd/797a4c9be2/6/context.md",
       "content_hash": "/dd/797a4c9be2/6/content_hash.txt",
       "prompt": "/dd/797a4c9be2/6/prompt.txt"
+    },
+    {
+      "metadata": "/dd/797a4c9be2/7/metadata.json",
+      "transcript": "/dd/797a4c9be2/7/full.jsonl",
+      "context": "/dd/797a4c9be2/7/context.md",
+      "content_hash": "/dd/797a4c9be2/7/content_hash.txt",
+      "prompt": "/dd/797a4c9be2/7/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 4231,
-    "cache_creation_tokens": 174218,
-    "cache_read_tokens": 2377471,
-    "output_tokens": 6858,
-    "api_call_count": 58
+    "input_tokens": 4246,
+    "cache_creation_tokens": 198593,
+    "cache_read_tokens": 2779760,
+    "output_tokens": 9531,
+    "api_call_count": 69
   }
 }
