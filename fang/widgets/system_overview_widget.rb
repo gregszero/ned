@@ -16,7 +16,7 @@ module Fang
       STATS = [
         { label: 'Conversations', model: 'Conversation', sub: nil },
         { label: 'Pages',         model: 'Page',         sub: -> { "#{Fang::Page.where(status: 'published').count} published" } },
-        { label: 'Skills',        model: nil,             sub: nil, count: -> { Fang::SkillLoader.skills.size } },
+        { label: 'Skills',        model: nil,             sub: nil, count: -> { Fang::SkillLoader.available_skills.size } },
         { label: 'Scheduled Jobs', model: 'ScheduledTask', sub: -> { "#{Fang::ScheduledTask.where(status: 'pending').count} pending" } },
         { label: 'Heartbeats',    model: 'Heartbeat',     sub: -> { "#{Fang::Heartbeat.where(enabled: true).count} active" } },
         { label: 'Workflows',     model: 'Workflow',      sub: -> { "#{Fang::Workflow.where(status: 'running').count} running" } },
