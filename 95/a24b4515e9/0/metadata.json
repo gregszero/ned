@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "95a24b4515e9",
+  "session_id": "cf6aa954-5b20-4a34-92be-9ac4ab4c380f",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-24T21:48:02.993775234Z",
+  "branch": "master",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "fang/widgets/docker_containers_widget.rb",
+    "skills/showcase_setup.rb"
+  ],
+  "agent": "Claude Code",
+  "checkpoint_transcript_start": 76,
+  "transcript_lines_at_start": 76,
+  "token_usage": {
+    "input_tokens": 7,
+    "cache_creation_tokens": 6876,
+    "cache_read_tokens": 234624,
+    "output_tokens": 131,
+    "api_call_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-24T21:48:02.917681271Z",
+    "agent_lines": 0,
+    "human_added": 38,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 38,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-home-greg-Developer-openfang/cf6aa954-5b20-4a34-92be-9ac4ab4c380f.jsonl"
+}

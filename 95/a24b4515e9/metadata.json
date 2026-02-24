@@ -1,0 +1,27 @@
+{
+  "cli_version": "0.4.4",
+  "checkpoint_id": "95a24b4515e9",
+  "strategy": "manual-commit",
+  "branch": "master",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "fang/widgets/docker_containers_widget.rb",
+    "skills/showcase_setup.rb"
+  ],
+  "sessions": [
+    {
+      "metadata": "/95/a24b4515e9/0/metadata.json",
+      "transcript": "/95/a24b4515e9/0/full.jsonl",
+      "context": "/95/a24b4515e9/0/context.md",
+      "content_hash": "/95/a24b4515e9/0/content_hash.txt",
+      "prompt": "/95/a24b4515e9/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 7,
+    "cache_creation_tokens": 6876,
+    "cache_read_tokens": 234624,
+    "output_tokens": 131,
+    "api_call_count": 5
+  }
+}

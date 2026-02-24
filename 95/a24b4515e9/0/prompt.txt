@@ -1,0 +1,83 @@
+Implement the following plan:
+
+# OpenFang Showcase Canvas + Docker Widget
+
+## Context
+Create a showcase page demonstrating OpenFang's full capability range, plus a new Docker containers widget to add real system monitoring depth.
+
+## Files to Create
+
+### 1. `fang/widgets/docker_containers_widget.rb` — New Widget
+
+A refreshable system widget showing running Docker containers in a table.
+
+- **widget_type:** `'docker_containers'`
+- **menu_label:** `'Docker Containers'`, **menu_icon:** whale emoji, **menu_category:** `'System'`
+- **Refreshable:** yes, every 30s
+- **Refresh pattern:** Pattern B (pure content diff — no metadata caching)
+- **render_content:** Runs `docker ps --format '{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'` via `IO.popen`. Parses tab-separated output into a styled table with status badges (green for "Up", red for "Exited"). Shows "Docker not available" or "No containers running" gracefully.
+- **No required metadata keys.** Optional: `'show_all'` (boolean, passes `-a` flag to show stopped containers too).
+- **Reference:** Follow `system_overview_widget.rb` and `heartbeat_monitor_widget.rb` for the table/badge HTML patterns.
+
+### 2. `skills/showcase_setup.rb` — Showcase Skill
+
+Follows exact pattern of `skills/command_center_setup.rb`.
+
+**Page:** title "Showcase", slug "showcase", published
+
+**Layout (~1120px wide, 17 widgets):**
+
+```
+Row 1 — Hero (y=20)
+  Banner: info, "OpenFang — AI assistant framework. 40 tools, 25 widgets, endless automation." x=20 w=1080
+
+Row 2 — Live Data (y=100)
+  Weather(Zurich) x=20 w=280  |  Clock(UTC) x=320 w=200  |  Clock(Zurich) x=540 w=200  |  Metric(Conversations) x=760 w=280
+
+Row 3 — Visualization (y=320)
+  Chart(bar, Widget Types by Category) x=20 w=540 h=300  |  Hacker News(5) x=580 w=520 h=300
+
+Row 4 — Automation (y=660)
+  Heartbeat Monitor x=20 w=540  |  Workflow Monitor x=580 w=520
+
+Row 5 — Interaction (y=960)
+  Approval x=20 w=360  |  Quick Actions x=400 w=340  |  Gmail Inbox x=760 w=340
+
+Row 6 — Data & Content (y=1300)
+  Table(MCP Tool Categories) x=20 w=540  |  List(Key Features) x=580 w=520
+
+Row 7 — System (y=1620)
+  System Overview x=20 w=520  |  Docker Containers x=560 w=540
+```
+
+**Widget metadata:** (same as original plan, Docker widget gets `{}`)
+
+**Refresh + Notification:** Same pattern as command_center_setup.
+
+## Key Reference Files
+- `skills/command_center_setup.rb` — skill pattern
+- `fang/widgets/base_widget.rb` — registry, render pipeline, `evaluate_data_source`
+- `fang/widgets/system_overview_widget.rb` — system command widget pattern
+- `fang/widgets/heartbeat_monitor_widget.rb` — table + badge HTML pattern
+
+## Verification
+1. Restart server
+2. Run `run_skill showcase_setup` in chat
+3. Navigate to `/showcase`
+4. Verify ~17 widgets visible, Docker widget shows containers (or graceful fallback), chart renders, clocks tick
+5. Wait 30-60s — refreshable widgets auto-update via SSE
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
+
+---
+
+so clear my current canvases and lets kinda start blank with just the settings and the showcase setup
+
+---
+
+[Request interrupted by user for tool use]
