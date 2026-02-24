@@ -1,0 +1,125 @@
+Implement the following plan:
+
+# Revert Cleanup + Seed Command Center on Fresh Install
+
+## Context
+The previous changes (deleting skills + migration to remove pages) were wrong. The actual goal: a fresh `db:migrate` should create both **Settings** and **Command Center** as default canvas pages. All skills stay on disk.
+
+## Changes
+
+### 1. Revert uncommitted changes
+- Restore deleted files: `git checkout -- skills/command_center_setup.rb skills/daily_briefing.rb`
+- Delete the wrong migration: `rm workspace/migrations/20260224000001_remove_old_canvas_pages.rb`
+- Roll back the already-run migration: `./openfang.rb db_rollback` (or manually remove from schema_migrations)
+
+### 2. New migration: `workspace/migrations/20260224000001_seed_command_center_page.rb`
+Seed the Command Center page with its 7 widgets, matching the layout in `skills/command_center_setup.rb`:
+
+```
+Row 1: system_overview (680w), clock/Zurich (200w)
+Row 2: gmail_inbox (380w×320h), workflow_monitor (380w×320h), quick_actions (280w×320h)
+Row 3: heartbeat_monitor (580w), approval (480w)
+```
+
+Uses raw SQL (same pattern as `20260218000004_create_settings_and_jobs_pages.rb`) with current column names (`page_id`, `pages` table).
+
+### Files modified
+- `workspace/migrations/20260224000001_seed_command_center_page.rb` — **new**
+- `skills/command_center_setup.rb` — **restored** (git checkout)
+- `skills/daily_briefing.rb` — **restored** (git checkout)
+- `workspace/migrations/20260224000001_remove_old_canvas_pages.rb` — **deleted**
+
+### Files unchanged
+- `skills/showcase_setup.rb`, `skills/base.rb`, all widget files
+
+## Verification
+1. `./openfang.rb db_migrate` — creates Command Center page + 7 widgets
+2. Server starts without errors
+3. `/command-center` shows the dashboard
+4. `run_skill command_center_setup` still works (idempotent find_or_create)
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+where do i access the page?
+
+---
+
+yes
+
+---
+
+how do i create the command center?
+
+---
+
+i've ran and it does not show up
+
+---
+
+it says db:migrate is not a valid command, what's the actual command?
+
+---
+
+openfang  master $? 
+ ./openfang.rb db_migrate
+I, [2026-02-24T18:42:19.543988 #262488]  INFO -- : Connected to database: 
+I, [2026-02-24T18:42:19.550974 #262488]  INFO -- : Queue adapter: ActiveJob::QueueAdapters::DelayedJobAdapter
+I, [2026-02-24T18:42:20.361257 #262488]  INFO -- : System profile detected in 0.81s
+D, [2026-02-24T18:42:20.372237 #262488] DEBUG -- :    (0.1ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372320 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372375 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372455 #262488] DEBUG -- :    (0.1ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372502 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372548 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372589 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372630 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372670 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372709 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372749 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372788 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372827 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372866 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372905 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372949 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.372992 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.373035 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.373103 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380099 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380417 #262488] DEBUG -- :    (0.1ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380481 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380530 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380575 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380617 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380658 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380699 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380742 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380784 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380825 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+D, [2026-02-24T18:42:20.380865 #262488] DEBUG -- :    (0.0ms)  SELECT version FROM schema_migrations
+✅ Database migrations complete
+
+openfang  master $?
+
+---
+
+rm workspace/openfang.db && ./openfang.rb db_migrate
+
+---
+
+nothing shows up
+
+---
+
+nothing appears in the command center canvas
+
+---
+
+Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+:3000/api/pages/14/canvas:1  Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+
+---
+
+commit this

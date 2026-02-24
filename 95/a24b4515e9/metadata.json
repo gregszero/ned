@@ -3,14 +3,17 @@
   "checkpoint_id": "95a24b4515e9",
   "strategy": "manual-commit",
   "branch": "master",
-  "checkpoints_count": 1,
+  "checkpoints_count": 3,
   "files_touched": [
     ".claude/settings.local.json",
     "fang/widgets/docker_containers_widget.rb",
+    "fang/widgets/system_overview_widget.rb",
     "skills/command_center_setup.rb",
     "skills/daily_briefing.rb",
     "skills/showcase_setup.rb",
-    "workspace/migrations/20260224000001_remove_old_canvas_pages.rb"
+    "workspace/migrations/20260224000001_remove_old_canvas_pages.rb",
+    "workspace/migrations/20260224000001_seed_command_center_page.rb",
+    "workspace/openfang.db"
   ],
   "sessions": [
     {
@@ -26,13 +29,20 @@
       "context": "/95/a24b4515e9/1/context.md",
       "content_hash": "/95/a24b4515e9/1/content_hash.txt",
       "prompt": "/95/a24b4515e9/1/prompt.txt"
+    },
+    {
+      "metadata": "/95/a24b4515e9/2/metadata.json",
+      "transcript": "/95/a24b4515e9/2/full.jsonl",
+      "context": "/95/a24b4515e9/2/context.md",
+      "content_hash": "/95/a24b4515e9/2/content_hash.txt",
+      "prompt": "/95/a24b4515e9/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 30,
-    "cache_creation_tokens": 29750,
-    "cache_read_tokens": 854087,
-    "output_tokens": 1926,
-    "api_call_count": 24
+    "input_tokens": 109,
+    "cache_creation_tokens": 61826,
+    "cache_read_tokens": 2970575,
+    "output_tokens": 5040,
+    "api_call_count": 79
   }
 }
