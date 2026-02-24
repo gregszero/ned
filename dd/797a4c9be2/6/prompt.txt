@@ -1,0 +1,85 @@
+Implement the following plan:
+
+# Command Center Dashboard
+
+## Context
+Build a showcase page at `/pages/command-center` that demonstrates OpenFang's capabilities in one glance — a live dashboard with 7 widgets covering monitoring, email, workflows, and quick actions.
+
+## Files to Create (5 new files, 0 modifications)
+
+### 1. `fang/widgets/system_overview_widget.rb` — System Stats Grid
+- 3x3 grid of stat counters: Conversations, Pages, Skills, Scheduled Jobs, Heartbeats, Workflows, Triggers, Notifications, Data Tables
+- Each cell shows count + a contextual sub-badge (e.g. "3 pending", "2 active")
+- Refreshable every 60s, green header (`#16a34a`)
+- Pattern: same as `heartbeat_monitor_widget.rb` (query DB, compare content, update)
+
+### 2. `fang/widgets/gmail_inbox_widget.rb` — Recent Unread Emails
+- Shows 5 most recent unread emails (from, subject, snippet, date)
+- Three fallback states: "Gmail Not Connected" / "Loading..." / "Inbox Zero"
+- Refreshable every 300s, red header (`#ea4335`)
+- Gmail `search` returns `{id:, subject:, from:, date:, snippet:, labels:}` (symbol keys)
+- Caches email data in `metadata['emails']` to detect changes
+- `rescue => e` around Gmail API calls
+
+### 3. `fang/widgets/workflow_monitor_widget.rb` — Workflow Progress
+- Shows 5 most recent workflows with name, status badge, and segmented progress bar
+- Each step = one bar segment colored by status (green/blue/red/gray)
+- Refreshable every 30s, purple header (`#8b5cf6`)
+- Uses `includes(:workflow_steps)` to avoid N+1
+
+### 4. `fang/widgets/quick_actions_widget.rb` — Action Button Grid
+- 2-column grid of `outline sm` buttons using `data-fang-action` pattern
+- Not refreshable — actions configured via metadata
+- Default actions: Daily Briefing, Check Gmail, List Heartbeats, Pending Approvals
+- Amber header (`#f59e0b`)
+- Posts to `/api/actions` with `action_type: 'run_skill'` (supported by `web/app.rb:448`)
+
+### 5. `skills/command_center_setup.rb` — Setup Skill
+- Creates/finds page with slug `command-center`
+- Destroys existing components (fresh layout on re-run)
+- Places 7 widgets in freeform layout:
+  ```
+  Row 1 (y=20):   [System Overview 680w] [Clock 200w]
+  Row 2 (y=260):  [Gmail 380w] [Workflows 380w] [Quick Actions 280w]
+  Row 3 (y=620):  [Heartbeats 580w] [Approvals 480w]
+  ```
+- Refreshes all refreshable widgets immediately
+- Sends success notification
+- Follows `daily_briefing.rb` pattern exactly
+
+## Reused Existing Widgets (no changes needed)
+- `heartbeat_monitor` — 30s refresh, heartbeat grid with run cells
+- `approval` — 30s refresh, pending approvals with approve/reject buttons
+- `clock` — client-side JS ticker, timezone configurable
+
+## No JS Needed
+- Clock: existing JS handles `[data-clock-display]`
+- Buttons: existing `fang-components.js` handles `data-fang-action`
+- Refresh: existing `WidgetRefreshJob` handles all refreshable widgets via SSE
+
+## No Migrations, Routes, or Nav Changes Needed
+- Widgets auto-discover via ObjectSpace
+- Skills auto-discover via SkillLoader
+- Published pages auto-appear in sidebar nav
+
+## Key Reference Files
+- `fang/widgets/base_widget.rb` — widget base class
+- `fang/widgets/heartbeat_monitor_widget.rb` — complex refreshable widget pattern
+- `fang/widgets/approval_widget.rb` — `data-fang-action` button pattern
+- `skills/daily_briefing.rb` — skill that creates page + widgets
+- `fang/gmail.rb:62-77` — `search` return format (symbol keys)
+- `web/app.rb:442-513` — `/api/actions` endpoint, `run_skill` handler
+
+## Verification
+1. Restart server after creating files
+2. Run skill: `run_skill command_center_setup` in chat
+3. Navigate to `/command-center`
+4. Verify: all 7 widgets render, clock ticks, action buttons show loading states on click
+5. Wait 30-60s — heartbeat/approval/workflow/system widgets should auto-refresh via SSE
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /home/greg/.REDACTED.jsonl
+
+---
+
+commit this
