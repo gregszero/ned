@@ -83,3 +83,11 @@ If you need specific details from before exiting plan mode (like exact code snip
 ---
 
 commit this
+
+---
+
+now create a new canvas to show case what open fang can do
+
+---
+
+[Request interrupted by user for tool use]

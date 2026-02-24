@@ -20,3 +20,11 @@ Build a showcase page at `/pages/command-center` that demonstrates OpenFang's ca
 
 commit this
 
+### Prompt 3
+
+now create a new canvas to show case what open fang can do
+
+### Prompt 4
+
+[Request interrupted by user for tool use]
+
